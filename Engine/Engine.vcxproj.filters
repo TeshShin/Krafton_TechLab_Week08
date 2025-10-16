@@ -7,14 +7,16 @@
     <FxCompile Include="Asset\Shader\ShaderFont.hlsl">
       <Filter>Asset\Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Asset\Shader\TextureShader.hlsl">
-      <Filter>Asset\Shader</Filter>
-    </FxCompile>
     <FxCompile Include="Asset\Shader\DecalShader.hlsl">
       <Filter>Asset\Shader</Filter>
     </FxCompile>
     <FxCompile Include="Asset\Shader\HeightFogShader.hlsl" />
     <FxCompile Include="Asset\Shader\BatchLineShader.hlsl" />
+    <FxCompile Include="Asset\Shader\SceneDepthShader.hlsl" />
+    <FxCompile Include="Asset\Shader\FXAAShader.hlsl" />
+    <FxCompile Include="Asset\Shader\TextureDepthPS.hlsl" />
+    <FxCompile Include="Asset\Shader\TexturePS.hlsl" />
+    <FxCompile Include="Asset\Shader\TextureVS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Global\Octree.cpp">
@@ -366,6 +368,20 @@
     <ClCompile Include="Source\Manager\Asset\Private\TextureManager.cpp" />
     <ClCompile Include="Source\Render\RenderPass\Private\FogPass.cpp" />
     <ClCompile Include="Source\Render\UI\Widget\Private\ActorSpawnWidget.cpp" />
+    <ClCompile Include="Source\Actor\Private\HeightFogActor.cpp" />
+    <ClCompile Include="Source\Actor\Private\PointLightActor.cpp" />
+    <ClCompile Include="Source\Component\Private\LightComponent.cpp" />
+    <ClCompile Include="Source\Component\Private\PointLightComponent.cpp" />
+    <ClCompile Include="Source\Component\Private\MovementComponent.cpp" />
+    <ClCompile Include="Source\Component\Private\ProjectileMovementComponent.cpp" />
+    <ClCompile Include="Source\Component\Private\RotatingMovementComponent.cpp" />
+    <ClCompile Include="Source\Render\RenderPass\Private\PointLightPass.cpp" />
+    <ClCompile Include="Source\Render\RenderPass\Private\FXAAPass.cpp" />
+    <ClCompile Include="Source\Render\RenderPass\Private\SceneDepthPass.cpp" />
+    <ClCompile Include="Source\Render\UI\Widget\Private\HeightFogComponentWidget.cpp" />
+    <ClCompile Include="Source\Render\UI\Widget\Private\PointLightComponentWidget.cpp" />
+    <ClCompile Include="Source\Render\UI\Widget\Private\ProjectileMovementComponentWidget.cpp" />
+    <ClCompile Include="Source\Render\UI\Widget\Private\RotatingMovementComponentWidget.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Global\Octree.h">
@@ -763,6 +779,20 @@
     <ClInclude Include="Source\Manager\Asset\Public\TextureManager.h" />
     <ClInclude Include="Source\Render\RenderPass\Public\FogPass.h" />
     <ClInclude Include="Source\Render\UI\Widget\Public\ActorSpawnWidget.h" />
+    <ClInclude Include="Source\Actor\Public\HeightFogActor.h" />
+    <ClInclude Include="Source\Actor\Public\PointLightActor.h" />
+    <ClInclude Include="Source\Component\Public\PointLightComponent.h" />
+    <ClInclude Include="Source\Component\Public\MovementComponent.h" />
+    <ClInclude Include="Source\Component\Public\ProjectileMovementComponent.h" />
+    <ClInclude Include="Source\Component\Public\RotatingMovementComponent.h" />
+    <ClInclude Include="Source\Component\Public\LightComponent.h" />
+    <ClInclude Include="Source\Render\RenderPass\Public\PointLightPass.h" />
+    <ClInclude Include="Source\Render\RenderPass\Public\FXAAPass.h" />
+    <ClInclude Include="Source\Render\RenderPass\Public\SceneDepthPass.h" />
+    <ClInclude Include="Source\Render\UI\Widget\Public\HeightFogComponentWidget.h" />
+    <ClInclude Include="Source\Render\UI\Widget\Public\PointLightComponentWidget.h" />
+    <ClInclude Include="Source\Render\UI\Widget\Public\ProjectileMovementComponentWidget.h" />
+    <ClInclude Include="Source\Render\UI\Widget\Public\RotatingMovementComponentWidget.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Engine.rc" />
