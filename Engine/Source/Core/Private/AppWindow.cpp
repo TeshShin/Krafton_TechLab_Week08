@@ -1,11 +1,10 @@
 #include "pch.h"
 #include "Core/Public/AppWindow.h"
 #include "Core/Public/resource.h"
-
 #include "ImGui/imgui.h"
-#include "Manager/UI/Public/UIManager.h"
-#include "Manager/Input/Public/InputManager.h"
-#include "Render/Renderer/Public/Renderer.h"
+#include "Manager/Public/UIManager.h"
+#include "Manager/Public/InputManager.h"
+#include "Renderer/Public/Renderer.h"
 
 FAppWindow::FAppWindow(FClientApp* InOwner)
 	: Owner(InOwner), InstanceHandle(nullptr), MainWindowHandle(nullptr)

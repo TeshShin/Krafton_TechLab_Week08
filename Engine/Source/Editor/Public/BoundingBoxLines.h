@@ -1,5 +1,5 @@
 #pragma once
-#include "Core/Public/Object.h"
+#include "Core/Public/Object/Object.h"
 #include "Physics/Public/AABB.h"
 
 class UBoundingBoxLines : UObject

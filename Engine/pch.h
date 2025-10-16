@@ -32,18 +32,19 @@
 #include <xmmintrin.h>
 
 // Global Included
-#include "Source/Global/Types.h"
-#include "Source/Global/Memory.h"
-#include "Source/Global/Constant.h"
-#include "Source/Global/Enum.h"
-#include "Source/Global/Matrix.h"
-#include "Source/Global/Vector.h"
-#include "Source/Global/Quaternion.h"
-#include "Source/Global/CoreTypes.h"
-#include "Source/Global/Macro.h"
-#include "Source/Global/Function.h"
-#include "Source/Utility/Public/ScopeCycleCounter.h"
-#include "Source/Editor/Public/EditorEngine.h"
+#include "Core/Public/AppWindow.h"
+#include "Core/Public/Types.h"
+#include "Core/Public/Memory.h"
+#include "Core/Public/Misc/Constant.h"
+#include "Core/Public/Misc/Enum.h"
+#include "Core/Public/Math/Matrix.h"
+#include "Core/Public/Math/Vector.h"
+#include "Core/Public/Math/Quaternion.h"
+#include "Core/Public/CoreTypes.h"
+#include "Core/Public/Misc/Macro.h"
+#include "Core/Public/Misc/Function.h"
+#include "Core/Public/Misc/ScopeCycleCounter.h"
+#include "Editor/Public/EditorEngine.h"
 
 using std::clamp;
 using std::unordered_map;
@@ -72,10 +73,10 @@ using filesystem::exists;
 using filesystem::create_directories;
 
 #define IMGUI_DEFINE_MATH_OPERATORS
-#include "Source/Render/UI/Window/Public/ConsoleWindow.h"
+#include "Editor/Public/UI/Window/ConsoleWindow.h"
 
 // DT Include
-#include "Source/Manager/Time/Public/TimeManager.h"
+#include "Manager/Public/TimeManager.h"
 
 // 빌드 조건에 따른 Library 분류
 #ifdef _DEBUG

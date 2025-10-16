@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "Editor/Public/Axis.h"
-#include "Render/Renderer/Public/Renderer.h"
-#include "Render/Renderer/Public/RenderResourceFactory.h"
+#include "Renderer/Public/Renderer.h"
+#include "Renderer/Public/RenderResourceFactory.h"
 
 UAxis::UAxis()
 {

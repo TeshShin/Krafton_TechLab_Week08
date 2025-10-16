@@ -1,6 +1,5 @@
 #pragma once
 #include "Physics/Public/BoundingVolume.h"
-#include "Global/Vector.h"
 
 struct FAABB : public IBoundingVolume
 {

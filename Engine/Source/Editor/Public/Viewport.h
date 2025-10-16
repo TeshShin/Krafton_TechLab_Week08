@@ -1,6 +1,5 @@
 #pragma once
 #include "Editor/Public/ViewportClient.h"
-#include "Optimization/Public/ViewVolumeCuller.h"
 
 class URenderer;
 

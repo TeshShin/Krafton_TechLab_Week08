@@ -1,11 +1,10 @@
 #include "pch.h"
 #include "Editor/Public/BatchLines.h"
-#include "Render/Renderer/Public/Renderer.h"
+#include "Renderer/Public/Renderer.h"
 #include "Editor/Public/EditorPrimitive.h"
-#include "Manager/Asset/Public/AssetManager.h"
-#include "Render/Renderer/Public/RenderResourceFactory.h"
-#include "Global/Octree.h"
-#include "Component/Public/DecalSpotLightComponent.h"
+#include "Renderer/Public/RenderResourceFactory.h"
+#include "Core/Public/Container/Octree.h"
+#include "Scene/Public/Component/DecalSpotLightComponent.h"
 #include "Physics/Public/OBB.h"
 
 IMPLEMENT_CLASS(UBatchLines, UObject)

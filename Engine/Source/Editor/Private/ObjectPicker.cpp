@@ -2,10 +2,10 @@
 #include "Editor/Public/ObjectPicker.h"
 #include "Editor/Public/Camera.h"
 #include "Editor/Public/Gizmo.h"
-#include "Component/Public/PrimitiveComponent.h"
-#include "Global/Octree.h"
+#include "Scene/Public/Component/PrimitiveComponent.h"
+#include "Core/Public/Container/Octree.h"
 #include "Physics/Public/AABB.h"
-#include "Component/Mesh/Public/StaticMeshComponent.h"
+#include "Scene/Public/Component/StaticMeshComponent.h"
 
 FRay UObjectPicker::GetModelRay(const FRay& Ray, UPrimitiveComponent* Primitive)
 {

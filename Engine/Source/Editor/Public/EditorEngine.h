@@ -1,6 +1,6 @@
 ﻿#pragma once
-#include "Core/Public/Object.h"
-#include "Level/Public/World.h"
+#include "Core/Public/Object/Object.h"
+#include "Scene/Public/Level/World.h"
 
 class UEditor;
 /**

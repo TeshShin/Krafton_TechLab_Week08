@@ -1,4 +1,5 @@
 #pragma once
+#include "Types.h"
 
 class FClientApp;
 
@@ -17,7 +18,7 @@ public:
 	// Getter & Setter
 	HWND GetWindowHandle() const { return MainWindowHandle; }
 	HINSTANCE GetInstanceHandle() const { return InstanceHandle; }
-	void SetNewTitle(const wstring& InNewTitle) const;
+	void SetNewTitle(const std::wstring& InNewTitle) const;
 
 	// Special Member Function
 	FAppWindow(FClientApp* InOwner);

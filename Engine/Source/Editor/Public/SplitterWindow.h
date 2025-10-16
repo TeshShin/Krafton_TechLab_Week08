@@ -1,5 +1,4 @@
 #pragma once
-#include "Global/CoreTypes.h"
 
 /* *
 * @brief 스플리터의 접힘 상태를 나타내는 Enum 타입입니다.

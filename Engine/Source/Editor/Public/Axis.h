@@ -1,7 +1,6 @@
 #pragma once
-#include "Core/Public/Object.h"
+#include "Core/Public/Object/Object.h"
 #include "Editor/Public/EditorPrimitive.h"
-#include "Global/CoreTypes.h"
 
 class UAxis : public UObject
 {

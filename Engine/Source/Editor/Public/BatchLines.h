@@ -1,6 +1,4 @@
 #pragma once
-#include "Global/Types.h"
-#include "Global/CoreTypes.h"
 #include "Editor/Public/EditorPrimitive.h"
 #include "Editor/Public/Grid.h"
 #include "Editor/Public/BoundingBoxLines.h"

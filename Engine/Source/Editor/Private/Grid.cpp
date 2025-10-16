@@ -1,8 +1,7 @@
 #include "pch.h"
 #include "Editor/Public/Grid.h"
-#include "Render/Renderer/Public/Renderer.h"
 #include "Editor/Public/EditorPrimitive.h"
-#include "Manager/Config/Public/ConfigManager.h"
+#include "Manager/Public/ConfigManager.h"
 
 
 UGrid::UGrid()

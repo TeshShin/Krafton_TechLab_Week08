@@ -1,7 +1,5 @@
 #pragma once
-#include "Core/Public/Object.h"
-#include "Global/CoreTypes.h"
-#include "Editor/Public/EditorPrimitive.h"
+#include "Core/Public/Object/Object.h"
 
 class UGrid : public UObject
 {

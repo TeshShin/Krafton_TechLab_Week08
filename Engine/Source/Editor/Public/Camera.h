@@ -1,6 +1,6 @@
 #pragma once
-#include "Core/Public/Object.h"
-#include "Optimization/Public/ViewVolumeCuller.h"
+#include "Core/Public/Object/Object.h"
+#include "Renderer/Public/Optimization/ViewVolumeCuller.h"
 
 class UConfigManager;
 

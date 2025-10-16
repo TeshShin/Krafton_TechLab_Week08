@@ -1,11 +1,9 @@
 #include "pch.h"
 #include "Editor/Public/Camera.h"
-#include "Manager/Input/Public/InputManager.h"
-#include "Manager/Time/Public/TimeManager.h"
-#include "Manager/Config/Public/ConfigManager.h"
-
-#include "Component/Public/PrimitiveComponent.h"
-#include "Level/Public/Level.h"
+#include "Manager/Public/InputManager.h"
+#include "Manager/Public/TimeManager.h"
+#include "Manager/Public/ConfigManager.h"
+#include "Scene/Public/Level/Level.h"
 
 UCamera::UCamera() :
 	CameraConstants(FCameraConstants()),

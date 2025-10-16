@@ -1,11 +1,9 @@
 #include "pch.h"
 #include "Editor/Public/Gizmo.h"
 #include "Editor/Public/Camera.h"
-#include "Manager/Asset/Public/AssetManager.h"
-#include "Render/Renderer/Public/Renderer.h"
-#include "Actor/Public/Actor.h"
+#include "Manager/Public/AssetManager.h"
+#include "Renderer/Public/Renderer.h"
 #include "Editor/Public/Editor.h"
-#include "Global/Quaternion.h"
 
 UGizmo::UGizmo()
 {

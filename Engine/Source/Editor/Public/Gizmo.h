@@ -1,7 +1,6 @@
 #pragma once
 #include "Editor/Public/EditorPrimitive.h"
-#include "Core/Public/Object.h"
-#include "Actor/Public/Actor.h"
+#include "Scene/Public/Actor/Actor.h"
 
 class UCamera;
 

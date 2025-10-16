@@ -1,20 +1,17 @@
 #include "pch.h"
 #include "Core/Public/ClientApp.h"
 
-#include "Editor/Public/Editor.h"
 #include "Core/Public/AppWindow.h"
-#include "Manager/Input/Public/InputManager.h"
 
-#include "Manager/Asset/Public/AssetManager.h"
-#include "Manager/Time/Public/TimeManager.h"
+#include "Manager/Public/InputManager.h"
+#include "Manager/Public/AssetManager.h"
+#include "Manager/Public/TimeManager.h"
 
-#include "Manager/UI/Public/UIManager.h"
-#include "Manager/Config/Public/ConfigManager.h"
-#include "Render/Renderer/Public/Renderer.h"
+#include "Manager/Public/UIManager.h"
+#include "Renderer/Public/Renderer.h"
 
-#include "Render/UI/Window/Public/ConsoleWindow.h"
-#include "Render/UI/Overlay/Public/StatOverlay.h"
-#include "Utility/Public/ScopeCycleCounter.h"
+#include "Editor/Public/UI/StatOverlay.h"
+#include "Core/Public/Misc/ScopeCycleCounter.h"
 
 #ifdef IS_OBJ_VIEWER
 #include "Utility/Public/FileDialog.h"

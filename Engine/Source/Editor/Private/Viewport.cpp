@@ -1,8 +1,7 @@
 #include "pch.h"
 #include "Editor/Public/Viewport.h"
-#include "Render/Renderer/Public/Renderer.h"
-#include "Manager/Config/Public/ConfigManager.h"
-#include "Optimization/Public/ViewVolumeCuller.h"
+#include "Renderer/Public/Renderer.h"
+#include "Manager/Public/ConfigManager.h"
 
 FViewport::~FViewport()
 {
