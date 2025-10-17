@@ -1,4 +1,4 @@
-﻿#include "TextureVS.hlsl"
+#include "TextureVS.hlsl"
 
 cbuffer MaterialConstants : register(b2)
 {
@@ -14,7 +14,7 @@ cbuffer MaterialConstants : register(b2)
 
 Texture2D DiffuseTexture : register(t0);	// map_Kd
 Texture2D AmbientTexture : register(t1);	// map_Ka
-Texture2D SpecularTexture : register(t2);	// map_Ks
+Texture2D SpecularTexture : register(t2);   // map_Ks
 Texture2D ShiniessTexture : register(t3);   // map_Ns
 Texture2D AlphaTexture : register(t4);		// map_d
 Texture2D BumpTexture : register(t5);		// map_bump
@@ -35,7 +35,7 @@ struct PS_OUTPUT
     float4 NormalData : SV_Target1;
 };
 
-PS_OUTPUT mainPS(PS_INPUT Input)
+PS_OUTPUT mainPS(PS_INPUT Input) : SV_Target
 {
     PS_OUTPUT Output;
     

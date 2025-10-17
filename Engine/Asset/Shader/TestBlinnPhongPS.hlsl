@@ -1,4 +1,4 @@
-﻿#include "TextureVS.hlsl"
+#include "TextureVS.hlsl"
 
 cbuffer MaterialConstants : register(b2)
 {
@@ -103,11 +103,11 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
         float ShiniessTemp = ShiniessTexture.Sample(SamplerWrap, UV).r;
         Shininess = Shininess * ShiniessTemp * 128.0f; // Assuming texture stores exponent in [0,1] range
     }
-    
-    float Normal = Input.WorldNormal;
+
+    float3 Normal = Input.WorldNormal;
     if(MaterialFlags & HAS_BUMP_MAP)
     {
-        float3 Normal = BumpTexture.Sample(SamplerWrap, UV).xyz * 2.0f - 1.0f;
+        Normal = BumpTexture.Sample(SamplerWrap, UV).xyz * 2.0f - 1.0f;
         Normal = normalize(Normal);
     }
 
