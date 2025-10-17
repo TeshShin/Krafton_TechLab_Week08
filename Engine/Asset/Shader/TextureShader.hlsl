@@ -42,6 +42,7 @@ struct VS_INPUT
 {
 	float3 position : POSITION;
 	float3 normal : NORMAL;
+	float4 tangent : TANGENT;
 	float4 color : COLOR;
 	float2 tex : TEXCOORD0;
 };
@@ -50,6 +51,8 @@ struct PS_INPUT
 {
 	float4 position : SV_POSITION;	// Transformed position to pass to the pixel shader
 	float3 normal : TEXCOORD0;
+	float3 tangent : TANGENT;
+	float3 bitangent : BINORMAL;
 	float2 tex : TEXCOORD1;
 };
 
@@ -62,8 +65,18 @@ PS_INPUT mainVS(VS_INPUT input)
 	tmp = mul(tmp, View);
 	tmp = mul(tmp, Projection);
 	output.position = tmp;
-	output.normal = normalize(mul(float4(input.normal, 0.0f), world).xyz);
 	output.tex = input.tex;
+
+	float3x3 world3x3 = world;
+
+	float3 normal = normalize(mul(float3(input.normal), world3x3));
+	float3 tangent = normalize(mul(input.tangent, world3x3));
+	float handedness = input.tangent.w;
+	float3 bitangent = normalize(cross(normal, tangent) * handedness);
+
+	output.normal = normal;
+	output.tangent = tangent;
+	output.bitangent = bitangent;
 
 	return output;
 }
@@ -106,6 +119,11 @@ PS_OUTPUT mainPS(PS_INPUT input) : SV_TARGET
 	}
 
 	output.SceneColor = finalColor;
+
+	float3x3 TBN = float3x3(normalize(input.tangent),
+							normalize(input.bitangent),
+							normalize(input.normal));
+	float3 worldNormal = normalize(mul(float4(input.normal, 0.0f), TBN).xyz);
 	float3 encodedNormal = normalize(input.normal) * 0.5f + 0.5f; // [-1,1] → [0,1]
 	output.NormalData = float4(encodedNormal, 1.0f);
 	

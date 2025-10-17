@@ -261,6 +261,21 @@ void FObjManager::CreateMaterialsFromMTL(UStaticMesh* StaticMesh, FStaticMesh* S
 			}
 		}
 
+		// Normal/Bump 텍스처 로드 (map_bump or bump)
+		if (!MaterialInfo.BumpMap.empty())
+		{
+			FString TexturePathStr = (ObjDirectory / MaterialInfo.BumpMap).generic_string();
+
+			if (std::filesystem::exists(TexturePathStr))
+			{
+				UTexture* NormalTexture = AssetManager.LoadTexture(TexturePathStr);
+				if (NormalTexture)
+				{
+					Material->SetNormalTexture(NormalTexture);
+				}
+			}
+		}
+
 		// Alpha 텍스처 로드 (map_d)
 		if (!MaterialInfo.DMap.empty())
 		{
