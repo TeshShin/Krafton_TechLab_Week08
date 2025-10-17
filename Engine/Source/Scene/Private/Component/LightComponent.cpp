@@ -1,0 +1,21 @@
+﻿# include "pch.h"
+# include "Scene/Public/Component/LightComponent.h"
+# include "Asset/Public/JsonSerializer.h"
+
+IMPLEMENT_ABSTRACT_CLASS(ULightComponent, ULightComponentBase)
+
+void ULightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+{
+	Super::Serialize(bInIsLoading, InOutHandle);
+}
+
+UObject* ULightComponent::Duplicate()
+{
+	ULightComponent* LightComponent = Cast<ULightComponent>(Super::Duplicate());
+	return LightComponent;
+}
+
+void ULightComponent::DuplicateSubObjects(UObject* DuplicatedObject)
+{
+	Super::DuplicateSubObjects(DuplicatedObject);
+}

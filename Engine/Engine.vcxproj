@@ -447,7 +447,10 @@
     <ClInclude Include="Source\Scene\Public\Component\DecalComponent.h" />
     <ClInclude Include="Source\Scene\Public\Component\DecalSpotLightComponent.h" />
     <ClInclude Include="Source\Scene\Public\Component\HeightFogComponent.h" />
-    <ClInclude Include="Source\Scene\Public\Component\LightComponent.h" />
+    <ClInclude Include="Source\Scene\Public\Component\LightComponent.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\Public\Component\LightComponentBase.h" />
     <ClInclude Include="Source\Scene\Public\Component\MeshComponent.h">
       <DeploymentContent>false</DeploymentContent>
     </ClInclude>
@@ -480,21 +483,21 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Source\Asset\Private\Material.cpp"/>
-    <ClCompile Include="Source\Asset\Private\ObjImporter.cpp"/>
-    <ClCompile Include="Source\Asset\Private\ObjManager.cpp"/>
-    <ClCompile Include="Source\Asset\Private\StaticMesh.cpp"/>
-    <ClCompile Include="Source\Asset\Private\Texture.cpp"/>
-    <ClCompile Include="Source\Asset\Private\TextureManager.cpp"/>
-    <ClCompile Include="Source\Asset\Private\VertexDatas.cpp"/>
-    <ClCompile Include="Source\Core\Private\Archive\Archive.cpp"/>
-    <ClCompile Include="Source\Core\Private\Archive\WindowsBinReader.cpp"/>
-    <ClCompile Include="Source\Core\Private\Archive\WindowsBinWriter.cpp"/>
-    <ClCompile Include="Source\Core\Private\Container\BVH.cpp"/>
-    <ClCompile Include="Source\Core\Private\Container\Name.cpp"/>
-    <ClCompile Include="Source\Core\Private\Container\Octree.cpp"/>
-    <ClCompile Include="Source\Core\Private\Math\Matrix.cpp"/>
-    <ClCompile Include="Source\Core\Private\Math\Quaternion.cpp"/>
+    <ClCompile Include="Source\Asset\Private\Material.cpp" />
+    <ClCompile Include="Source\Asset\Private\ObjImporter.cpp" />
+    <ClCompile Include="Source\Asset\Private\ObjManager.cpp" />
+    <ClCompile Include="Source\Asset\Private\StaticMesh.cpp" />
+    <ClCompile Include="Source\Asset\Private\Texture.cpp" />
+    <ClCompile Include="Source\Asset\Private\TextureManager.cpp" />
+    <ClCompile Include="Source\Asset\Private\VertexDatas.cpp" />
+    <ClCompile Include="Source\Core\Private\Archive\Archive.cpp" />
+    <ClCompile Include="Source\Core\Private\Archive\WindowsBinReader.cpp" />
+    <ClCompile Include="Source\Core\Private\Archive\WindowsBinWriter.cpp" />
+    <ClCompile Include="Source\Core\Private\Container\BVH.cpp" />
+    <ClCompile Include="Source\Core\Private\Container\Name.cpp" />
+    <ClCompile Include="Source\Core\Private\Container\Octree.cpp" />
+    <ClCompile Include="Source\Core\Private\Math\Matrix.cpp" />
+    <ClCompile Include="Source\Core\Private\Math\Quaternion.cpp" />
     <ClCompile Include="Source\Core\Private\Math\Vector.cpp">
     </ClCompile>
     <ClCompile Include="Source\Core\Private\Memory.cpp">
@@ -676,6 +679,9 @@
     <ClCompile Include="Source\Scene\Private\Component\HeightFogComponent.cpp">
     </ClCompile>
     <ClCompile Include="Source\Scene\Private\Component\LightComponent.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
+    <ClCompile Include="Source\Scene\Private\Component\LightComponentBase.cpp">
     </ClCompile>
     <ClCompile Include="Source\Scene\Private\Component\MeshComponent.cpp">
       <DeploymentContent>false</DeploymentContent>
@@ -731,12 +737,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="Asset\Shader\TextureDepthPS.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewerDebug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">true</ExcludedFromBuild>
-    </FxCompile>
     <FxCompile Include="Asset\Shader\TexturePS.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewerDebug|x64'">true</ExcludedFromBuild>
@@ -776,5 +776,8 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Engine.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
 </Project>
