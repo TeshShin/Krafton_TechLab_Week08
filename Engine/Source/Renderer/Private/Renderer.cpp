@@ -19,7 +19,6 @@
 #include "Renderer/Public/RenderPass/DecalPass.h"
 #include "Renderer/Public/RenderPass/FXAAPass.h"
 #include "Renderer/Public/RenderPass/FogPass.h"
-#include "Renderer/Public/RenderPass/PointLightPass.h"
 #include "Renderer/Public/RenderPass/StaticMeshPass.h"
 #include "Renderer/Public/RenderPass/TextPass.h"
 #include "Renderer/Public/RenderResourceFactory.h"
@@ -57,9 +56,6 @@ void URenderer::Init(HWND InWindowHandle)
 
 	FDecalPass* DecalPass = new FDecalPass(Pipeline, ConstantBufferViewProj, DecalDepthStencilState, AlphaBlendState);
 	RenderPasses.push_back(DecalPass);
-
-	FPointLightPass* PointLightPass = new FPointLightPass(Pipeline, DisabledDepthStencilState, AdditiveBlendState);
-	RenderPasses.push_back(PointLightPass);
 	
 	FBillboardPass* BillboardPass = new FBillboardPass(Pipeline, ConstantBufferViewProj, ConstantBufferModels,
 		TextureVertexShader, TexturePixelShader, TextureInputLayout, DefaultDepthStencilState, AlphaBlendState);
@@ -465,7 +461,7 @@ void URenderer::OnResize(uint32 InWidth, uint32 InHeight) const
 
 void URenderer::CreateConstantBuffers()
 {
-	ConstantBufferModels = FRenderResourceFactory::CreateConstantBuffer<FMatrix>();
+	ConstantBufferModels = FRenderResourceFactory::CreateConstantBuffer<FModelConstants>();
 	ConstantBufferColor = FRenderResourceFactory::CreateConstantBuffer<FVector4>();
 	ConstantBufferViewProj = FRenderResourceFactory::CreateConstantBuffer<FCameraConstants>();
 }

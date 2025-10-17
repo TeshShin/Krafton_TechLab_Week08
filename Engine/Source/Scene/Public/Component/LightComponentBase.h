@@ -84,5 +84,5 @@ private:
      */
     FVector LightColor = { 1.0f, 1.0f, 1.0f };
 
-    bool bVisible;
+    bool bVisible = true;
 };

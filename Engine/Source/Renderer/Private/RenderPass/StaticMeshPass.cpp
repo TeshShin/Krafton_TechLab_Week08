@@ -1,8 +1,11 @@
 #include "pch.h"
 #include "Renderer/Public/RenderPass/StaticMeshPass.h"
 #include "Scene/Public/Component/StaticMeshComponent.h"
+#include "Scene/Public/Component/PointLightComponent.h"
+#include "Scene/Public/Component/SpotLightComponent.h"
 #include "Renderer/Public/Pipeline.h"
 #include "Renderer/Public/RenderResourceFactory.h"
+#include "Renderer/Public/LightData.h"
 #include "Asset/Public/Texture.h"
 #include "Scene/Public/Component/LightComponentBase.h"
 
@@ -12,10 +15,19 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstant
 {
 	ConstantBufferMaterial = FRenderResourceFactory::CreateConstantBuffer<FMaterialConstants>();
 	ConstantBufferLight = FRenderResourceFactory::CreateConstantBuffer<FLightConstants>();
+
+	// Unified Dynamic Light Buffer (Point, Spot, Rect)
+	UnifiedLightCapacity = 128;  // Initial capacity for all dynamic lights
+	UnifiedLightStructuredBuffer = FRenderResourceFactory::CreateStructuredBuffer<FUnifiedDynamicLight>(
+		UnifiedLightCapacity);
+	UnifiedLightSRV = FRenderResourceFactory::CreateBufferSRV(
+		UnifiedLightStructuredBuffer, UnifiedLightCapacity);
 }
 
 void FStaticMeshPass::Execute(FRenderingContext& Context)
 {
+	UpdateLightsFromContext(Context);
+
 	FRenderState RenderState = UStaticMeshComponent::GetClassDefaultRenderState();
 	if (Context.ViewMode == EViewModeIndex::VMI_Wireframe)
 	{
@@ -194,8 +206,85 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	// --- RTVs Reset End ---
 }
 
+void FStaticMeshPass::UpdateLightsFromContext(FRenderingContext& Context)
+{
+	// Step 1: Collect all dynamic lights into unified buffer
+	TArray<FUnifiedDynamicLight> UnifiedLights;
+
+	for (ULightComponentBase* Light : Context.Lights)
+	{
+		if (!Light || !Light->IsVisible()) continue;
+
+		FUnifiedDynamicLight UnifiedLight = {};
+
+		switch (Light->GetLightType())
+		{
+		case ELightComponentType::LightType_Point:
+		{
+			UPointLightComponent* PointLight = Cast<UPointLightComponent>(Light);
+			if (!PointLight) continue;
+
+			UnifiedLight.Position = PointLight->GetWorldLocation();
+			UnifiedLight.Intensity = PointLight->GetIntensity();
+			UnifiedLight.Color = PointLight->GetLightColor();
+			UnifiedLight.SourceRadius = max(PointLight->GetSourceRadius(), 1000.0f);  // Temp: ensure minimum radius
+			UnifiedLight.FalloffExponent = PointLight->GetLightFalloffExtent();
+			UnifiedLight.LightType = static_cast<uint32>(EDynamicLightType::Point);
+
+			UnifiedLights.push_back(UnifiedLight);
+			break;
+		}
+		//case ELightComponentType::LightType_Spot:
+		//{
+		//	USpotLightComponent* SpotLight = Cast<USpotLightComponent>(Light);
+		//	if (!SpotLight) continue;
+
+		//	UnifiedLight.Position = SpotLight->GetWorldLocation();
+		//	UnifiedLight.Intensity = SpotLight->GetIntensity();
+		//	UnifiedLight.Color = SpotLight->GetLightColor();
+		//	UnifiedLight.SourceRadius = 1000.0f;
+		//	UnifiedLight.Direction = SpotLight->GetWorldForwardVector();
+		//	UnifiedLight.FalloffExponent = SpotLight->GetLight
+		//	//UnifiedLight.Param0 = SpotLight->GetInnerConeAngle();
+		//	//UnifiedLight.Param1 = SpotLight->GetOuterConeAngle();
+		//	UnifiedLight.LightType = static_cast<uint32>(EDynamicLightType::Spot);
+
+		//	UnifiedLights.push_back(UnifiedLight);
+		//	break;
+		//}
+		case ELightComponentType::LightType_Ambient:
+		case ELightComponentType::LightType_Directional:
+			// These are handled via ConstantBuffer, skip here
+			break;
+		default:
+			break;
+		}
+	}
+
+	// Step 2: Reallocate buffer if capacity exceeded
+	if (UnifiedLights.size() > UnifiedLightCapacity)
+	{
+		UnifiedLightCapacity = static_cast<uint32>(UnifiedLights.size() * 2);
+		FRenderResourceFactory::ReallocateStructuredBuffer<FUnifiedDynamicLight>(
+			UnifiedLightStructuredBuffer, UnifiedLightSRV, UnifiedLightCapacity);
+	}
+
+	// Step 3: Upload to GPU
+	if (!UnifiedLights.empty())
+	{
+		FRenderResourceFactory::UpdateStructuredBufferData(
+			UnifiedLightStructuredBuffer, UnifiedLights);
+	}
+
+	// Step 4: Bind SRV to Pixel Shader (t6)
+	Pipeline->SetTexture(6, false, UnifiedLightSRV);
+}
+
+
 void FStaticMeshPass::Release()
 {
 	SafeRelease(ConstantBufferMaterial);
 	SafeRelease(ConstantBufferLight);
+	SafeRelease(UnifiedLightStructuredBuffer);
+	SafeRelease(UnifiedLightSRV);
 }

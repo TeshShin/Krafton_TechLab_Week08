@@ -9,6 +9,8 @@ public:
     void Execute(FRenderingContext& Context) override;
     void Release() override;
 
+    void UpdateLightsFromContext(FRenderingContext& Context);
+
 private:
     ID3D11VertexShader* VS = nullptr;
     ID3D11PixelShader* PS = nullptr;
@@ -17,4 +19,9 @@ private:
     
     ID3D11Buffer* ConstantBufferMaterial = nullptr;
     ID3D11Buffer* ConstantBufferLight = nullptr;
+
+    // Unified Dynamic Light Buffer (Point, Spot, Rect lights)
+    ID3D11Buffer* UnifiedLightStructuredBuffer = nullptr;
+    ID3D11ShaderResourceView* UnifiedLightSRV = nullptr;
+    uint32 UnifiedLightCapacity;
 };

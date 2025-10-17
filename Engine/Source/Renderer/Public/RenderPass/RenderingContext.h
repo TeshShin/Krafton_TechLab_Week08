@@ -1,4 +1,5 @@
-﻿#pragma once
+#pragma once
+#include "Core/Public/CoreTypes.h"
 
 struct FRenderingContext
 {
