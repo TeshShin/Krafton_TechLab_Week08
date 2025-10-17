@@ -426,3 +426,6 @@ WARP.md
 # Rider
 .idea/
 *.objbin
+
+# class diagram
+*.cd
