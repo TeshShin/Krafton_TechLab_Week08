@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Core/Public/Object/Object.h"
 
 class UTexture;
@@ -75,14 +75,14 @@ public:
 	UTexture* GetDiffuseTexture() const { return DiffuseTexture; }
 	UTexture* GetAmbientTexture() const { return AmbientTexture; }
 	UTexture* GetSpecularTexture() const { return SpecularTexture; }
-	UTexture* GetNormalTexture() const { return NormalTexture; }
+	UTexture* GetShiniessTexture() const { return ShiniessTexture; }
 	UTexture* GetAlphaTexture() const { return AlphaTexture; }
 	UTexture* GetBumpTexture() const { return BumpTexture; }
 
 	void SetDiffuseTexture(UTexture* InTexture) { DiffuseTexture = InTexture; }
 	void SetAmbientTexture(UTexture* InTexture) { AmbientTexture = InTexture; }
 	void SetSpecularTexture(UTexture* InTexture) { SpecularTexture = InTexture; }
-	void SetNormalTexture(UTexture* InTexture) { NormalTexture = InTexture; }
+	void SetShiniessTexture(UTexture* InTexture) { ShiniessTexture = InTexture; }
 	void SetAlphaTexture(UTexture* InTexture) { AlphaTexture = InTexture; }
 	void SetBumpTexture(UTexture* InTexture) { BumpTexture = InTexture; }
 
@@ -90,7 +90,7 @@ private:
 	UTexture* DiffuseTexture = nullptr;
 	UTexture* AmbientTexture = nullptr;
 	UTexture* SpecularTexture = nullptr;
-	UTexture* NormalTexture = nullptr;
+	UTexture* ShiniessTexture = nullptr;
 	UTexture* AlphaTexture = nullptr;
 	UTexture* BumpTexture = nullptr;
 

@@ -1,4 +1,4 @@
-#include "TextureVS.hlsl"
+﻿#include "TextureVS.hlsl"
 
 cbuffer MaterialConstants : register(b2)
 {
@@ -15,7 +15,7 @@ cbuffer MaterialConstants : register(b2)
 Texture2D DiffuseTexture : register(t0);	// map_Kd
 Texture2D AmbientTexture : register(t1);	// map_Ka
 Texture2D SpecularTexture : register(t2);	// map_Ks
-Texture2D NormalTexture : register(t3);		// map_Ns
+Texture2D ShiniessTexture : register(t3);   // map_Ns
 Texture2D AlphaTexture : register(t4);		// map_d
 Texture2D BumpTexture : register(t5);		// map_bump
 
@@ -25,7 +25,7 @@ SamplerState SamplerWrap : register(s0);
 #define HAS_DIFFUSE_MAP	 (1 << 0)
 #define HAS_AMBIENT_MAP	 (1 << 1)
 #define HAS_SPECULAR_MAP (1 << 2)
-#define HAS_NORMAL_MAP	 (1 << 3)
+#define HAS_SHINIESS_MAP (1 << 3)
 #define HAS_ALPHA_MAP	 (1 << 4)
 #define HAS_BUMP_MAP	 (1 << 5)
 
@@ -35,7 +35,7 @@ struct PS_OUTPUT
     float4 NormalData : SV_Target1;
 };
 
-PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
+PS_OUTPUT mainPS(PS_INPUT Input)
 {
     PS_OUTPUT Output;
     
