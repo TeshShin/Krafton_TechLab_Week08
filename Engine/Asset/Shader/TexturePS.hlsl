@@ -39,7 +39,7 @@ struct PS_OUTPUT
 PS_OUTPUT mainPS(PS_INPUT Input) : SV_Target
 {
     PS_OUTPUT Output;
-	
+
     float2 UV = Input.Tex;
 
     // Base diffuse color
@@ -55,7 +55,7 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_Target
     {
         AmbientColor *= AmbientTexture.Sample(SamplerWrap, UV);
     }
-    
+
     // Specular color for material
     float4 SpecularColor = Ks;
     if (MaterialFlags & HAS_SPECULAR_MAP)
@@ -65,7 +65,7 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_Target
 
     // Shininess for material
     float Shininess = Ns;
-        
+
     // 조명 계산 호출
     float3 FinalLitColor = CalculateLighting(AmbientColor, DiffuseColor, SpecularColor, Shininess,
         Input.WorldPosition, Input.WorldNormal, ViewWorldLocation);
@@ -92,22 +92,12 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_Target
         float3 nTS = BumpTexture.Sample(SamplerWrap, UV).xyz * 2.0f - 1.0f;
         nTS = normalize(nTS);
 
-        // Derive TBN from screen-space derivatives (no vertex tangents required)
         float3 N = normalize(Input.WorldNormal);
-        float3 dpdx = ddx(Input.WorldPosition);
-        float3 dpdy = ddy(Input.WorldPosition);
-        float2 dUVdx = ddx(UV);
-        float2 dUVdy = ddy(UV);
+        float3 T = normalize(Input.WorldTangent);
+        // Recompute B using handedness (stored in TangentSign)
+        float3 B = normalize(cross(N, T)) * Input.TangentSign;
 
-        // Robust tangent reconstruction
-        float3 T = dUVdy.y * dpdx - dUVdx.y * dpdy;
-        // float3 B = -dUVdy.x * dpdx + dUVdx.x * dpdy;
-
-        // Orthonormalize
-        T = normalize(T - N * dot(N, T));
-        float3 B_ortho = normalize(cross(N, T));
-
-        float3x3 TBN = float3x3(T, B_ortho, N);
+        float3x3 TBN = float3x3(T, B, N);
         wsNormal = normalize(mul(nTS, TBN));
     }
     else
@@ -119,6 +109,6 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_Target
 
     float3 EncodedNormal = wsNormal * 0.5f + 0.5f;
     Output.NormalData = float4(EncodedNormal, 1.0f);
-    
+
     return Output;
 }

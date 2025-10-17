@@ -63,6 +63,7 @@ struct FNormalVertex
 	FVector Normal;
 	FVector4 Color;
 	FVector2 TexCoord;
+	FVector4 Tangent;
 };
 
 struct FRay
