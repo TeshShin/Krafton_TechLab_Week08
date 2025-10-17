@@ -128,7 +128,6 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 				{
 					Pipeline->SetTexture(2, false, SpecularTexture->GetTextureSRV());
 				}
-				// Bind normal map (t3) if present
 				if (UTexture* NormalTexture = Material->GetNormalTexture())
 				{
 					Pipeline->SetTexture(3, false, NormalTexture->GetTextureSRV());
