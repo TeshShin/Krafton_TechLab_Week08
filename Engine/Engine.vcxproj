@@ -443,9 +443,11 @@
     <ClInclude Include="Source\Scene\Public\Actor\TextActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\TriangleActor.h" />
     <ClInclude Include="Source\Scene\Public\Component\ActorComponent.h" />
+    <ClInclude Include="Source\Scene\Public\Component\AmbientLightComponent.h" />
     <ClInclude Include="Source\Scene\Public\Component\BillBoardComponent.h" />
     <ClInclude Include="Source\Scene\Public\Component\DecalComponent.h" />
     <ClInclude Include="Source\Scene\Public\Component\DecalSpotLightComponent.h" />
+    <ClInclude Include="Source\Scene\Public\Component\DirectionalLightComponent.h" />
     <ClInclude Include="Source\Scene\Public\Component\HeightFogComponent.h" />
     <ClInclude Include="Source\Scene\Public\Component\LightComponent.h">
       <DeploymentContent>false</DeploymentContent>
@@ -670,12 +672,14 @@
     </ClCompile>
     <ClCompile Include="Source\Scene\Private\Component\ActorComponent.cpp">
     </ClCompile>
+    <ClCompile Include="Source\Scene\Private\Component\AmbientLightComponent.cpp" />
     <ClCompile Include="Source\Scene\Private\Component\BillBoardComponent.cpp">
     </ClCompile>
     <ClCompile Include="Source\Scene\Private\Component\DecalComponent.cpp">
     </ClCompile>
     <ClCompile Include="Source\Scene\Private\Component\DecalSpotLightComponent.cpp">
     </ClCompile>
+    <ClCompile Include="Source\Scene\Private\Component\DirectionalLightComponent.cpp" />
     <ClCompile Include="Source\Scene\Private\Component\HeightFogComponent.cpp">
     </ClCompile>
     <ClCompile Include="Source\Scene\Private\Component\LightComponent.cpp">
@@ -720,6 +724,12 @@
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Asset\Shader\SceneDepthShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewerDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\AmbientDirectionalLighting.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewerDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>

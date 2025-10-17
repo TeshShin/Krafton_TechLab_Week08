@@ -67,11 +67,12 @@ void FPointLightPass::Execute(FRenderingContext& Context)
     Pipeline->SetTexture(2, false, DeviceResources->GetDepthSRV());
     Pipeline->SetSamplerState(0, false, PointLightSampler);
 
-    for (auto PointLight : Context.PointLights)
+    for (auto Light : Context.Lights)
     {
         // if (!PointLight || !PointLight->IsVisible()) { continue; }
-        if (!PointLight) { continue; }
-
+        if (!Light || Light->GetLightType() != ELightComponentType::LightType_Point) { continue; }
+        UPointLightComponent* PointLight = Cast<UPointLightComponent>(Light);
+        
         auto ViewProjConstantsInverse = Context.CurrentCamera->GetFViewProjConstantsInverse();
         
         FPointLightPerFrame PointLightPerFrame = {};

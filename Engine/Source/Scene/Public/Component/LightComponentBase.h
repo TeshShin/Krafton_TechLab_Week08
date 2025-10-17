@@ -5,11 +5,12 @@
 UENUM()
 enum class ELightComponentType
 {
-    LightType_Directional = 0,
-    LightType_Point       = 1,
-    LightType_Spot        = 2,
-    LightType_Rect        = 3,
-    LightType_Max         = 4
+    LightType_Ambient     = 0,
+    LightType_Directional = 1,
+    LightType_Point       = 2,
+    LightType_Spot        = 3,
+    LightType_Rect        = 4,
+    LightType_Max         = 5
 };
 DECLARE_ENUM_REFLECTION(ELightComponentType)
 

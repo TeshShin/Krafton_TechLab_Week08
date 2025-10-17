@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "Scene/Public/Level/Level.h"
 #include "Scene/Public/Component/PrimitiveComponent.h"
-#include "Scene/Public/Component/PointLightComponent.h"
+#include "Scene/Public/Component/LightComponentBase.h"
 #include "Editor/Public/Editor.h"
 #include "Editor/Public/Viewport.h"
 #include "Core/Public/Container/Octree.h"
@@ -146,9 +146,9 @@ void ULevel::RegisterComponent(UActorComponent* InComponent)
 			OnPrimitiveUpdated(PrimitiveComponent);
 		}
 	}
-	else if (auto PointLightComponent = Cast<UPointLightComponent>(InComponent))
+	else if (auto PointLightComponent = Cast<ULightComponentBase>(InComponent))
 	{
-		PointLights.push_back(PointLightComponent);
+		Lights.push_back(PointLightComponent);
 	}
 
 	UE_LOG("Level: '%s' 컴포넌트를 씬에 등록했습니다.", InComponent->GetName().ToString().data());
@@ -173,11 +173,11 @@ void ULevel::UnregisterComponent(UActorComponent* InComponent)
 	
 		OnPrimitiveUnregistered(PrimitiveComponent);
 	}
-	else if (auto PointLightComponent = Cast<UPointLightComponent>(InComponent))
+	else if (auto LightComponent = Cast<ULightComponentBase>(InComponent))
 	{
-		if (auto It = std::find(PointLights.begin(), PointLights.end(), PointLightComponent); It != PointLights.end())
+		if (auto It = std::find(Lights.begin(), Lights.end(), LightComponent); It != Lights.end())
 		{
-			PointLights.erase(It);
+			Lights.erase(It);
 		}	
 	}
 	
@@ -196,9 +196,9 @@ void ULevel::AddLevelComponent(AActor* Actor)
 		{
 			OnPrimitiveUpdated(PrimitiveComponent);			
 		}
-		else if (auto PointLightComponent = Cast<UPointLightComponent>(Component))
+		else if (auto LightComponent = Cast<ULightComponentBase>(Component))
 		{
-			PointLights.push_back(PointLightComponent);
+			Lights.push_back(LightComponent);
 		}
 	}
 }

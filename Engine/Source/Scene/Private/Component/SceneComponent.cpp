@@ -245,3 +245,21 @@ void USceneComponent::SetWorldScale3D(const FVector& NewScale)
         SetRelativeScale3D(NewScale);
     }
 }
+
+FVector USceneComponent::GetWorldForwardVector() const
+{
+	const FQuaternion WorldRotation = GetWorldRotationAsQuaternion();
+	return WorldRotation.RotateVector(FVector::ForwardVector());
+}
+
+FVector USceneComponent::GetWorldRightVector() const
+{
+	const FQuaternion WorldRotation = GetWorldRotationAsQuaternion();
+	return WorldRotation.RotateVector(FVector::RightVector());
+}
+
+FVector USceneComponent::GetWorldUpVector() const
+{
+	const FQuaternion WorldRotation = GetWorldRotationAsQuaternion();
+	return WorldRotation.RotateVector(FVector::UpVector());
+}

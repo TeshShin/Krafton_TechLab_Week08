@@ -70,6 +70,8 @@ public:
 	float GetSpecularExponent() const { return MaterialData.Ns; }
 	float GetRefractionIndex() const { return MaterialData.Ni; }
 	float GetDissolveFactor() const { return MaterialData.D; }
+
+	void SetMaterialData(const FMaterial& InMaterialData) { MaterialData = InMaterialData; }
 	
 	// Texture access functions
 	UTexture* GetDiffuseTexture() const { return DiffuseTexture; }

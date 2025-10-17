@@ -1,4 +1,5 @@
 #include "TextureVS.hlsl"
+#include "AmbientDirectionalLighting.hlsl"
 
 cbuffer MaterialConstants : register(b2)
 {
@@ -38,8 +39,6 @@ struct PS_OUTPUT
 PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 {
     PS_OUTPUT Output;
-    
-    float4 FinalColor = float4(0.f, 0.f, 0.f, 1.f);
     float2 UV = Input.Tex;
 
     // Base diffuse color
@@ -47,29 +46,47 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
     if (MaterialFlags & HAS_DIFFUSE_MAP)
     {
         DiffuseColor *= DiffuseTexture.Sample(SamplerWrap, UV);
-        FinalColor.a = DiffuseColor.a;
     }
 
-    // Ambient contribution
+    // Ambient color for material
     float4 AmbientColor = Ka;
     if (MaterialFlags & HAS_AMBIENT_MAP)
     {
         AmbientColor *= AmbientTexture.Sample(SamplerWrap, UV);
     }
+    
+    // Specular color for material
+    float4 SpecularColor = Ks;
+    if (MaterialFlags & HAS_SPECULAR_MAP)
+    {
+        SpecularColor *= SpecularTexture.Sample(SamplerWrap, UV);
+    }
 
-    FinalColor.rgb = DiffuseColor.rgb + AmbientColor.rgb;
+    // Shininess for material
+    float Shininess = Ns;
+    
+    // Normal mapping
+    float3 WorldNormal = normalize(Input.WorldNormal);
+    
+    // 조명 계산 호출
+    float3 FinalLitColor = CalculateLighting(AmbientColor, DiffuseColor, SpecularColor, Shininess,
+        Input.WorldPosition, WorldNormal, ViewWorldLocation);
 
-    // Alpha handling
+    float4 FinalColor;
+    FinalColor.rgb = FinalLitColor;
+
+    // 3. 알파 값 처리 (기존 코드와 동일)
+    FinalColor.a = D; // 기본 알파값
     if (MaterialFlags & HAS_ALPHA_MAP)
     {
         float alpha = AlphaTexture.Sample(SamplerWrap, UV).r;
-        FinalColor.a = D;
-        FinalColor.a *= alpha;
+        FinalColor.a = D * alpha;
     }
 
+    // 4. 최종 출력값 설정
     Output.SceneColor = FinalColor;
     float3 EncodedNormal = normalize(Input.WorldNormal) * 0.5f + 0.5f;
     Output.NormalData = float4(EncodedNormal, 1.0f);
-	
+    
     return Output;
 }

@@ -114,3 +114,29 @@ struct FRect
 	float GetRight() const { return Left + Width; }
 	float GetBottom() const { return Top + Height; }
 };
+
+/// Light Constants
+static const int MAX_DIRECTIONAL_LIGHTS = 16;
+
+// HLSL의 cbuffer는 16바이트 단위로 정렬되므로, C++ 구조체도 이에 맞춰야 합니다.
+// alignas(16) 키워드를 사용하거나, 패딩을 직접 추가할 수 있습니다.
+
+struct FAmbientLight
+{
+	FVector Color;
+	float Intensity;
+};
+
+struct FDirectionalLight
+{
+	FVector Color; float Pad0;
+	FVector Direction; float Pad1;
+	float Intensity; float Pad2[3];
+};
+
+struct FLightConstants
+{
+	FAmbientLight GlobalAmbient;
+	FDirectionalLight DirectionalLights[MAX_DIRECTIONAL_LIGHTS];
+	int NumDirectionalLights;
+};
