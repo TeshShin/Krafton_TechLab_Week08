@@ -63,6 +63,10 @@ struct PS_OUTPUT
 // [UNIFIED FORWARD RENDERING] Calculate dynamic light contribution using Blinn-Phong
 float3 CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower)
 {
+    // Early exit for disabled/dummy lights
+    if (Light.Intensity <= 0.0f)
+        return float3(0, 0, 0);
+
     float3 LightDir;
     float Attenuation = Light.Intensity;
 
