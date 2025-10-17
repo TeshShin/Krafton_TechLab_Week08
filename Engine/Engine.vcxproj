@@ -421,6 +421,7 @@
     <ClInclude Include="Source\Renderer\Public\RenderPass\DecalPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\FogPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\FXAAPass.h" />
+    <ClInclude Include="Source\Renderer\Public\RenderPass\NormalMapPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\PointLightPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\RenderingContext.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\RenderPass.h" />
@@ -479,6 +480,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewerDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
+    <Content Include="Asset\Shader\NormalMapShader.hlsl" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
@@ -631,6 +633,7 @@
     </ClCompile>
     <ClCompile Include="Source\Renderer\Private\RenderPass\FXAAPass.cpp">
     </ClCompile>
+    <ClCompile Include="Source\Renderer\Private\RenderPass\NormalMapPass.cpp" />
     <ClCompile Include="Source\Renderer\Private\RenderPass\PointLightPass.cpp">
     </ClCompile>
     <ClCompile Include="Source\Renderer\Private\RenderPass\RenderPass.cpp">
