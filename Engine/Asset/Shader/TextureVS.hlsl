@@ -35,7 +35,6 @@ PS_INPUT mainVS(VS_INPUT Input)
 	PS_INPUT Output;
 	Output.WorldPosition = mul(float4(Input.Position, 1.0f), World).xyz;
 	Output.Position = mul(mul(mul(float4(Input.Position, 1.0f), World), View), Projection);
-	// TODO - Normal은 WorldInverseTranspose로 변환해야함
 	Output.WorldNormal = normalize(mul(Input.Normal, (float3x3)WorldInverseTranspose));
 	Output.Tex = Input.Tex;
 
