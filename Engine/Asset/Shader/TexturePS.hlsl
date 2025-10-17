@@ -139,6 +139,10 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
     {
         AmbientColor *= AmbientTexture.Sample(SamplerWrap, UV);
     }
+	else if (MaterialFlags & HAS_DIFFUSE_MAP)
+	{
+		AmbientColor *= DiffuseTexture.Sample(SamplerWrap, UV);
+	}
 
     // Specular color for material
     float4 SpecularColor = Ks;
@@ -148,7 +152,7 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
     }
 
     // Start with ambient lighting (Material ambient * Global ambient)
-    float3 Lighting = AmbientColor.rgb * GlobalAmbient.Color * GlobalAmbient.Intensity;
+	float3 Lighting = 0.0f;
 
     // [UNIFIED FORWARD RENDERING] Add dynamic lights (single loop)
     float3 Normal = normalize(Input.WorldNormal);
@@ -169,6 +173,7 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 
     // Apply lighting to diffuse color
     FinalColor.rgb = DiffuseColor.rgb * Lighting;
+	FinalColor.rgb += AmbientColor.rgb * GlobalAmbient.Color * GlobalAmbient.Intensity;
 
     // 3. 알파 값 처리 (기존 코드와 동일)
     FinalColor.a = D; // 기본 알파값
