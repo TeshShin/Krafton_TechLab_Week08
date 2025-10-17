@@ -5,15 +5,23 @@
 #include "Renderer/Public/Renderer.h"
 #include "Renderer/Public/RenderResourceFactory.h"
 
-FPointLightPass::FPointLightPass(UPipeline* InPipeline,
-    ID3D11VertexShader* InVS, ID3D11PixelShader* InPS, ID3D11InputLayout* InLayout,
-    ID3D11DepthStencilState* InDS, ID3D11BlendState* InBS)
-        : FRenderPass(InPipeline, nullptr, nullptr), VS(InVS), PS(InPS), InputLayout(InLayout), DS(InDS), BS(InBS)
+FPointLightPass::FPointLightPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS, ID3D11BlendState* InBS)
+        : FRenderPass(InPipeline, nullptr, nullptr), DS(InDS), BS(InBS)
 {
     FNormalVertex NormalVertices[3] = {};
     NormalVertices[0].Position = { -1.0f, -1.0f, 0.0f };
     NormalVertices[1].Position = { 3.0f, -1.0f, 0.0f };
     NormalVertices[2].Position = { -1.0f, 3.0f, 0.0f };
+    
+    TArray<D3D11_INPUT_ELEMENT_DESC> PointLightLayout =
+    {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Position), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Normal), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Color), D3D11_INPUT_PER_VERTEX_DATA, 0	},
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FNormalVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0	}
+    };
+    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/PointLightShader.hlsl", PointLightLayout, &VS, &InputLayout);
+    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/PointLightShader.hlsl", &PS);
     
     VertexBuffer = FRenderResourceFactory::CreateVertexBuffer(NormalVertices, sizeof(NormalVertices));
     ConstantBufferPerFrame = FRenderResourceFactory::CreateConstantBuffer<FPointLightPerFrame>();
@@ -97,6 +105,10 @@ void FPointLightPass::Execute(FRenderingContext& Context)
 
 void FPointLightPass::Release()
 {
+    SafeRelease(VS);
+    SafeRelease(PS);
+    SafeRelease(InputLayout);
+    
     SafeRelease(VertexBuffer);
     SafeRelease(ConstantBufferPerFrame);
     SafeRelease(ConstantBufferPointLightData);

@@ -46,12 +46,7 @@ void URenderer::Init(HWND InWindowHandle)
 	CreateSamplerState();
 	CreateDefaultShader();
 	CreateTextureShader();
-	CreateDecalShader();
-	CreatePointLightShader();
-	CreateFogShader();
 	CreateConstantBuffers();
-	CreateFXAAShader();
-	
 
 	ViewportClient->InitializeLayout(DeviceResources->GetViewportInfo());
 
@@ -59,11 +54,10 @@ void URenderer::Init(HWND InWindowHandle)
 		TextureVertexShader, TexturePixelShader, TextureInputLayout, DefaultDepthStencilState);
 	RenderPasses.push_back(StaticMeshPass);
 
-	FDecalPass* DecalPass = new FDecalPass(Pipeline, ConstantBufferViewProj,
-		DecalVertexShader, DecalPixelShader, DecalInputLayout, DecalDepthStencilState, AlphaBlendState);
+	FDecalPass* DecalPass = new FDecalPass(Pipeline, ConstantBufferViewProj, DecalDepthStencilState, AlphaBlendState);
 	RenderPasses.push_back(DecalPass);
 
-	FPointLightPass* PointLightPass = new FPointLightPass(Pipeline, PointLightVertexShader, PointLightPixelShader, PointLightInputLayout, DisabledDepthStencilState, AdditiveBlendState);
+	FPointLightPass* PointLightPass = new FPointLightPass(Pipeline, DisabledDepthStencilState, AdditiveBlendState);
 	RenderPasses.push_back(PointLightPass);
 	
 	FBillboardPass* BillboardPass = new FBillboardPass(Pipeline, ConstantBufferViewProj, ConstantBufferModels,
@@ -73,18 +67,16 @@ void URenderer::Init(HWND InWindowHandle)
 	FTextPass* TextPass = new FTextPass(Pipeline, ConstantBufferViewProj, ConstantBufferModels);
 	RenderPasses.push_back(TextPass);
 
-	FFogPass* FogPass = new FFogPass(Pipeline, ConstantBufferViewProj,
-		FogVertexShader, FogPixelShader, FogInputLayout, DefaultDepthStencilState, AlphaBlendState);
+	FFogPass* FogPass = new FFogPass(Pipeline, ConstantBufferViewProj, DefaultDepthStencilState, AlphaBlendState);
 	RenderPasses.push_back(FogPass);
 
 	FSceneDepthPass* SceneDepthPass = new FSceneDepthPass(Pipeline, ConstantBufferViewProj, DisabledDepthStencilState);
 	RenderPasses.push_back(SceneDepthPass);
 
+	FXAAPass = new FFXAAPass(Pipeline, DeviceResources);
 	// UPipeline* InPipeline, UDeviceResources* InDeviceResources, ID3D11VertexShader* InVS,
 	// ID3D11PixelShader* InPS, ID3D11InputLayout* InLayout, ID3D11SamplerState* InSampler
-	FXAAPass = new FFXAAPass(Pipeline, DeviceResources, FXAAVertexShader, FXAAPixelShader, FXAAInputLayout, FXAASamplerState);
 	//RenderPasses.push_back(FXAAPass);
-	
 }
 
 void URenderer::Release()
@@ -201,53 +193,6 @@ void URenderer::CreateTextureShader()
 	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/TexturePS.hlsl", &TexturePixelShader);
 }
 
-void URenderer::CreateDecalShader()
-{
-	TArray<D3D11_INPUT_ELEMENT_DESC> DecalLayout =
-	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Position), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Normal), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Color), D3D11_INPUT_PER_VERTEX_DATA, 0	},
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FNormalVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0	}
-	};
-	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/DecalShader.hlsl", DecalLayout, &DecalVertexShader, &DecalInputLayout);
-	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/DecalShader.hlsl", &DecalPixelShader);
-}
-
-void URenderer::CreatePointLightShader()
-{
-	TArray<D3D11_INPUT_ELEMENT_DESC> PointLightLayout =
-	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Position), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Normal), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Color), D3D11_INPUT_PER_VERTEX_DATA, 0	},
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FNormalVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0	}
-	};
-	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/PointLightShader.hlsl", PointLightLayout, &PointLightVertexShader, &PointLightInputLayout);
-	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/PointLightShader.hlsl", &PointLightPixelShader);
-}
-
-void URenderer::CreateFogShader()
-{
-	TArray<D3D11_INPUT_ELEMENT_DESC> FogLayout =
-	{
-	};
-	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/HeightFogShader.hlsl", FogLayout, &FogVertexShader, &FogInputLayout);
-	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/HeightFogShader.hlsl", &FogPixelShader);
-}
-
-void URenderer::CreateFXAAShader()
-{
-	TArray<D3D11_INPUT_ELEMENT_DESC> FXAALayout =
-	{
-		{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	    {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
-    };
-	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/FXAAShader.hlsl", FXAALayout, &FXAAVertexShader, &FXAAInputLayout);
-	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/FXAAShader.hlsl", &FXAAPixelShader);
-	
-	FXAASamplerState = FRenderResourceFactory::CreateFXAASamplerState();
-}
 
 void URenderer::ReleaseDefaultShader()
 {
@@ -258,22 +203,6 @@ void URenderer::ReleaseDefaultShader()
 	SafeRelease(TextureInputLayout);
 	SafeRelease(TexturePixelShader);
 	SafeRelease(TextureVertexShader);
-	
-	SafeRelease(DecalVertexShader);
-	SafeRelease(DecalPixelShader);
-	SafeRelease(DecalInputLayout);
-	
-	SafeRelease(PointLightVertexShader);
-	SafeRelease(PointLightPixelShader);
-	SafeRelease(PointLightInputLayout);
-	
-	SafeRelease(FogVertexShader);
-	SafeRelease(FogPixelShader);
-	SafeRelease(FogInputLayout);
-	
-	SafeRelease(FXAAVertexShader);
-	SafeRelease(FXAAPixelShader);
-	SafeRelease(FXAAInputLayout);
 }
 
 void URenderer::ReleaseDepthStencilState()
@@ -295,7 +224,6 @@ void URenderer::ReleaseBlendState()
 
 void URenderer::ReleaseSamplerState()
 {
-	SafeRelease(FXAASamplerState);
 	SafeRelease(DefaultSampler);
 }
 

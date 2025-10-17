@@ -92,27 +92,6 @@ ID3D11SamplerState* FRenderResourceFactory::CreateSamplerState(D3D11_FILTER InFi
 	return SamplerState;
 }
 
-ID3D11SamplerState* FRenderResourceFactory::CreateFXAASamplerState()
-{
-	// FXAA샘플러 상태 생성
-	D3D11_SAMPLER_DESC SamplerDesc = {};
-	SamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	SamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	SamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	SamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	SamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	SamplerDesc.MinLOD = 0;
-	SamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-
-	ID3D11SamplerState* FXAASamplerState = nullptr;
-	if (FAILED(URenderer::GetInstance().GetDevice()->CreateSamplerState(&SamplerDesc, &FXAASamplerState)))
-	{
-		UE_LOG_ERROR("Renderer: 샘플러 스테이트 생성 실패");
-		return nullptr;
-	}
-	return FXAASamplerState;
-}
-
 ID3D11RasterizerState* FRenderResourceFactory::GetRasterizerState(const FRenderState& InRenderState)
 {
 	const FRasterKey Key{ ToD3D11(InRenderState.FillMode), ToD3D11(InRenderState.CullMode) };

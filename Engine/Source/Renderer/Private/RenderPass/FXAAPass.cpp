@@ -10,16 +10,19 @@ struct FFullscreenVertex
     FVector2 UV;
 };
 
-FFXAAPass::FFXAAPass(UPipeline* InPipeline, UDeviceResources* InDeviceResources, ID3D11VertexShader* InVS,
-    ID3D11PixelShader* InPS, ID3D11InputLayout* InLayout, ID3D11SamplerState* InSampler)
-    :FRenderPass(InPipeline,nullptr,nullptr)
-    , DeviceResources(InDeviceResources)
-    , VertexShader(InVS)
-    , PixelShader(InPS)
-    , InputLayout(InLayout)
-    , SamplerState(InSampler)
+FFXAAPass::FFXAAPass(UPipeline* InPipeline, UDeviceResources* InDeviceResources)
+    :FRenderPass(InPipeline,nullptr,nullptr), DeviceResources(InDeviceResources)
 {
     InitializeFullscreenQuad();
+    TArray<D3D11_INPUT_ELEMENT_DESC> FXAALayout =
+    {
+        {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+    };
+    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/FXAAShader.hlsl", FXAALayout, &VertexShader, &InputLayout);
+    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/FXAAShader.hlsl", &PixelShader);
+	
+    SamplerState = FRenderResourceFactory::CreateSamplerState(D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP);
     FXAAConstantBuffer = FRenderResourceFactory::CreateConstantBuffer<FFXAAConstants>();
 }
 

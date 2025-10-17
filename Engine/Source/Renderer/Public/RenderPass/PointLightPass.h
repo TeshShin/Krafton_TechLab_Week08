@@ -26,9 +26,7 @@ struct FPointLightData
 class FPointLightPass : public FRenderPass
 {
 public:
-    FPointLightPass(UPipeline* InPipeline,
-        ID3D11VertexShader* InVS, ID3D11PixelShader* InPS, ID3D11InputLayout* InLayout,
-        ID3D11DepthStencilState* InDS, ID3D11BlendState* InBS);
+    FPointLightPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS, ID3D11BlendState* InBS);
 
     void Execute(FRenderingContext& Context) override;
     void Release() override;
