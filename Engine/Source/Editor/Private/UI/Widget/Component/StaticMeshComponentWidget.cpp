@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "Editor/Public/UI/Widget/Component/StaticMeshComponentWidget.h"
 #include "Scene/Public/Component/StaticMeshComponent.h"
 #include "Asset/Public/StaticMesh.h"
@@ -194,7 +194,7 @@ FString UStaticMeshComponentWidget::GetMaterialDisplayName(UMaterial* Material) 
 	TArray<UTexture*> Textures = {
 		Material->GetAmbientTexture(),
 		Material->GetSpecularTexture(),
-		Material->GetNormalTexture(),
+		Material->GetShininessTexture(),
 		Material->GetAlphaTexture(),
 		Material->GetBumpTexture()
 	};

@@ -22,6 +22,7 @@
 #include "Renderer/Public/RenderPass/StaticMeshPass.h"
 #include "Renderer/Public/RenderPass/TextPass.h"
 #include "Renderer/Public/RenderResourceFactory.h"
+#include "Renderer/Public/RenderPass/NormalMapPass.h"
 #include "Renderer/Public/RenderPass/SceneDepthPass.h"
 #include "Renderer/Public/RenderPass/RenderingContext.h"
 
@@ -68,6 +69,9 @@ void URenderer::Init(HWND InWindowHandle)
 
 	FSceneDepthPass* SceneDepthPass = new FSceneDepthPass(Pipeline, ConstantBufferViewProj, DisabledDepthStencilState);
 	RenderPasses.push_back(SceneDepthPass);
+
+	FNormalMapPass* NormalMapPass = new FNormalMapPass(Pipeline, ConstantBufferViewProj, DefaultDepthStencilState);
+	RenderPasses.push_back(NormalMapPass);
 
 	FXAAPass = new FFXAAPass(Pipeline, DeviceResources);
 	// UPipeline* InPipeline, UDeviceResources* InDeviceResources, ID3D11VertexShader* InVS,
