@@ -106,8 +106,7 @@ float3 CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPos, float3
 PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 {
     PS_OUTPUT Output;
-
-    float4 FinalColor = float4(0.f, 0.f, 0.f, 1.f);
+	
     float2 UV = Input.Tex;
 
     // Base diffuse color

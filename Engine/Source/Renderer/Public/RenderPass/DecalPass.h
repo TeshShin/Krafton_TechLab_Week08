@@ -3,11 +3,6 @@
 #include "Renderer/Public/RenderPass/RenderPass.h"
 
 // Matches the layout in DecalShader.hlsl
-struct FModelConstants
-{
-    FMatrix World;
-    FMatrix WorldInverseTranspose;
-};
 
 struct FDecalConstants
 {
