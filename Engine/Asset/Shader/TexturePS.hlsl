@@ -185,35 +185,52 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 
     // Normal mapping
     // -----------------------
-    float3 wsNormal;
-    if (MaterialFlags & HAS_BUMP_MAP)
-    {
+	float3 wsNormal = Input.WorldNormal;
+	if (MaterialFlags & HAS_BUMP_MAP)
+	{
         // Sample and unpack tangent-space normal (assumes XYZ in texture)
-        float3 nTS = BumpTexture.Sample(SamplerWrap, UV).xyz * 2.0f - 1.0f;
-        nTS = normalize(nTS);
+		float3 nTS = BumpTexture.Sample(SamplerWrap, UV).xyz * 2.0f - 1.0f;
+		nTS = normalize(nTS);
 
         // Derive TBN from screen-space derivatives (no vertex tangents required)
-        float3 N = normalize(Input.WorldNormal);
-        float3 dpdx = ddx(Input.WorldPosition);
-        float3 dpdy = ddy(Input.WorldPosition);
-        float2 dUVdx = ddx(UV);
-        float2 dUVdy = ddy(UV);
+		float3 N = normalize(Input.WorldNormal);
+		float3 dpdx = ddx(Input.WorldPosition);
+		float3 dpdy = ddy(Input.WorldPosition);
+		float2 dUVdx = ddx(UV);
+		float2 dUVdy = ddy(UV);
 
         // Robust tangent reconstruction
-        float3 T = dUVdy.y * dpdx - dUVdx.y * dpdy;
+		float3 T = dUVdy.y * dpdx - dUVdx.y * dpdy;
         // float3 B = -dUVdy.x * dpdx + dUVdx.x * dpdy;
 
         // Orthonormalize
-        T = normalize(T - N * dot(N, T));
-        float3 B_ortho = normalize(cross(N, T));
+		T = normalize(T - N * dot(N, T));
+		float3 B_ortho = normalize(cross(N, T));
 
-        float3x3 TBN = float3x3(T, B_ortho, N);
-        wsNormal = normalize(mul(nTS, TBN));
-    }
-    else
+		float3x3 TBN = float3x3(T, B_ortho, N);
+		wsNormal = normalize(mul(nTS, TBN));
+	}
+	else
+	{
+		wsNormal = normalize(Input.WorldNormal);
+	}
+	
+    // 조명 계산 호출
+    float3 FinalLitColor = CalculateLighting(AmbientColor, DiffuseColor, SpecularColor, Shininess,
+        Input.WorldPosition, wsNormal, ViewWorldLocation);
+
+	float4 FinalColor = float4(0.f, 0.f, 0.f, 1.f);
+    FinalColor.rgb = FinalLitColor;
+
+    // 3. 알파 값 처리 (기존 코드와 동일)
+    FinalColor.a = D; // 기본 알파값
+    if (MaterialFlags & HAS_ALPHA_MAP)
     {
-        wsNormal = normalize(Input.WorldNormal);
+        float alpha = AlphaTexture.Sample(SamplerWrap, UV).r;
+        FinalColor.a = D * alpha;
     }
+
+    
 
     Output.SceneColor = FinalColor;
 
