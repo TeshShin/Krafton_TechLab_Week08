@@ -3,7 +3,7 @@
 #include "Asset/Public/JsonSerializer.h"
 #include "Editor/Public/UI/Widget/Component/PointLightComponentWidget.h"
 
-IMPLEMENT_CLASS(UPointLightComponent, ULightComponent)
+IMPLEMENT_CLASS(UPointLightComponent, ULightComponentBase)
 
 void UPointLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {

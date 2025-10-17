@@ -1,30 +1,17 @@
-﻿#include "pch.h"
-#include "Scene/Public/Component/LightComponent.h"
-#include "Asset/Public/JsonSerializer.h"
+﻿# include "pch.h"
+# include "Scene/Public/Component/LightComponent.h"
+# include "Asset/Public/JsonSerializer.h"
 
-IMPLEMENT_ABSTRACT_CLASS(ULightComponent, USceneComponent)
+IMPLEMENT_ABSTRACT_CLASS(ULightComponent, ULightComponentBase)
 
 void ULightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
 	Super::Serialize(bInIsLoading, InOutHandle);
-	if (bInIsLoading)
-	{
-		FJsonSerializer::ReadFloat(InOutHandle, "Intensity", Intensity);
-		FJsonSerializer::ReadVector(InOutHandle, "LightColor", LightColor);
-	}
-	else
-	{
-		InOutHandle["Intensity"] = Intensity;
-		InOutHandle["LightColor"] = FJsonSerializer::VectorToJson(LightColor);
-	}
 }
 
 UObject* ULightComponent::Duplicate()
 {
 	ULightComponent* LightComponent = Cast<ULightComponent>(Super::Duplicate());
-	LightComponent->Intensity = Intensity;
-	LightComponent->LightColor = LightColor;
-
 	return LightComponent;
 }
 

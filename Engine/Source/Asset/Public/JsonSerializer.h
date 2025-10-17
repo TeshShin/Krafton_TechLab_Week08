@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 // --- Standard Library Includes ---
 #include <string>
@@ -251,6 +251,26 @@ public:
 
 		OutValue = InDefaultValue;
 		return false;
+	}
+
+	static bool ReadBool(JSON& InHandle, const std::string& InKey, bool& OutValue, bool InDefaultValue)
+	{
+		if (InHandle.hasKey(InKey))
+		{
+			bool bOk = false;
+			OutValue = InHandle[InKey].ToBool(bOk);
+			if (!bOk)
+			{
+				OutValue = InDefaultValue;
+				return false;
+			}
+		}
+		else
+		{
+			OutValue = InDefaultValue;
+			return false;
+		}
+		return true;
 	}
 
 	//====================================================================================
