@@ -19,7 +19,6 @@
 #include "Renderer/Public/RenderPass/DecalPass.h"
 #include "Renderer/Public/RenderPass/FXAAPass.h"
 #include "Renderer/Public/RenderPass/FogPass.h"
-#include "Renderer/Public/RenderPass/PointLightPass.h"
 #include "Renderer/Public/RenderPass/StaticMeshPass.h"
 #include "Renderer/Public/RenderPass/TextPass.h"
 #include "Renderer/Public/RenderResourceFactory.h"
@@ -56,9 +55,6 @@ void URenderer::Init(HWND InWindowHandle)
 
 	FDecalPass* DecalPass = new FDecalPass(Pipeline, ConstantBufferViewProj, DecalDepthStencilState, AlphaBlendState);
 	RenderPasses.push_back(DecalPass);
-
-	FPointLightPass* PointLightPass = new FPointLightPass(Pipeline, DisabledDepthStencilState, AdditiveBlendState);
-	RenderPasses.push_back(PointLightPass);
 	
 	FBillboardPass* BillboardPass = new FBillboardPass(Pipeline, ConstantBufferViewProj, ConstantBufferModels,
 		TextureVertexShader, TexturePixelShader, TextureInputLayout, DefaultDepthStencilState, AlphaBlendState);

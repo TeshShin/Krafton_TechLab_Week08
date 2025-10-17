@@ -9,6 +9,8 @@ public:
     void Execute(FRenderingContext& Context) override;
     void Release() override;
 
+    void UpdateLightsFromContext(FRenderingContext& Context);
+
 private:
     ID3D11VertexShader* VS = nullptr;
     ID3D11PixelShader* PS = nullptr;
@@ -16,4 +18,14 @@ private:
     ID3D11DepthStencilState* DS = nullptr;
     
     ID3D11Buffer* ConstantBufferMaterial = nullptr;
+
+    ID3D11Buffer* PointLightStructuredBuffer = nullptr;
+    ID3D11ShaderResourceView* PointLightSRV = nullptr;
+    uint32 PointLightCapacity;
+
+    ID3D11Buffer* SpotLightStructuredBuffer = nullptr;
+    ID3D11ShaderResourceView* SpotLightSRV = nullptr;
+    uint32 SpotLightCapacity;
+
+
 };

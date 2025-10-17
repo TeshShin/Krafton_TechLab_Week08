@@ -1,8 +1,11 @@
 ﻿#include "pch.h"
 #include "Renderer/Public/RenderPass/StaticMeshPass.h"
 #include "Scene/Public/Component/StaticMeshComponent.h"
+#include "Scene/Public/Component/PointLightComponent.h"
+#include "Scene/Public/Component/SpotLightComponent.h"
 #include "Renderer/Public/Pipeline.h"
 #include "Renderer/Public/RenderResourceFactory.h"
+#include "Renderer/Public/LightData.h"
 #include "Asset/Public/Texture.h"
 
 FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferCamera, ID3D11Buffer* InConstantBufferModel,
@@ -10,10 +13,24 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstant
 	: FRenderPass(InPipeline, InConstantBufferCamera, InConstantBufferModel), VS(InVS), PS(InPS), InputLayout(InLayout), DS(InDS)
 {
 	ConstantBufferMaterial = FRenderResourceFactory::CreateConstantBuffer<FMaterialConstants>();
+
+	PointLightCapacity = 64;
+	PointLightStructuredBuffer = FRenderResourceFactory::CreateStructuredBuffer<FPointLightData>(
+		PointLightCapacity);
+	PointLightSRV = FRenderResourceFactory::CreateBufferSRV(
+		PointLightStructuredBuffer, PointLightCapacity);
+
+	SpotLightCapacity = 64;
+	SpotLightStructuredBuffer = FRenderResourceFactory::CreateStructuredBuffer<FSpotLightData>(
+		SpotLightCapacity);
+	SpotLightSRV = FRenderResourceFactory::CreateBufferSRV(
+		SpotLightStructuredBuffer, SpotLightCapacity);
 }
 
 void FStaticMeshPass::Execute(FRenderingContext& Context)
 {
+	UpdateLightsFromContext(Context);
+
 	FRenderState RenderState = UStaticMeshComponent::GetClassDefaultRenderState();
 	if (Context.ViewMode == EViewModeIndex::VMI_Wireframe)
 	{
@@ -152,7 +169,98 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	// --- RTVs Reset End ---
 }
 
+void FStaticMeshPass::UpdateLightsFromContext(FRenderingContext& Context)
+{
+	// [NEW] Step 1: 라이트 데이터 수집
+	TArray<FPointLightData> PointLightData;
+	TArray<FSpotLightData> SpotLightData;
+
+	// [DEBUG] Log light count
+	UE_LOG("StaticMeshPass: PointLights in Context = %d", Context.PointLights.size());
+
+	// PointLight 데이터 변환
+	for (auto PointLight : Context.PointLights)
+	{
+		if (!PointLight || !PointLight->IsVisible()) continue;
+
+		FPointLightData Data;
+		Data.LightLocation = PointLight->GetWorldLocation();
+		Data.LightIntensity = PointLight->GetIntensity();
+		Data.LightColor = PointLight->GetLightColor();
+		// [TEMP] Use large radius until SourceRadius is properly tuned (default 10.0f is too small)
+		Data.SourceRadius = max(PointLight->GetSourceRadius(), 1000.0f);
+		Data.LightFalloffExtent = PointLight->GetLightFalloffExtent();
+
+		PointLightData.push_back(Data);
+
+		// [DEBUG] Log first light data
+		// if (PointLightData.size() == 1)
+		// {
+		//     UE_LOG("First PointLight: Pos=(%.1f,%.1f,%.1f) Intensity=%.1f Radius=%.1f",
+		//            Data.LightLocation.X, Data.LightLocation.Y, Data.LightLocation.Z,
+		//            Data.LightIntensity, Data.SourceRadius);
+		// }
+	}
+
+	// SpotLight 데이터 변환
+	//for (auto SpotLight : Context.SpotLights)  // Context에 SpotLights 추가 필요
+	//{
+	//	if (!SpotLight || !SpotLight->IsVisible()) continue;
+
+	//	FSpotLightData Data;
+	//	Data.Location = SpotLight->GetWorldLocation();
+	//	Data.Intensity = SpotLight->GetIntensity();
+	//	Data.Color = SpotLight->GetLightColor();
+	//	Data.Radius = 1000.0f;
+	//	Data.Direction = SpotLight->GetForwardVector();  // Transform 기반
+	//	Data.InnerConeAngle = SpotLight->GetInnerConeAngle();
+	//	Data.OuterConeAngle = SpotLight->GetOuterConeAngle();
+	//	Data.FalloffExtent = SpotLight->GetLightFalloffExtent();
+
+	//	SpotLightData.push_back(Data);
+	//}
+
+	// [NEW] Step 2: StructuredBuffer 용량 체크 및 재할당
+	if (PointLightData.size() > PointLightCapacity)
+	{
+		// 용량 부족 시 재할당 (2배 증가)
+		PointLightCapacity = static_cast<uint32>(PointLightData.size() * 2);
+		FRenderResourceFactory::ReallocateStructuredBuffer<FPointLightData>(
+			PointLightStructuredBuffer, PointLightSRV, PointLightCapacity);
+	}
+
+	if (SpotLightData.size() > SpotLightCapacity)
+	{
+		SpotLightCapacity = static_cast<uint32>(SpotLightData.size() * 2);
+		FRenderResourceFactory::ReallocateStructuredBuffer<FSpotLightData>(
+			SpotLightStructuredBuffer, SpotLightSRV, SpotLightCapacity);
+	}
+
+	// [NEW] Step 3: GPU로 데이터 전송
+	if (!PointLightData.empty())
+	{
+		FRenderResourceFactory::UpdateStructuredBufferData(
+			PointLightStructuredBuffer, PointLightData);
+	}
+
+	if (!SpotLightData.empty())
+	{
+		FRenderResourceFactory::UpdateStructuredBufferData(
+			SpotLightStructuredBuffer, SpotLightData);
+	}
+
+	// [NEW] Step 4: SRV 바인딩 (Pixel Shader에만)
+	Pipeline->SetTexture(6, false, PointLightSRV);     // t6: PointLights
+	Pipeline->SetTexture(7, false, SpotLightSRV);      // t7: SpotLights
+}
+
+
 void FStaticMeshPass::Release()
 {
 	SafeRelease(ConstantBufferMaterial);
+
+	SafeRelease(PointLightSRV);
+	SafeRelease(PointLightStructuredBuffer);
+	SafeRelease(SpotLightSRV);
+	SafeRelease(SpotLightStructuredBuffer);
 }

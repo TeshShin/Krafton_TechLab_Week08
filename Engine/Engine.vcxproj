@@ -360,6 +360,7 @@
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\ProjectileMovementComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\RotatingMovementComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\SetTextComponentWidget.h" />
+    <ClInclude Include="Source\Editor\Public\UI\Widget\Component\SpotLightComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\StaticMeshComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\ConsoleWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\FPSWidget.h" />
@@ -413,6 +414,7 @@
     <ClInclude Include="Source\Editor\Public\ObjectPicker.h" />
     <ClInclude Include="Source\Physics\Public\OBB.h" />
     <ClInclude Include="Source\Renderer\Public\DeviceResources.h" />
+    <ClInclude Include="Source\Renderer\Public\LightData.h" />
     <ClInclude Include="Source\Renderer\Public\Optimization\OcclusionCuller.h" />
     <ClInclude Include="Source\Renderer\Public\Optimization\ViewVolumeCuller.h" />
     <ClInclude Include="Source\Renderer\Public\Pipeline.h" />
@@ -421,7 +423,6 @@
     <ClInclude Include="Source\Renderer\Public\RenderPass\DecalPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\FogPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\FXAAPass.h" />
-    <ClInclude Include="Source\Renderer\Public\RenderPass\PointLightPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\RenderingContext.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\RenderPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\SceneDepthPass.h" />
@@ -467,8 +468,11 @@
     <ClInclude Include="Source\Scene\Public\Component\UUIDTextComponent.h" />
     <ClInclude Include="Source\Scene\Public\Level\Level.h" />
     <ClInclude Include="Source\Scene\Public\Level\World.h" />
+    <ClInclude Include="Source\Scene\Public\Component\SpotLightComponent.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Editor\Private\UI\Widget\Component\SpotLightComponentWidget.cpp" />
+    <ClCompile Include="Source\Scene\Private\Component\SpotLightComponent.cpp" />
     <FxCompile Include="Asset\Shader\HeightFogShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">true</ExcludedFromBuild>
@@ -631,8 +635,6 @@
     </ClCompile>
     <ClCompile Include="Source\Renderer\Private\RenderPass\FXAAPass.cpp">
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Private\RenderPass\PointLightPass.cpp">
-    </ClCompile>
     <ClCompile Include="Source\Renderer\Private\RenderPass\RenderPass.cpp">
     </ClCompile>
     <ClCompile Include="Source\Renderer\Private\RenderPass\SceneDepthPass.cpp">
@@ -778,6 +780,7 @@
     <ResourceCompile Include="Engine.rc" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\.editorconfig" />
     <None Include="ClassDiagram.cd" />
   </ItemGroup>
 </Project>
