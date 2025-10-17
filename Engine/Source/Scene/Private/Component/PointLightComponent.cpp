@@ -2,6 +2,7 @@
 #include "Scene/Public/Component/PointLightComponent.h"
 #include "Asset/Public/JsonSerializer.h"
 #include "Editor/Public/UI/Widget/Component/PointLightComponentWidget.h"
+#include "Renderer/Public/LightData.h"
 
 IMPLEMENT_CLASS(UPointLightComponent, ULightComponentBase)
 
@@ -37,4 +38,18 @@ void UPointLightComponent::DuplicateSubObjects(UObject* DuplicatedObject)
 UClass* UPointLightComponent::GetSpecificWidgetClass() const
 {
     return UPointLightComponentWidget::StaticClass();
+}
+
+FUnifiedDynamicLight UPointLightComponent::GetUnifiedLightData() const
+{
+    FUnifiedDynamicLight LightData = {};
+
+    LightData.Position = GetWorldLocation();
+    LightData.Intensity = GetIntensity();
+    LightData.Color = GetLightColor();
+    LightData.SourceRadius = max(GetSourceRadius(), 1000.0f);  // Temp: ensure minimum radius
+    LightData.FalloffExponent = GetLightFalloffExtent();
+    LightData.LightType = static_cast<uint32>(EDynamicLightType::Point);
+
+    return LightData;
 }

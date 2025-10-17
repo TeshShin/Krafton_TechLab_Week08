@@ -41,6 +41,8 @@ public:
 public:
     virtual ELightComponentType GetLightType() const override { return ELightComponentType::LightType_Point; }
 
+    virtual struct FUnifiedDynamicLight GetUnifiedLightData() const override;
+
     /*-----------------------------------------------------------------------------
         UPointLightComponent Features
      -----------------------------------------------------------------------------*/

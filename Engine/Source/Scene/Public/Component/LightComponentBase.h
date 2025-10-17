@@ -61,6 +61,13 @@ public:
 
     virtual ELightComponentType GetLightType() const { return ELightComponentType::LightType_Max; }
 
+    /**
+     * @brief Create unified light data for GPU StructuredBuffer
+     * @return FUnifiedDynamicLight data for this light component
+     * @note Each derived class implements this to provide its specific light data
+     */
+    virtual struct FUnifiedDynamicLight GetUnifiedLightData() const = 0;
+
     // --- [UE Style] ---
 
     // virtual FBox GetBoundingBox() const;

@@ -41,6 +41,8 @@ public:
 public:
     virtual ELightComponentType GetLightType() const override { return ELightComponentType::LightType_Spot; }
 
+    virtual struct FUnifiedDynamicLight GetUnifiedLightData() const override;
+
     /*-----------------------------------------------------------------------------
         USpotLightComponent Features
      -----------------------------------------------------------------------------*/
@@ -51,4 +53,8 @@ public:
 
 private:
     // TODO: Add SpotLight specific member variables
+    float InnerConeAngle = 0.523599f;  // 30 degrees in radians
+    float OuterConeAngle = 0.785398f;  // 45 degrees in radians
+    float SourceRadius = 1000.0f;
+    float FalloffExponent = 8.0f;
 };
