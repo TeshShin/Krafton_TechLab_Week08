@@ -39,8 +39,8 @@ void URenderer::Init(HWND InWindowHandle)
 	DeviceResources = new UDeviceResources(InWindowHandle);
 	Pipeline = new UPipeline(GetDeviceContext());
 	ViewportClient = new FViewport();
-	
-	
+
+
 	// 렌더링 상태 및 리소스 생성
 	CreateDepthStencilState();
 	CreateBlendState();
@@ -60,7 +60,7 @@ void URenderer::Init(HWND InWindowHandle)
 
 	FPointLightPass* PointLightPass = new FPointLightPass(Pipeline, DisabledDepthStencilState, AdditiveBlendState);
 	RenderPasses.push_back(PointLightPass);
-	
+
 	FBillboardPass* BillboardPass = new FBillboardPass(Pipeline, ConstantBufferViewProj, ConstantBufferModels,
 		TextureVertexShader, TexturePixelShader, TextureInputLayout, DefaultDepthStencilState, AlphaBlendState);
 	RenderPasses.push_back(BillboardPass);
@@ -98,7 +98,7 @@ void URenderer::Release()
 	}
 	FXAAPass->Release();
 	SafeDelete(FXAAPass);
-	
+
 	SafeDelete(ViewportClient);
 	SafeDelete(Pipeline);
 	SafeDelete(DeviceResources);
@@ -203,7 +203,7 @@ void URenderer::ReleaseDefaultShader()
 	SafeRelease(DefaultInputLayout);
 	SafeRelease(DefaultPixelShader);
 	SafeRelease(DefaultVertexShader);
-	
+
 	SafeRelease(TextureInputLayout);
 	SafeRelease(TexturePixelShader);
 	SafeRelease(TextureVertexShader);
@@ -255,7 +255,7 @@ void URenderer::Update()
         CurrentCamera->Update(ViewportClient.GetViewportInfo());
         FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferViewProj, CurrentCamera->GetFViewProjConstants());
         Pipeline->SetConstantBuffer(1, true, ConstantBufferViewProj);
-	    
+
 	    {
         	TIME_PROFILE(RenderEditor)
 			GEditor->GetEditorModule()->RenderEditor();
@@ -264,7 +264,7 @@ void URenderer::Update()
             TIME_PROFILE(RenderLevel)
             RenderLevel(ViewportClient);
         }
-    	
+
         // Gizmo는 최종적으로 렌더
         GEditor->GetEditorModule()->RenderGizmo(CurrentCamera);
     }
@@ -407,11 +407,11 @@ void URenderer::RenderEditorPrimitive(const FEditorPrimitive& InPrimitive, const
 		FMatrix::GetModelMatrix(InPrimitive.Location, InPrimitive.Rotation, InPrimitive.Scale));
 	Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
 	Pipeline->SetConstantBuffer(1, true, ConstantBufferViewProj);
-	
+
 	FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferColor, InPrimitive.Color);
 	Pipeline->SetConstantBuffer(2, false, ConstantBufferColor);
 	Pipeline->SetConstantBuffer(2, true, ConstantBufferColor);
-	
+
     Pipeline->SetVertexBuffer(InPrimitive.VertexBuffer, FinalStride);
 
     // The core logic: check for an index buffer
@@ -465,7 +465,7 @@ void URenderer::OnResize(uint32 InWidth, uint32 InHeight) const
 
 void URenderer::CreateConstantBuffers()
 {
-	ConstantBufferModels = FRenderResourceFactory::CreateConstantBuffer<FMatrix>();
+	ConstantBufferModels = FRenderResourceFactory::CreateConstantBuffer<FModelConstants>();
 	ConstantBufferColor = FRenderResourceFactory::CreateConstantBuffer<FVector4>();
 	ConstantBufferViewProj = FRenderResourceFactory::CreateConstantBuffer<FCameraConstants>();
 }
