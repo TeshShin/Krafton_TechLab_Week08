@@ -14,18 +14,14 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstant
 	: FRenderPass(InPipeline, InConstantBufferCamera, InConstantBufferModel), VS(InVS), PS(InPS), InputLayout(InLayout), DS(InDS)
 {
 	ConstantBufferMaterial = FRenderResourceFactory::CreateConstantBuffer<FMaterialConstants>();
+	ConstantBufferLight = FRenderResourceFactory::CreateConstantBuffer<FLightConstants>();
 
-	PointLightCapacity = 64;
-	PointLightStructuredBuffer = FRenderResourceFactory::CreateStructuredBuffer<FPointLightData>(
-		PointLightCapacity);
-	PointLightSRV = FRenderResourceFactory::CreateBufferSRV(
-		PointLightStructuredBuffer, PointLightCapacity);
-
-	SpotLightCapacity = 64;
-	SpotLightStructuredBuffer = FRenderResourceFactory::CreateStructuredBuffer<FSpotLightData>(
-		SpotLightCapacity);
-	SpotLightSRV = FRenderResourceFactory::CreateBufferSRV(
-		SpotLightStructuredBuffer, SpotLightCapacity);
+	// Unified Dynamic Light Buffer (Point, Spot, Rect)
+	UnifiedLightCapacity = 128;  // Initial capacity for all dynamic lights
+	UnifiedLightStructuredBuffer = FRenderResourceFactory::CreateStructuredBuffer<FUnifiedDynamicLight>(
+		UnifiedLightCapacity);
+	UnifiedLightSRV = FRenderResourceFactory::CreateBufferSRV(
+		UnifiedLightStructuredBuffer, UnifiedLightCapacity);
 }
 
 void FStaticMeshPass::Execute(FRenderingContext& Context)
@@ -208,91 +204,83 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 
 void FStaticMeshPass::UpdateLightsFromContext(FRenderingContext& Context)
 {
-	// [NEW] Step 1: 라이트 데이터 수집
-	TArray<FPointLightData> PointLightData;
-	TArray<FSpotLightData> SpotLightData;
+	// Step 1: Collect all dynamic lights into unified buffer
+	TArray<FUnifiedDynamicLight> UnifiedLights;
 
-	// [DEBUG] Log light count
-	UE_LOG("StaticMeshPass: PointLights in Context = %d", Context.PointLights.size());
-
-	// PointLight 데이터 변환
-	for (auto PointLight : Context.Lights)
+	for (ULightComponentBase* Light : Context.Lights)
 	{
-		if (!PointLight || !PointLight->IsVisible()) continue;
+		if (!Light || !Light->IsVisible()) continue;
 
-		FPointLightData Data;
-		Data.LightLocation = PointLight->GetWorldLocation();
-		Data.LightIntensity = PointLight->GetIntensity();
-		Data.LightColor = PointLight->GetLightColor();
-		// [TEMP] Use large radius until SourceRadius is properly tuned (default 10.0f is too small)
-		Data.SourceRadius = max(PointLight->GetSourceRadius(), 1000.0f);
-		Data.LightFalloffExtent = PointLight->GetLightFalloffExtent();
+		FUnifiedDynamicLight UnifiedLight = {};
 
-		PointLightData.push_back(Data);
+		switch (Light->GetLightType())
+		{
+		case ELightComponentType::LightType_Point:
+		{
+			UPointLightComponent* PointLight = Cast<UPointLightComponent>(Light);
+			if (!PointLight) continue;
 
-		// [DEBUG] Log first light data
-		// if (PointLightData.size() == 1)
-		// {
-		//     UE_LOG("First PointLight: Pos=(%.1f,%.1f,%.1f) Intensity=%.1f Radius=%.1f",
-		//            Data.LightLocation.X, Data.LightLocation.Y, Data.LightLocation.Z,
-		//            Data.LightIntensity, Data.SourceRadius);
-		// }
+			UnifiedLight.Position = PointLight->GetWorldLocation();
+			UnifiedLight.Intensity = PointLight->GetIntensity();
+			UnifiedLight.Color = PointLight->GetLightColor();
+			UnifiedLight.SourceRadius = max(PointLight->GetSourceRadius(), 1000.0f);  // Temp: ensure minimum radius
+			UnifiedLight.FalloffExponent = PointLight->GetLightFalloffExtent();
+			UnifiedLight.LightType = static_cast<uint32>(EDynamicLightType::Point);
+
+			UnifiedLights.push_back(UnifiedLight);
+			break;
+		}
+		//case ELightComponentType::LightType_Spot:
+		//{
+		//	USpotLightComponent* SpotLight = Cast<USpotLightComponent>(Light);
+		//	if (!SpotLight) continue;
+
+		//	UnifiedLight.Position = SpotLight->GetWorldLocation();
+		//	UnifiedLight.Intensity = SpotLight->GetIntensity();
+		//	UnifiedLight.Color = SpotLight->GetLightColor();
+		//	UnifiedLight.SourceRadius = 1000.0f;
+		//	UnifiedLight.Direction = SpotLight->GetWorldForwardVector();
+		//	UnifiedLight.FalloffExponent = SpotLight->GetLight
+		//	//UnifiedLight.Param0 = SpotLight->GetInnerConeAngle();
+		//	//UnifiedLight.Param1 = SpotLight->GetOuterConeAngle();
+		//	UnifiedLight.LightType = static_cast<uint32>(EDynamicLightType::Spot);
+
+		//	UnifiedLights.push_back(UnifiedLight);
+		//	break;
+		//}
+		case ELightComponentType::LightType_Ambient:
+		case ELightComponentType::LightType_Directional:
+			// These are handled via ConstantBuffer, skip here
+			break;
+		default:
+			break;
+		}
 	}
 
-	// SpotLight 데이터 변환
-	//for (auto SpotLight : Context.SpotLights)  // Context에 SpotLights 추가 필요
-	//{
-	//	if (!SpotLight || !SpotLight->IsVisible()) continue;
-
-	//	FSpotLightData Data;
-	//	Data.Location = SpotLight->GetWorldLocation();
-	//	Data.Intensity = SpotLight->GetIntensity();
-	//	Data.Color = SpotLight->GetLightColor();
-	//	Data.Radius = 1000.0f;
-	//	Data.Direction = SpotLight->GetForwardVector();  // Transform 기반
-	//	Data.InnerConeAngle = SpotLight->GetInnerConeAngle();
-	//	Data.OuterConeAngle = SpotLight->GetOuterConeAngle();
-	//	Data.FalloffExtent = SpotLight->GetLightFalloffExtent();
-
-	//	SpotLightData.push_back(Data);
-	//}
-
-	// [NEW] Step 2: StructuredBuffer 용량 체크 및 재할당
-	if (PointLightData.size() > PointLightCapacity)
+	// Step 2: Reallocate buffer if capacity exceeded
+	if (UnifiedLights.size() > UnifiedLightCapacity)
 	{
-		// 용량 부족 시 재할당 (2배 증가)
-		PointLightCapacity = static_cast<uint32>(PointLightData.size() * 2);
-		FRenderResourceFactory::ReallocateStructuredBuffer<FPointLightData>(
-			PointLightStructuredBuffer, PointLightSRV, PointLightCapacity);
+		UnifiedLightCapacity = static_cast<uint32>(UnifiedLights.size() * 2);
+		FRenderResourceFactory::ReallocateStructuredBuffer<FUnifiedDynamicLight>(
+			UnifiedLightStructuredBuffer, UnifiedLightSRV, UnifiedLightCapacity);
 	}
 
-	if (SpotLightData.size() > SpotLightCapacity)
-	{
-		SpotLightCapacity = static_cast<uint32>(SpotLightData.size() * 2);
-		FRenderResourceFactory::ReallocateStructuredBuffer<FSpotLightData>(
-			SpotLightStructuredBuffer, SpotLightSRV, SpotLightCapacity);
-	}
-
-	// [NEW] Step 3: GPU로 데이터 전송
-	if (!PointLightData.empty())
+	// Step 3: Upload to GPU
+	if (!UnifiedLights.empty())
 	{
 		FRenderResourceFactory::UpdateStructuredBufferData(
-			PointLightStructuredBuffer, PointLightData);
+			UnifiedLightStructuredBuffer, UnifiedLights);
 	}
 
-	if (!SpotLightData.empty())
-	{
-		FRenderResourceFactory::UpdateStructuredBufferData(
-			SpotLightStructuredBuffer, SpotLightData);
-	}
-
-	// [NEW] Step 4: SRV 바인딩 (Pixel Shader에만)
-	Pipeline->SetTexture(6, false, PointLightSRV);     // t6: PointLights
-	Pipeline->SetTexture(7, false, SpotLightSRV);      // t7: SpotLights
+	// Step 4: Bind SRV to Pixel Shader (t6)
+	Pipeline->SetTexture(6, false, UnifiedLightSRV);
 }
 
 
 void FStaticMeshPass::Release()
 {
 	SafeRelease(ConstantBufferMaterial);
+	SafeRelease(ConstantBufferLight);
+	SafeRelease(UnifiedLightStructuredBuffer);
+	SafeRelease(UnifiedLightSRV);
 }

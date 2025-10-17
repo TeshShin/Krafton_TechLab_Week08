@@ -20,32 +20,28 @@ Texture2D ShininessTexture : register(t3);   // map_Ns
 Texture2D AlphaTexture : register(t4);		// map_d
 Texture2D BumpTexture : register(t5);		// map_bump
 
-// [IMPORTANT] Must match C++ LightData.h exactly (field names and order)
-struct FPointLightData
+// [IMPORTANT] Light Type Enumeration - Must match C++ EDynamicLightType
+#define LIGHT_TYPE_POINT 0
+#define LIGHT_TYPE_SPOT  1
+#define LIGHT_TYPE_RECT  2
+
+// [IMPORTANT] Must match C++ FUnifiedDynamicLight exactly (field names and order)
+struct FUnifiedDynamicLight
 {
-    float3 LightLocation;       // 12 bytes
-    float LightIntensity;       // 4 bytes
-    float3 LightColor;          // 12 bytes
-    float SourceRadius;         // 4 bytes - Light influence radius
-    float LightFalloffExtent;   // 4 bytes - Falloff exponent (2.0 - 16.0)
-    float3 Padding;             // 12 bytes - Alignment padding
+    float3 Position;            // 12 bytes - World space light position
+    float Intensity;            // 4 bytes  - Light intensity (0.0 - 20.0)
+    float3 Color;               // 12 bytes - RGB color filter (0.0 - 1.0 per channel)
+    float SourceRadius;         // 4 bytes  - Light influence radius / Physical size
+    float3 Direction;           // 12 bytes - Light direction (Spot/Rect only, unused for Point)
+    float FalloffExponent;      // 4 bytes  - Radial falloff exponent (2.0 - 16.0)
+    float Param0;               // 4 bytes  - Spot: InnerConeAngle (radians), Rect: Width
+    float Param1;               // 4 bytes  - Spot: OuterConeAngle (radians), Rect: Height
+    float Param2;               // 4 bytes  - Reserved for future use
+    uint LightType;             // 4 bytes  - Light type identifier
+    float4 Padding;             // 16 bytes - Alignment padding
 };
 
-struct FSpotLightData
-{
-    float3 LightLocation;       // 12 bytes
-    float LightIntensity;       // 4 bytes
-    float3 LightColor;          // 12 bytes
-    float SourceRadius;         // 4 bytes - Light influence radius
-    float3 LightDirection;      // 12 bytes
-    float LightFalloffExtent;   // 4 bytes
-    float InnerConeAngle;       // 4 bytes
-    float OuterConeAngle;       // 4 bytes
-    float2 Padding;             // 8 bytes - Alignment padding
-};
-
-StructuredBuffer<FPointLightData> PointLights : register(t6);
-StructuredBuffer<FSpotLightData> SpotLights : register(t7);
+StructuredBuffer<FUnifiedDynamicLight> DynamicLights : register(t6);
 
 SamplerState SamplerWrap : register(s0);
 
@@ -63,10 +59,10 @@ struct PS_OUTPUT
     float4 NormalData : SV_Target1;
 };
 
-// [FORWARD RENDERING] Calculate PointLight contribution using Blinn-Phong
-float3 CalculatePointLight(FPointLightData Light, float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower)
+// [UNIFIED FORWARD RENDERING] Calculate dynamic light contribution using Blinn-Phong
+float3 CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower)
 {
-    float3 LightVec = Light.LightLocation - WorldPos;
+    float3 LightVec = Light.Position - WorldPos;
     float Distance = length(LightVec);
 
     // Early exit if outside light influence radius
@@ -85,50 +81,26 @@ float3 CalculatePointLight(FPointLightData Light, float3 WorldPos, float3 Normal
 
     // Distance Attenuation (radial falloff)
     float NormalizedDist = Distance / Light.SourceRadius;
-    float Attenuation = saturate(1.0f - pow(NormalizedDist, Light.LightFalloffExtent));
-    Attenuation *= Light.LightIntensity;
+    float Attenuation = saturate(1.0f - pow(NormalizedDist, Light.FalloffExponent));
+    Attenuation *= Light.Intensity;
 
-    // Combine diffuse + specular
-    return Light.LightColor * (NdotL + Specular * 0.3f) * Attenuation;
-}
+    // Spot-specific attenuation (if applicable)
+    float SpotAttenuation = 1.0f;
+    if (Light.LightType == LIGHT_TYPE_SPOT)
+    {
+        float Theta = dot(LightDir, -Light.Direction);
+        float InnerCos = cos(Light.Param0);  // InnerConeAngle
+        float OuterCos = cos(Light.Param1);  // OuterConeAngle
 
-// [FORWARD RENDERING] Calculate SpotLight contribution using Blinn-Phong
-float3 CalculateSpotLight(FSpotLightData Light, float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower)
-{
-    float3 LightVec = Light.LightLocation - WorldPos;
-    float Distance = length(LightVec);
+        if (Theta < OuterCos)
+            return float3(0, 0, 0); // Outside cone
 
-    // Early exit if outside light influence radius
-    if (Distance > Light.SourceRadius)
-        return float3(0, 0, 0);
+        // Smooth cone falloff
+        SpotAttenuation = saturate((Theta - OuterCos) / (InnerCos - OuterCos));
+    }
 
-    float3 LightDir = normalize(LightVec);
-
-    // Spot cone attenuation
-    float Theta = dot(LightDir, -Light.LightDirection);
-    float InnerCos = cos(Light.InnerConeAngle);
-    float OuterCos = cos(Light.OuterConeAngle);
-
-    if (Theta < OuterCos)
-        return float3(0, 0, 0); // Outside cone
-
-    // Smooth cone falloff
-    float SpotIntensity = saturate((Theta - OuterCos) / (InnerCos - OuterCos));
-
-    // Diffuse (Lambertian)
-    float NdotL = saturate(dot(Normal, LightDir));
-
-    // Specular (Blinn-Phong)
-    float3 HalfVec = normalize(LightDir + ViewDir);
-    float NdotH = saturate(dot(Normal, HalfVec));
-    float Specular = pow(NdotH, SpecularPower);
-
-    // Distance Attenuation
-    float NormalizedDist = Distance / Light.SourceRadius;
-    float Attenuation = saturate(1.0f - pow(NormalizedDist, Light.LightFalloffExtent));
-
-    // Combine all factors
-    return Light.LightColor * (NdotL + Specular * 0.3f) * Attenuation * SpotIntensity * Light.LightIntensity;
+    // Combine diffuse + specular with all attenuation factors
+    return Light.Color * (NdotL + Specular * 0.3f) * Attenuation * SpotAttenuation;
 }
 
 PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
@@ -151,7 +123,7 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
     {
         AmbientColor *= AmbientTexture.Sample(SamplerWrap, UV);
     }
-    
+
     // Specular color for material
     float4 SpecularColor = Ks;
     if (MaterialFlags & HAS_SPECULAR_MAP)
@@ -159,29 +131,22 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
         SpecularColor *= SpecularTexture.Sample(SamplerWrap, UV);
     }
 
-    // Start with ambient lighting
-    float3 Lighting = AmbientColor.rgb;
+    // Start with ambient lighting (Material ambient * Global ambient)
+    float3 Lighting = AmbientColor.rgb * GlobalAmbient.Color * GlobalAmbient.Intensity;
 
-    // [FORWARD RENDERING] Add dynamic lights
+    // [UNIFIED FORWARD RENDERING] Add dynamic lights (single loop)
     float3 Normal = normalize(Input.WorldNormal);
     float3 ViewDir = normalize(ViewWorldLocation - Input.WorldPosition);
     float SpecularPower = max(Ns, 1.0f); // Prevent division by zero
 
-    // Get light counts from StructuredBuffer
-    uint NumPointLights, NumSpotLights, Stride;
-    PointLights.GetDimensions(NumPointLights, Stride);
-    SpotLights.GetDimensions(NumSpotLights, Stride);
+    // Get light count from StructuredBuffer
+    uint NumDynamicLights, Stride;
+    DynamicLights.GetDimensions(NumDynamicLights, Stride);
 
-    // Accumulate PointLight contributions
-    for (uint i = 0; i < NumPointLights; i++)
+    // Accumulate all dynamic light contributions in a single loop
+    for (uint i = 0; i < NumDynamicLights; i++)
     {
-        Lighting += CalculatePointLight(PointLights[i], Input.WorldPosition, Normal, ViewDir, SpecularPower);
-    }
-
-    // Accumulate SpotLight contributions
-    for (uint j = 0; j < NumSpotLights; j++)
-    {
-        Lighting += CalculateSpotLight(SpotLights[j], Input.WorldPosition, Normal, ViewDir, SpecularPower);
+        Lighting += CalculateDynamicLight(DynamicLights[i], Input.WorldPosition, Normal, ViewDir, SpecularPower);
     }
 
     // Apply lighting to diffuse color
@@ -231,6 +196,6 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 
     float3 EncodedNormal = wsNormal * 0.5f + 0.5f;
     Output.NormalData = float4(EncodedNormal, 1.0f);
-    
+
     return Output;
 }

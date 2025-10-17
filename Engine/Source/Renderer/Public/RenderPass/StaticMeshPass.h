@@ -20,11 +20,8 @@ private:
     ID3D11Buffer* ConstantBufferMaterial = nullptr;
     ID3D11Buffer* ConstantBufferLight = nullptr;
 
-    ID3D11Buffer* PointLightStructuredBuffer = nullptr;
-    ID3D11ShaderResourceView* PointLightSRV = nullptr;
-    uint32 PointLightCapacity;
-
-    ID3D11Buffer* SpotLightStructuredBuffer = nullptr;
-    ID3D11ShaderResourceView* SpotLightSRV = nullptr;
-    uint32 SpotLightCapacity;
+    // Unified Dynamic Light Buffer (Point, Spot, Rect lights)
+    ID3D11Buffer* UnifiedLightStructuredBuffer = nullptr;
+    ID3D11ShaderResourceView* UnifiedLightSRV = nullptr;
+    uint32 UnifiedLightCapacity;
 };
