@@ -13,6 +13,7 @@ tab_width = 4
 end_of_line = crlf
 
 # 파일 인코딩 설정 (언리얼 표준: UTF-8 with BOM)
+[*]
 charset = utf-8
 
 # 파일 끝에 빈 줄을 추가합니다. (C++ 파일의 일반적인 관례)

@@ -1,5 +1,27 @@
 #include "TextureVS.hlsl"
-#include "AmbientDirectionalLighting.hlsl"
+
+//--------------------------------------------------------------------------------------
+// [UNIFIED FORWARD RENDERING] Light Data Structures
+//--------------------------------------------------------------------------------------
+
+// Ambient Light (Scene-wide global illumination)
+struct FAmbientLight
+{
+    float3 Color;
+    float Intensity;
+};
+
+// Light Constants (ConstantBuffer b10)
+cbuffer LightConstants : register(b10)
+{
+    FAmbientLight GlobalAmbient;        // 16 bytes - Scene-wide ambient illumination
+    uint UnifiedLightCount;             // 4 bytes  - Number of lights in StructuredBuffer
+    float3 Padding;                     // 12 bytes - Alignment padding
+};
+
+//--------------------------------------------------------------------------------------
+// Material Constants
+//--------------------------------------------------------------------------------------
 
 cbuffer MaterialConstants : register(b2)
 {
@@ -60,12 +82,86 @@ struct PS_OUTPUT
     float4 NormalData : SV_Target1;
 };
 
-// [UNIFIED FORWARD RENDERING] Calculate dynamic light contribution using Blinn-Phong
-float3 CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower)
+//--------------------------------------------------------------------------------------
+// [MODULAR LIGHTING SYSTEM] Lighting Result Structure
+//--------------------------------------------------------------------------------------
+
+/**
+ * @brief Separated lighting components for proper material application
+ * @note Allows independent Kd and Ks multiplication
+ */
+struct FLightingResult
 {
+    float3 Diffuse;   // Diffuse contribution (to be multiplied by Kd)
+    float3 Specular;  // Specular contribution (to be multiplied by Ks)
+};
+
+//--------------------------------------------------------------------------------------
+// [LIGHTING MODELS] Modular lighting calculation functions
+//--------------------------------------------------------------------------------------
+
+/**
+ * @brief Calculate Blinn-Phong lighting (Diffuse + Specular)
+ * @param LightDir Direction from surface to light (normalized)
+ * @param Normal Surface normal (normalized)
+ * @param ViewDir Direction from surface to camera (normalized)
+ * @param LightColor Light's color and intensity
+ * @param SpecularPower Shininess exponent (Ns)
+ * @return Separated diffuse and specular contributions
+ */
+FLightingResult CalculateBlinnPhongLighting(float3 LightDir, float3 Normal, float3 ViewDir,
+                                             float3 LightColor, float SpecularPower)
+{
+    FLightingResult Result;
+
+    // Diffuse (Lambertian)
+    float NdotL = saturate(dot(Normal, LightDir));
+    Result.Diffuse = LightColor * NdotL;
+
+    // Specular (Blinn-Phong)
+    float3 HalfVec = normalize(LightDir + ViewDir);
+    float NdotH = saturate(dot(Normal, HalfVec));
+    float SpecularFactor = pow(NdotH, SpecularPower);
+    Result.Specular = LightColor * SpecularFactor;
+
+    return Result;
+}
+
+/**
+ * @brief Calculate Lambert lighting (Diffuse only, no specular)
+ * @param LightDir Direction from surface to light (normalized)
+ * @param Normal Surface normal (normalized)
+ * @param LightColor Light's color and intensity
+ * @return Diffuse contribution only
+ */
+FLightingResult CalculateLambertLighting(float3 LightDir, float3 Normal, float3 LightColor)
+{
+    FLightingResult Result;
+
+    float NdotL = saturate(dot(Normal, LightDir));
+    Result.Diffuse = LightColor * NdotL;
+    Result.Specular = float3(0, 0, 0);
+
+    return Result;
+}
+
+//--------------------------------------------------------------------------------------
+// [UNIFIED FORWARD RENDERING] Dynamic Light Calculation with Attenuation
+//--------------------------------------------------------------------------------------
+
+/**
+ * @brief Calculate dynamic light contribution with attenuation using Blinn-Phong
+ * @return Separated diffuse and specular contributions
+ */
+FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower)
+{
+    FLightingResult Result;
+    Result.Diffuse = float3(0, 0, 0);
+    Result.Specular = float3(0, 0, 0);
+
     // Early exit for disabled/dummy lights
     if (Light.Intensity <= 0.0f)
-        return float3(0, 0, 0);
+        return Result;
 
     float3 LightDir;
     float Attenuation = Light.Intensity;
@@ -83,7 +179,7 @@ float3 CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPos, float3
 
         // Early exit if outside light influence radius
         if (Distance > Light.SourceRadius)
-            return float3(0, 0, 0);
+            return Result;
 
         LightDir = normalize(LightVec);
 
@@ -100,7 +196,7 @@ float3 CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPos, float3
             float OuterCos = cos(Light.Param1);  // OuterConeAngle
 
             if (Theta < OuterCos)
-                return float3(0, 0, 0); // Outside cone
+                return Result; // Outside cone
 
             // Smooth cone falloff
             float SpotAttenuation = saturate((Theta - OuterCos) / (InnerCos - OuterCos));
@@ -108,16 +204,13 @@ float3 CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPos, float3
         }
     }
 
-    // Diffuse (Lambertian)
-    float NdotL = saturate(dot(Normal, LightDir));
+    // Apply attenuated light color
+    float3 AttenuatedLightColor = Light.Color * Attenuation;
 
-    // Specular (Blinn-Phong)
-    float3 HalfVec = normalize(LightDir + ViewDir);
-    float NdotH = saturate(dot(Normal, HalfVec));
-    float Specular = pow(NdotH, SpecularPower);
+    // Calculate Blinn-Phong lighting (separated Diffuse and Specular)
+    Result = CalculateBlinnPhongLighting(LightDir, Normal, ViewDir, AttenuatedLightColor, SpecularPower);
 
-    // Combine diffuse + specular with all attenuation factors
-    return Light.Color * (NdotL + Specular * 0.3f) * Attenuation;
+    return Result;
 }
 
 PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
@@ -151,29 +244,35 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
         SpecularColor *= SpecularTexture.Sample(SamplerWrap, UV);
     }
 
-    // Start with ambient lighting (Material ambient * Global ambient)
-	float3 Lighting = 0.0f;
-
-    // [UNIFIED FORWARD RENDERING] Add dynamic lights (single loop)
+    // [UNIFIED FORWARD RENDERING] Accumulate dynamic lights (single loop)
     float3 Normal = normalize(Input.WorldNormal);
     float3 ViewDir = normalize(ViewWorldLocation - Input.WorldPosition);
     float SpecularPower = max(Ns, 1.0f); // Prevent division by zero
 
-    // Get light count from StructuredBuffer
-    uint NumDynamicLights, Stride;
-    DynamicLights.GetDimensions(NumDynamicLights, Stride);
+    // Accumulate separated diffuse and specular contributions
+    float3 TotalDiffuse = float3(0, 0, 0);
+    float3 TotalSpecular = float3(0, 0, 0);
 
-    // Accumulate all dynamic light contributions in a single loop
-    for (uint i = 0; i < NumDynamicLights; i++)
+    for (uint i = 0; i < UnifiedLightCount; i++)
     {
-        Lighting += CalculateDynamicLight(DynamicLights[i], Input.WorldPosition, Normal, ViewDir, SpecularPower);
+        FLightingResult LightResult = CalculateDynamicLight(
+            DynamicLights[i], Input.WorldPosition, Normal, ViewDir, SpecularPower);
+
+        TotalDiffuse += LightResult.Diffuse;
+        TotalSpecular += LightResult.Specular;
     }
 
 	float4 FinalColor;
 
-    // Apply lighting to diffuse color
-    FinalColor.rgb = DiffuseColor.rgb * Lighting;
-	FinalColor.rgb += AmbientColor.rgb * GlobalAmbient.Color * GlobalAmbient.Intensity;
+    // [PHYSICALLY CORRECT] Apply material properties separately
+    // Ambient term: Ka * GlobalAmbient
+    FinalColor.rgb = AmbientColor.rgb * GlobalAmbient.Color * GlobalAmbient.Intensity;
+
+    // Diffuse term: Kd * Diffuse lighting
+    FinalColor.rgb += DiffuseColor.rgb * TotalDiffuse;
+
+    // Specular term: Ks * Specular lighting
+    FinalColor.rgb += SpecularColor.rgb * TotalSpecular;
 
     // 3. 알파 값 처리 (기존 코드와 동일)
     FinalColor.a = D; // 기본 알파값
@@ -185,34 +284,42 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 
     // Normal mapping
     // -----------------------
-    float3 wsNormal;
-    if (MaterialFlags & HAS_BUMP_MAP)
-    {
+	float3 wsNormal = Input.WorldNormal;
+	if (MaterialFlags & HAS_BUMP_MAP)
+	{
         // Sample and unpack tangent-space normal (assumes XYZ in texture)
-        float3 nTS = BumpTexture.Sample(SamplerWrap, UV).xyz * 2.0f - 1.0f;
-        nTS = normalize(nTS);
+		float3 nTS = BumpTexture.Sample(SamplerWrap, UV).xyz * 2.0f - 1.0f;
+		nTS = normalize(nTS);
 
         // Derive TBN from screen-space derivatives (no vertex tangents required)
-        float3 N = normalize(Input.WorldNormal);
-        float3 dpdx = ddx(Input.WorldPosition);
-        float3 dpdy = ddy(Input.WorldPosition);
-        float2 dUVdx = ddx(UV);
-        float2 dUVdy = ddy(UV);
+		float3 N = normalize(Input.WorldNormal);
+		float3 dpdx = ddx(Input.WorldPosition);
+		float3 dpdy = ddy(Input.WorldPosition);
+		float2 dUVdx = ddx(UV);
+		float2 dUVdy = ddy(UV);
 
         // Robust tangent reconstruction
-        float3 T = dUVdy.y * dpdx - dUVdx.y * dpdy;
+		float3 T = dUVdy.y * dpdx - dUVdx.y * dpdy;
         // float3 B = -dUVdy.x * dpdx + dUVdx.x * dpdy;
 
         // Orthonormalize
-        T = normalize(T - N * dot(N, T));
-        float3 B_ortho = normalize(cross(N, T));
+		T = normalize(T - N * dot(N, T));
+		float3 B_ortho = normalize(cross(N, T));
 
-        float3x3 TBN = float3x3(T, B_ortho, N);
-        wsNormal = normalize(mul(nTS, TBN));
-    }
-    else
+		float3x3 TBN = float3x3(T, B_ortho, N);
+		wsNormal = normalize(mul(nTS, TBN));
+	}
+	else
+	{
+		wsNormal = normalize(Input.WorldNormal);
+	}
+
+    // 3. 알파 값 처리 (기존 코드와 동일)
+    FinalColor.a = D; // 기본 알파값
+    if (MaterialFlags & HAS_ALPHA_MAP)
     {
-        wsNormal = normalize(Input.WorldNormal);
+        float alpha = AlphaTexture.Sample(SamplerWrap, UV).r;
+        FinalColor.a = D * alpha;
     }
 
     Output.SceneColor = FinalColor;

@@ -24,7 +24,8 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstant
 
 void FStaticMeshPass::Execute(FRenderingContext& Context)
 {
-	UpdateLightsFromContext(Context);
+	// Update lights and get count
+	uint32 LightCount = UpdateLightsFromContext(Context);
 
 	FRenderState RenderState = UStaticMeshComponent::GetClassDefaultRenderState();
 	if (Context.ViewMode == EViewModeIndex::VMI_Wireframe)
@@ -42,7 +43,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	// Initialize with default ambient (very dark, almost black)
 	LightConstants.GlobalAmbient.Color = FVector(1.0f, 1.0f, 1.0f);
 	LightConstants.GlobalAmbient.Intensity = 0.0f;
-	LightConstants.NumDirectionalLights = 0;
+	LightConstants.UnifiedLightCount = LightCount;
 
 	for (ULightComponentBase* Light : Context.Lights)
 	{
@@ -197,7 +198,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	// --- RTVs Reset End ---
 }
 
-void FStaticMeshPass::UpdateLightsFromContext(FRenderingContext& Context)
+uint32 FStaticMeshPass::UpdateLightsFromContext(FRenderingContext& Context)
 {
 	// Step 1: Collect all dynamic lights into unified buffer
 	TArray<FUnifiedDynamicLight> UnifiedLights;
@@ -215,6 +216,9 @@ void FStaticMeshPass::UpdateLightsFromContext(FRenderingContext& Context)
 		UnifiedLights.push_back(UnifiedLight);
 	}
 
+	// Store actual light count before padding
+	uint32 ActualLightCount = static_cast<uint32>(UnifiedLights.size());
+
 	// Step 2: Reallocate buffer if capacity exceeded
 	// Always maintain minimum capacity of 1 to support empty updates
 	if (UnifiedLights.size() > UnifiedLightCapacity)
@@ -225,7 +229,7 @@ void FStaticMeshPass::UpdateLightsFromContext(FRenderingContext& Context)
 	}
 
 	// Step 3: Upload to GPU (always update, even if empty, to clear stale data)
-	// When empty, upload one dummy light with Intensity=0 so GetDimensions() doesn't fail
+	// When empty, upload one dummy light with Intensity=0 to maintain buffer validity
 	if (UnifiedLights.empty())
 	{
 		UnifiedLights.push_back(FUnifiedDynamicLight());  // All fields zero, Intensity=0
@@ -236,6 +240,9 @@ void FStaticMeshPass::UpdateLightsFromContext(FRenderingContext& Context)
 
 	// Step 4: Bind SRV to Pixel Shader (t6)
 	Pipeline->SetTexture(6, false, UnifiedLightSRV);
+
+	// Return actual light count (not including dummy)
+	return ActualLightCount;
 }
 
 
