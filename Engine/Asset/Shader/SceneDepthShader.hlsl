@@ -84,6 +84,5 @@ float4 mainPS(PS_INPUT Input) : SV_TARGET
     
     float scaledDepth = linearDepth / BandSize;
     float sawtooth = frac(scaledDepth);
-    float bandPattern = 1.0f - sawtooth;
-    return float4(bandPattern, bandPattern, bandPattern, 1.0f);
+    return float4(sawtooth, sawtooth, sawtooth, 1.0f);
 }

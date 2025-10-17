@@ -35,6 +35,8 @@ public:
         
     virtual void DuplicateSubObjects(UObject* DuplicatedObject) override;
 
+    virtual UClass* GetSpecificWidgetClass() const override;
+
     /*-----------------------------------------------------------------------------
         UActorComponent Features
      -----------------------------------------------------------------------------*/

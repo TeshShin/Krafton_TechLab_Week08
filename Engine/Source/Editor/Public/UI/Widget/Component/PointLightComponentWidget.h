@@ -12,7 +12,6 @@ class UPointLightComponentWidget : public UWidget
     
 public:
     UPointLightComponentWidget() = default;
-    
     virtual ~UPointLightComponentWidget() = default;
     
     /*-----------------------------------------------------------------------------

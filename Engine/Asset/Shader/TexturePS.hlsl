@@ -64,13 +64,10 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 
     // Shininess for material
     float Shininess = Ns;
-    
-    // Normal mapping
-    float3 WorldNormal = normalize(Input.WorldNormal);
-    
+        
     // 조명 계산 호출
     float3 FinalLitColor = CalculateLighting(AmbientColor, DiffuseColor, SpecularColor, Shininess,
-        Input.WorldPosition, WorldNormal, ViewWorldLocation);
+        Input.WorldPosition, Input.WorldNormal, ViewWorldLocation);
 
     float4 FinalColor;
     FinalColor.rgb = FinalLitColor;

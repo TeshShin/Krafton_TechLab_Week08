@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "Scene/Public/Component/LightComponentBase.h"
 #include "Asset/Public/JsonSerializer.h"
+#include "Editor/Public/UI/Widget/Component/LightComponentWidget.h"
 
 IMPLEMENT_ABSTRACT_CLASS(ULightComponentBase, USceneComponent)
 
@@ -34,4 +35,9 @@ UObject* ULightComponentBase::Duplicate()
 void ULightComponentBase::DuplicateSubObjects(UObject* DuplicatedObject)
 {
 	Super::DuplicateSubObjects(DuplicatedObject);
+}
+
+UClass* ULightComponentBase::GetSpecificWidgetClass() const
+{
+	return ULightComponentWidget::StaticClass();
 }

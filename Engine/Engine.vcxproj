@@ -356,6 +356,7 @@
     <ClInclude Include="Source\Editor\Public\UI\Widget\CameraControlWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\DecalTextureSelectionWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\HeightFogComponentWidget.h" />
+    <ClInclude Include="Source\Editor\Public\UI\Widget\Component\LightComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\PointLightComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\ProjectileMovementComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\RotatingMovementComponentWidget.h" />
@@ -429,11 +430,14 @@
     <ClInclude Include="Source\Renderer\Public\RenderPass\TextPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderResourceFactory.h" />
     <ClInclude Include="Source\Scene\Public\Actor\Actor.h" />
+    <ClInclude Include="Source\Scene\Public\Actor\AmbientLightActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\BillBoardActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\CubeActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\DecalActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\DecalSpotLightActor.h" />
+    <ClInclude Include="Source\Scene\Public\Actor\DirectionalLightActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\HeightFogActor.h" />
+    <ClInclude Include="Source\Scene\Public\Actor\LightActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\MovingCubeActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\PointLightActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\SphereActor.h" />
@@ -533,6 +537,7 @@
     </ClCompile>
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\HeightFogComponentWidget.cpp">
     </ClCompile>
+    <ClCompile Include="Source\Editor\Private\UI\Widget\Component\LightComponentWidget.cpp" />
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\PointLightComponentWidget.cpp">
     </ClCompile>
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\ProjectileMovementComponentWidget.cpp">
@@ -647,6 +652,7 @@
     </ClCompile>
     <ClCompile Include="Source\Scene\Private\Actor\Actor.cpp">
     </ClCompile>
+    <ClCompile Include="Source\Scene\Private\Actor\AmbientLightActor.cpp" />
     <ClCompile Include="Source\Scene\Private\Actor\BillBoardActor.cpp">
     </ClCompile>
     <ClCompile Include="Source\Scene\Private\Actor\CubeActor.cpp">
@@ -655,8 +661,10 @@
     </ClCompile>
     <ClCompile Include="Source\Scene\Private\Actor\DecalSpotLightActor.cpp">
     </ClCompile>
+    <ClCompile Include="Source\Scene\Private\Actor\DirectionalLightActor.cpp" />
     <ClCompile Include="Source\Scene\Private\Actor\HeightFogActor.cpp">
     </ClCompile>
+    <ClCompile Include="Source\Scene\Private\Actor\LightActor.cpp" />
     <ClCompile Include="Source\Scene\Private\Actor\MovingCubeActor.cpp">
     </ClCompile>
     <ClCompile Include="Source\Scene\Private\Actor\PointLightActor.cpp">
