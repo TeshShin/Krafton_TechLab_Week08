@@ -37,7 +37,12 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 
 	// [UNIFIED FORWARD RENDERING] Only Ambient light uses ConstantBuffer now
 	// All dynamic lights (Directional, Point, Spot) use unified StructuredBuffer
-	FLightConstants LightConstants;
+	FLightConstants LightConstants = {};
+
+	// Initialize with default ambient (very dark, almost black)
+	LightConstants.GlobalAmbient.Color = FVector(1.0f, 1.0f, 1.0f);
+	LightConstants.GlobalAmbient.Intensity = 0.0f;
+	LightConstants.NumDirectionalLights = 0;
 
 	for (ULightComponentBase* Light : Context.Lights)
 	{
@@ -211,6 +216,7 @@ void FStaticMeshPass::UpdateLightsFromContext(FRenderingContext& Context)
 	}
 
 	// Step 2: Reallocate buffer if capacity exceeded
+	// Always maintain minimum capacity of 1 to support empty updates
 	if (UnifiedLights.size() > UnifiedLightCapacity)
 	{
 		UnifiedLightCapacity = static_cast<uint32>(UnifiedLights.size() * 2);
@@ -218,12 +224,15 @@ void FStaticMeshPass::UpdateLightsFromContext(FRenderingContext& Context)
 			UnifiedLightStructuredBuffer, UnifiedLightSRV, UnifiedLightCapacity);
 	}
 
-	// Step 3: Upload to GPU
-	if (!UnifiedLights.empty())
+	// Step 3: Upload to GPU (always update, even if empty, to clear stale data)
+	// When empty, upload one dummy light with Intensity=0 so GetDimensions() doesn't fail
+	if (UnifiedLights.empty())
 	{
-		FRenderResourceFactory::UpdateStructuredBufferData(
-			UnifiedLightStructuredBuffer, UnifiedLights);
+		UnifiedLights.push_back(FUnifiedDynamicLight());  // All fields zero, Intensity=0
 	}
+
+	FRenderResourceFactory::UpdateStructuredBufferData(
+		UnifiedLightStructuredBuffer, UnifiedLights);
 
 	// Step 4: Bind SRV to Pixel Shader (t6)
 	Pipeline->SetTexture(6, false, UnifiedLightSRV);
