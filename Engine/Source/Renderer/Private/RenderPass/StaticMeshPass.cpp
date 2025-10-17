@@ -59,7 +59,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	Pipeline->SetConstantBuffer(0, true, ConstantBufferModel);
 	Pipeline->SetConstantBuffer(1, true, ConstantBufferCamera);
 	Pipeline->SetConstantBuffer(1, false, ConstantBufferCamera);
-	
+
 	if (!(Context.ShowFlags & EEngineShowFlags::SF_StaticMesh)) { return; }
 	TArray<UStaticMeshComponent*>& MeshComponents = Context.StaticMeshes;
 	sort(MeshComponents.begin(), MeshComponents.end(),
@@ -73,7 +73,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	UMaterial* CurrentMaterial = nullptr;
 
 	// --- RTVs Setup ---
-	
+
 	/**
 	 * @todo Find a better way to reduce depdency upon Renderer class.
 	 * @note How about introducing methods like BeginPass(), EndPass() to set up and release pass specific state?
@@ -83,11 +83,11 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	ID3D11RenderTargetView* RTV = nullptr;
 	if (Renderer.GetFXAA())
 	{
-		RTV = DeviceResources->GetSceneColorRenderTargetView();	
+		RTV = DeviceResources->GetSceneColorRenderTargetView();
 	}
 	else
 	{
-		RTV = DeviceResources->GetRenderTargetView();	
+		RTV = DeviceResources->GetRenderTargetView();
 	}
 	ID3D11RenderTargetView* RTVs[2] = { RTV, DeviceResources->GetNormalRenderTargetView() };
 	ID3D11DepthStencilView* DSV = DeviceResources->GetDepthStencilView();
@@ -95,7 +95,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 
 	// --- RTVs Setup End ---
 
-	for (UStaticMeshComponent* MeshComp : MeshComponents) 
+	for (UStaticMeshComponent* MeshComp : MeshComponents)
 	{
 		if (!MeshComp->GetStaticMesh()) { continue; }
 		FStaticMesh* MeshAsset = MeshComp->GetStaticMesh()->GetStaticMeshAsset();
@@ -107,17 +107,17 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 			Pipeline->SetIndexBuffer(MeshComp->GetIndexBuffer(), 0);
 			CurrentMeshAsset = MeshAsset;
 		}
-		
+
 		FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferModel, MeshComp->GetWorldTransformMatrix());
 		Pipeline->SetConstantBuffer(0, true, ConstantBufferModel);
 
-		if (MeshAsset->MaterialInfo.empty() || MeshComp->GetStaticMesh()->GetNumMaterials() == 0) 
+		if (MeshAsset->MaterialInfo.empty() || MeshComp->GetStaticMesh()->GetNumMaterials() == 0)
 		{
 			Pipeline->DrawIndexed(MeshAsset->Indices.size(), 0, 0);
 			continue;
 		}
 
-		if (MeshComp->IsScrollEnabled()) 
+		if (MeshComp->IsScrollEnabled())
 		{
 			MeshComp->SetElapsedTime(MeshComp->GetElapsedTime() + UTimeManager::GetInstance().GetDeltaTime());
 		}
@@ -137,7 +137,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 				if (Material->GetDiffuseTexture())  { MaterialConstants.MaterialFlags |= HAS_DIFFUSE_MAP; }
 				if (Material->GetAmbientTexture())  { MaterialConstants.MaterialFlags |= HAS_AMBIENT_MAP; }
 				if (Material->GetSpecularTexture()) { MaterialConstants.MaterialFlags |= HAS_SPECULAR_MAP; }
-				if (Material->GetNormalTexture())   { MaterialConstants.MaterialFlags |= HAS_NORMAL_MAP; }
+				if (Material->GetShininessTexture()) { MaterialConstants.MaterialFlags |= HAS_SHININESS_MAP; }
 				if (Material->GetAlphaTexture())    { MaterialConstants.MaterialFlags |= HAS_ALPHA_MAP; }
 				if (Material->GetBumpTexture())     { MaterialConstants.MaterialFlags |= HAS_BUMP_MAP; }
 				MaterialConstants.Time = MeshComp->GetElapsedTime();
@@ -158,11 +158,19 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 				{
 					Pipeline->SetTexture(2, false, SpecularTexture->GetTextureSRV());
 				}
+				if (UTexture* NormalTexture = Material->GetShininessTexture())
+				{
+					Pipeline->SetTexture(3, false, NormalTexture->GetTextureSRV());
+				}
 				if (UTexture* AlphaTexture = Material->GetAlphaTexture())
 				{
 					Pipeline->SetTexture(4, false, AlphaTexture->GetTextureSRV());
 				}
-				
+				if (UTexture* BumpTexture = Material->GetBumpTexture())
+				{
+					Pipeline->SetTexture(5, false, BumpTexture->GetTextureSRV());
+				}
+
 				CurrentMaterial = Material;
 			}
 			Pipeline->DrawIndexed(Section.IndexCount, Section.StartIndex, 0);
@@ -170,9 +178,9 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	}
 	Pipeline->SetConstantBuffer(2, false, nullptr);
 
-	
+
 	// --- RTVs Reset ---
-	
+
 	/**
 	 * @todo Find a better way to reduce depdency upon Renderer class.
 	 * @note How about introducing methods like BeginPass(), EndPass() to set up and release pass specific state?

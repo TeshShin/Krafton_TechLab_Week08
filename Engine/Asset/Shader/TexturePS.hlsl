@@ -15,8 +15,8 @@ cbuffer MaterialConstants : register(b2)
 
 Texture2D DiffuseTexture : register(t0);	// map_Kd
 Texture2D AmbientTexture : register(t1);	// map_Ka
-Texture2D SpecularTexture : register(t2);	// map_Ks
-Texture2D NormalTexture : register(t3);		// map_Ns
+Texture2D SpecularTexture : register(t2);   // map_Ks
+Texture2D ShininessTexture : register(t3);   // map_Ns
 Texture2D AlphaTexture : register(t4);		// map_d
 Texture2D BumpTexture : register(t5);		// map_bump
 
@@ -26,7 +26,7 @@ SamplerState SamplerWrap : register(s0);
 #define HAS_DIFFUSE_MAP	 (1 << 0)
 #define HAS_AMBIENT_MAP	 (1 << 1)
 #define HAS_SPECULAR_MAP (1 << 2)
-#define HAS_NORMAL_MAP	 (1 << 3)
+#define HAS_SHININESS_MAP (1 << 3)
 #define HAS_ALPHA_MAP	 (1 << 4)
 #define HAS_BUMP_MAP	 (1 << 5)
 
@@ -36,9 +36,11 @@ struct PS_OUTPUT
     float4 NormalData : SV_Target1;
 };
 
-PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
+PS_OUTPUT mainPS(PS_INPUT Input) : SV_Target
 {
     PS_OUTPUT Output;
+
+    float4 FinalColor = float4(0.f, 0.f, 0.f, 1.f);
     float2 UV = Input.Tex;
 
     // Base diffuse color
@@ -81,8 +83,42 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
     }
 
     // 4. 최종 출력값 설정
+    // -----------------------
+    // Normal mapping
+    // -----------------------
+    float3 wsNormal;
+    if (MaterialFlags & HAS_BUMP_MAP)
+    {
+        // Sample and unpack tangent-space normal (assumes XYZ in texture)
+        float3 nTS = BumpTexture.Sample(SamplerWrap, UV).xyz * 2.0f - 1.0f;
+        nTS = normalize(nTS);
+
+        // Derive TBN from screen-space derivatives (no vertex tangents required)
+        float3 N = normalize(Input.WorldNormal);
+        float3 dpdx = ddx(Input.WorldPosition);
+        float3 dpdy = ddy(Input.WorldPosition);
+        float2 dUVdx = ddx(UV);
+        float2 dUVdy = ddy(UV);
+
+        // Robust tangent reconstruction
+        float3 T = dUVdy.y * dpdx - dUVdx.y * dpdy;
+        // float3 B = -dUVdy.x * dpdx + dUVdx.x * dpdy;
+
+        // Orthonormalize
+        T = normalize(T - N * dot(N, T));
+        float3 B_ortho = normalize(cross(N, T));
+
+        float3x3 TBN = float3x3(T, B_ortho, N);
+        wsNormal = normalize(mul(nTS, TBN));
+    }
+    else
+    {
+        wsNormal = normalize(Input.WorldNormal);
+    }
+
     Output.SceneColor = FinalColor;
-    float3 EncodedNormal = normalize(Input.WorldNormal) * 0.5f + 0.5f;
+
+    float3 EncodedNormal = wsNormal * 0.5f + 0.5f;
     Output.NormalData = float4(EncodedNormal, 1.0f);
     
     return Output;

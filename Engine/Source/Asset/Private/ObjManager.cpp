@@ -58,6 +58,48 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FName& PathFileName, cons
 	/** @note: Use only first object in '.obj' file to create FStaticMesh. */
 	FObjectInfo& ObjectInfo = ObjInfo.ObjectInfoList[0];
 
+    // If the OBJ provides no normal indices, build per-vertex normals from face geometry
+    if (ObjectInfo.NormalIndexList.empty())
+    {
+        const size_t numPositions = ObjInfo.VertexList.size();
+        TArray<FVector> AccumNormals; AccumNormals.resize(numPositions);
+        // Accumulate face normals per vertex (assumes triangles)
+        for (size_t i = 0; i + 2 < ObjectInfo.VertexIndexList.size(); i += 3)
+        {
+            size_t ia = ObjectInfo.VertexIndexList[i + 0];
+            size_t ib = ObjectInfo.VertexIndexList[i + 1];
+            size_t ic = ObjectInfo.VertexIndexList[i + 2];
+            if (ia >= numPositions || ib >= numPositions || ic >= numPositions) { continue; }
+
+            const FVector& A = ObjInfo.VertexList[ia];
+            const FVector& B = ObjInfo.VertexList[ib];
+            const FVector& C = ObjInfo.VertexList[ic];
+
+            FVector N = (B - A).Cross(C - A);
+            float len = N.Length();
+            if (len > 1e-6f) { N = N * (1/len); }
+            else { N = FVector(0, 0, 1); }
+
+            AccumNormals[ia] = AccumNormals[ia] + N;
+            AccumNormals[ib] = AccumNormals[ib] + N;
+            AccumNormals[ic] = AccumNormals[ic] + N;
+        }
+        // Normalize accumulated normals into ObjInfo.NormalList if it's empty
+        if (ObjInfo.NormalList.empty()) { ObjInfo.NormalList.resize(numPositions); }
+        for (size_t vi = 0; vi < numPositions; ++vi)
+        {
+            FVector n = AccumNormals[vi];
+            float len = n.Length();
+            if (len > 1e-6f) { ObjInfo.NormalList[vi] = n * (1/len); }
+            else {
+                // Fallback: normalize position as normal (sphere-like)
+                const FVector& P = ObjInfo.VertexList[vi];
+                float plen = P.Length();
+                ObjInfo.NormalList[vi] = (plen > 1e-6f) ? (P * (1/plen)) : FVector(0, 0, 1);
+            }
+        }
+    }
+
 	TMap<VertexKey, size_t, VertexKeyHash> VertexMap;
 	for (size_t i = 0; i < ObjectInfo.VertexIndexList.size(); ++i)
 	{
@@ -82,11 +124,17 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FName& PathFileName, cons
 			FNormalVertex Vertex = {};
 			Vertex.Position = ObjInfo.VertexList[VertexIndex];
 
-			if (NormalIndex != INVALID_INDEX)
-			{
-				assert("Vertex normal index out of range" && NormalIndex < ObjInfo.NormalList.size());
-				Vertex.Normal = ObjInfo.NormalList[NormalIndex];
-			}
+            if (NormalIndex != INVALID_INDEX)
+            {
+                assert("Vertex normal index out of range" && NormalIndex < ObjInfo.NormalList.size());
+                Vertex.Normal = ObjInfo.NormalList[NormalIndex];
+            }
+            else if (!ObjInfo.NormalList.empty())
+            {
+                // Use computed per-vertex normal when explicit normal indices are absent
+                assert("Vertex index out of range" && VertexIndex < ObjInfo.NormalList.size());
+                Vertex.Normal = ObjInfo.NormalList[VertexIndex];
+            }
 
 			if (TexCoordIndex != INVALID_INDEX)
 			{
@@ -150,7 +198,7 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FName& PathFileName, cons
 		StaticMesh->MaterialInfo[0].Name = "DefaultMaterial";
 		StaticMesh->MaterialInfo[0].Kd = FVector(0.9f, 0.9f, 0.9f);
 	}
-	
+
 	/** #4. 오브젝트의 서브메쉬 정보를 저장 */
 	if (ObjectInfo.MaterialNameList.empty())
 	{
@@ -258,6 +306,21 @@ void FObjManager::CreateMaterialsFromMTL(UStaticMesh* StaticMesh, FStaticMesh* S
 				if (SpecularTexture)
 				{
 					Material->SetSpecularTexture(SpecularTexture);
+				}
+			}
+		}
+
+		// Normal/Bump 텍스처 로드 (map_bump or bump)
+		if (!MaterialInfo.BumpMap.empty())
+		{
+			FString TexturePathStr = (ObjDirectory / MaterialInfo.BumpMap).generic_string();
+
+			if (std::filesystem::exists(TexturePathStr))
+			{
+				UTexture* NormalTexture = AssetManager.LoadTexture(TexturePathStr);
+				if (NormalTexture)
+				{
+					Material->SetBumpTexture(NormalTexture);
 				}
 			}
 		}
