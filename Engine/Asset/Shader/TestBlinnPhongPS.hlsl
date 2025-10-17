@@ -25,7 +25,7 @@ SamplerState SamplerWrap : register(s0);
 #define HAS_DIFFUSE_MAP	 (1 << 0)
 #define HAS_AMBIENT_MAP	 (1 << 1)
 #define HAS_SPECULAR_MAP (1 << 2)
-#define HAS_SHINIESS_MAP (1 << 3)
+#define HAS_SHININESS_MAP (1 << 3)
 #define HAS_ALPHA_MAP	 (1 << 4)
 #define HAS_BUMP_MAP	 (1 << 5)
 
@@ -50,19 +50,19 @@ struct PS_OUTPUT
 float4 CaculateBlinnPhong(float3 ToLightDir, float3 ToEyeDir, float4 lightColor, float3 Normal, float4 DiffuseColor, float4 SpecularColor, float Shiniess)
 {
     float3 halfVector = normalize(ToLightDir + ToEyeDir);
-    
+
     float3 DiffuseTerm = DiffuseColor * saturate(dot(normalize(Normal), normalize(ToLightDir)));
     float3 SpecularTerm = SpecularColor * pow(saturate(dot(normalize(Normal), halfVector)), Shiniess);
-    
+
     float4 FinalColor = float4((DiffuseTerm + SpecularTerm) * lightColor.rgb, 1.0f);
-    
+
     return FinalColor;
 }
 
 PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 {
     PS_OUTPUT Output;
-    
+
     float4 FinalColor = float4(0.f, 0.f, 0.f, 1.f);
     float2 UV = Input.Tex;
 
@@ -87,7 +87,7 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
     {
         SpecularColor *= SpecularTexture.Sample(SamplerWrap, UV);
     }
-    
+
     // Alpha handling
     if (MaterialFlags & HAS_ALPHA_MAP)
     {
@@ -95,10 +95,10 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
         FinalColor.a = D;
         FinalColor.a *= alpha;
     }
-    
+
     // Specular exponent from texture
     float Shininess = Ns;
-    if (MaterialFlags & HAS_SHINIESS_MAP)
+    if (MaterialFlags & HAS_SHININESS_MAP)
     {
         float ShiniessTemp = ShiniessTexture.Sample(SamplerWrap, UV).r;
         Shininess = Shininess * ShiniessTemp * 128.0f; // Assuming texture stores exponent in [0,1] range
@@ -117,17 +117,17 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
     for (uint i = 0; i < TempLightCount; ++i)
     {
         // TODO: 이곳에 각자의 Light 계산식을 넣어서 테스트 해보세요 (ToLightDir, LightColor 구하기)
-        
+
         float3 ToLightDir = float3(0.0f, 0.0f, 1.0f); // 임시값
         float4 LightColor = float4(1.0f, 1.0f, 1.0f, 1.0f); // 임시값
         FinalColor += CaculateBlinnPhong(ToLightDir, ToEyeDir, LightColor, Normal, DiffuseColor, SpecularColor, Shininess);
     }
     FinalColor.rgb += AmbientLightColor.rgb * AmbientColor.rgb; // 환경광 더해주기
-    
-    
+
+
     Output.SceneColor = FinalColor;
     float3 EncodedNormal = Normal * 0.5f + 0.5f;
     Output.NormalData = float4(EncodedNormal, 1.0f);
-	
+
     return Output;
 }

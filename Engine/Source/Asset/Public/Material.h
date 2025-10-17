@@ -70,19 +70,19 @@ public:
 	float GetSpecularExponent() const { return MaterialData.Ns; }
 	float GetRefractionIndex() const { return MaterialData.Ni; }
 	float GetDissolveFactor() const { return MaterialData.D; }
-	
+
 	// Texture access functions
 	UTexture* GetDiffuseTexture() const { return DiffuseTexture; }
 	UTexture* GetAmbientTexture() const { return AmbientTexture; }
 	UTexture* GetSpecularTexture() const { return SpecularTexture; }
-	UTexture* GetShiniessTexture() const { return ShiniessTexture; }
+	UTexture* GetShininessTexture() const { return ShininessTexture; }
 	UTexture* GetAlphaTexture() const { return AlphaTexture; }
 	UTexture* GetBumpTexture() const { return BumpTexture; }
 
 	void SetDiffuseTexture(UTexture* InTexture) { DiffuseTexture = InTexture; }
 	void SetAmbientTexture(UTexture* InTexture) { AmbientTexture = InTexture; }
 	void SetSpecularTexture(UTexture* InTexture) { SpecularTexture = InTexture; }
-	void SetShiniessTexture(UTexture* InTexture) { ShiniessTexture = InTexture; }
+	void SetShininessTexture(UTexture* InTexture) { ShininessTexture = InTexture; }
 	void SetAlphaTexture(UTexture* InTexture) { AlphaTexture = InTexture; }
 	void SetBumpTexture(UTexture* InTexture) { BumpTexture = InTexture; }
 
@@ -90,7 +90,7 @@ private:
 	UTexture* DiffuseTexture = nullptr;
 	UTexture* AmbientTexture = nullptr;
 	UTexture* SpecularTexture = nullptr;
-	UTexture* ShiniessTexture = nullptr;
+	UTexture* ShininessTexture = nullptr;
 	UTexture* AlphaTexture = nullptr;
 	UTexture* BumpTexture = nullptr;
 

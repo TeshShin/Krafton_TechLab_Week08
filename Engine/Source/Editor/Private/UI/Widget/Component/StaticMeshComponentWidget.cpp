@@ -194,7 +194,7 @@ FString UStaticMeshComponentWidget::GetMaterialDisplayName(UMaterial* Material) 
 	TArray<UTexture*> Textures = {
 		Material->GetAmbientTexture(),
 		Material->GetSpecularTexture(),
-		Material->GetShiniessTexture(),
+		Material->GetShininessTexture(),
 		Material->GetAlphaTexture(),
 		Material->GetBumpTexture()
 	};

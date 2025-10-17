@@ -21,7 +21,7 @@ struct FCameraConstants
 
 	FMatrix View;
 	FMatrix Projection;
-	FVector ViewWorldLocation;    
+	FVector ViewWorldLocation;
 	float NearClip;
 	float FarClip;
 };
@@ -29,7 +29,7 @@ struct FCameraConstants
 #define HAS_DIFFUSE_MAP	 (1 << 0)
 #define HAS_AMBIENT_MAP	 (1 << 1)
 #define HAS_SPECULAR_MAP (1 << 2)
-#define HAS_SHINIESS_MAP	 (1 << 3)
+#define HAS_SHININESS_MAP	 (1 << 3)
 #define HAS_ALPHA_MAP	 (1 << 4)
 #define HAS_BUMP_MAP	 (1 << 5)
 

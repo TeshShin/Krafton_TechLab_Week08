@@ -428,6 +428,10 @@
     <ClCompile Include="Source\ImGui\imgui_widgets.cpp">
       <Filter>Source\ImGui</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Renderer\Private\RenderPass\NormalMapPass.cpp" />
+    <ClCompile Include="Asset\Shader\NormalMapShader.hlsl">
+      <Filter>Asset\Shader</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -872,6 +876,10 @@
     <ClInclude Include="Source\ImGui\imstb_truetype.h">
       <Filter>Source\ImGui</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Scene\Public\Component\LightComponent.h">
+      <Filter>Source\Scene\Public\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Public\RenderPass\NormalMapPass.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Engine.rc" />
