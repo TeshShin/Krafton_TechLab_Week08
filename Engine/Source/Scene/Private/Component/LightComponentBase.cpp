@@ -1,34 +1,37 @@
 ﻿#include "pch.h"
-#include "Scene/Public/Component/LightComponent.h"
+#include "Scene/Public/Component/LightComponentBase.h"
 #include "Asset/Public/JsonSerializer.h"
 
-IMPLEMENT_ABSTRACT_CLASS(ULightComponent, USceneComponent)
+IMPLEMENT_ABSTRACT_CLASS(ULightComponentBase, USceneComponent)
 
-void ULightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+void ULightComponentBase::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
 	Super::Serialize(bInIsLoading, InOutHandle);
 	if (bInIsLoading)
 	{
 		FJsonSerializer::ReadFloat(InOutHandle, "Intensity", Intensity);
 		FJsonSerializer::ReadVector(InOutHandle, "LightColor", LightColor);
+		FJsonSerializer::ReadBool(InOutHandle, "bVisible", bVisible, true);
 	}
 	else
 	{
 		InOutHandle["Intensity"] = Intensity;
 		InOutHandle["LightColor"] = FJsonSerializer::VectorToJson(LightColor);
+		InOutHandle["bVisible"] = bVisible;
 	}
 }
 
-UObject* ULightComponent::Duplicate()
+UObject* ULightComponentBase::Duplicate()
 {
-	ULightComponent* LightComponent = Cast<ULightComponent>(Super::Duplicate());
+	ULightComponentBase* LightComponent = Cast<ULightComponentBase>(Super::Duplicate());
 	LightComponent->Intensity = Intensity;
 	LightComponent->LightColor = LightColor;
+	LightComponent->bVisible = bVisible;
 
 	return LightComponent;
 }
 
-void ULightComponent::DuplicateSubObjects(UObject* DuplicatedObject)
+void ULightComponentBase::DuplicateSubObjects(UObject* DuplicatedObject)
 {
 	Super::DuplicateSubObjects(DuplicatedObject);
 }

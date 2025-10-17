@@ -1,15 +1,15 @@
 ﻿#pragma once
 
-#include "LightComponentBase.h"
+#include "SceneComponent.h"
 
 UENUM()
 enum class ELightComponentType
 {
     LightType_Directional = 0,
-    LightType_Point = 1,
-    LightType_Spot = 2,
-    LightType_Rect = 3,
-    LightType_Max = 4
+    LightType_Point       = 1,
+    LightType_Spot        = 2,
+    LightType_Rect        = 3,
+    LightType_Max         = 4
 };
 DECLARE_ENUM_REFLECTION(ELightComponentType)
 
@@ -23,7 +23,7 @@ public:
     ULightComponentBase() = default;
 
     virtual ~ULightComponentBase() = default;
-
+    
     /*-----------------------------------------------------------------------------
         UObject Features
      -----------------------------------------------------------------------------*/
@@ -31,7 +31,7 @@ public:
     virtual void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
     virtual UObject* Duplicate() override;
-
+        
     virtual void DuplicateSubObjects(UObject* DuplicatedObject) override;
 
     /*-----------------------------------------------------------------------------
@@ -39,7 +39,7 @@ public:
      -----------------------------------------------------------------------------*/
 public:
     virtual void BeginPlay() override { Super::BeginPlay(); }
-
+    
     virtual void TickComponent(float DeltaTime) override { Super::TickComponent(DeltaTime); }
 
     virtual void EndPlay() override { Super::EndPlay(); }
@@ -52,9 +52,9 @@ public:
 
     float GetIntensity() const { return Intensity; }
 
-    FVector GetLightColor() const { return LightColor; }
+    FVector GetLightColor() const { return LightColor;}
 
-    bool IsVisible() const { return bVisible; }
+	bool IsVisible() const { return bVisible; }
 
     virtual ELightComponentType GetLightType() const { return ELightComponentType::LightType_Max; }
 
@@ -63,13 +63,13 @@ public:
     // virtual FBox GetBoundingBox() const;
 
     // virtual FSphere GetBoundingSphere() const;
-
+    
     /** @note Sets the light intensity and clamps it to the same range as Unreal Engine (0.0 - 20.0). */
     void SetIntensity(float InIntensity) { Intensity = std::clamp(InIntensity, 0.0f, 20.0f); }
 
     void SetLightColor(FVector InLightColor) { LightColor = InLightColor; }
 
-    void SetVisible(bool bInVisible) { bVisible = bInVisible; }
+	void SetVisible(bool bInVisible) { bVisible = bInVisible; }
 
 private:
     /** Total energy that the light emits. */
@@ -83,4 +83,3 @@ private:
 
     bool bVisible;
 };
-

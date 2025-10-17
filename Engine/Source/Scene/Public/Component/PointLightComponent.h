@@ -3,10 +3,10 @@
 #include "LightComponent.h"
 
 UCLASS()
-class UPointLightComponent : public ULightComponent
+class UPointLightComponent : public ULightComponentBase
 {
     GENERATED_BODY()
-    DECLARE_CLASS(UPointLightComponent, ULightComponent)
+    DECLARE_CLASS(UPointLightComponent, ULightComponentBase)
 
 public:
     UPointLightComponent() = default;
@@ -36,7 +36,7 @@ public:
     virtual UClass* GetSpecificWidgetClass() const override; 
 
     /*-----------------------------------------------------------------------------
-        ULightComponent Features
+        ULightComponentBase Features
      -----------------------------------------------------------------------------*/
 public:
     virtual ELightComponentType GetLightType() const override { return ELightComponentType::LightType_Point; }
