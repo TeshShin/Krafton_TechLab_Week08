@@ -461,7 +461,7 @@ void URenderer::OnResize(uint32 InWidth, uint32 InHeight) const
 
 void URenderer::CreateConstantBuffers()
 {
-	ConstantBufferModels = FRenderResourceFactory::CreateConstantBuffer<FMatrix>();
+	ConstantBufferModels = FRenderResourceFactory::CreateConstantBuffer<FModelConstants>();
 	ConstantBufferColor = FRenderResourceFactory::CreateConstantBuffer<FVector4>();
 	ConstantBufferViewProj = FRenderResourceFactory::CreateConstantBuffer<FCameraConstants>();
 }

@@ -148,6 +148,8 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
         Lighting += CalculateDynamicLight(DynamicLights[i], Input.WorldPosition, Normal, ViewDir, SpecularPower);
     }
 
+	float4 FinalColor;
+
     // Apply lighting to diffuse color
     FinalColor.rgb = DiffuseColor.rgb * Lighting;
 
