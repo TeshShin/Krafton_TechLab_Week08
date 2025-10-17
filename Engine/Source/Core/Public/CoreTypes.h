@@ -122,27 +122,27 @@ struct FRect
 };
 
 /// Light Constants
-static const int MAX_DIRECTIONAL_LIGHTS = 16;
-
 // HLSL의 cbuffer는 16바이트 단위로 정렬되므로, C++ 구조체도 이에 맞춰야 합니다.
-// alignas(16) 키워드를 사용하거나, 패딩을 직접 추가할 수 있습니다.
 
+/**
+ * @brief Ambient Light structure for global illumination
+ * @note 16-byte aligned (total 16 bytes)
+ */
 struct FAmbientLight
 {
-	FVector Color;
-	float Intensity;
+	FVector Color;      // 12 bytes
+	float Intensity;    // 4 bytes
 };
 
-struct FDirectionalLight
-{
-	FVector Color; float Pad0;
-	FVector Direction; float Pad1;
-	float Intensity; float Pad2[3];
-};
-
+/**
+ * @brief Light constants for GPU ConstantBuffer
+ * @note Register b10, 32 bytes total
+ * @details Only Ambient light uses ConstantBuffer
+ *          All dynamic lights (Directional, Point, Spot) use StructuredBuffer (t6)
+ */
 struct FLightConstants
 {
-	FAmbientLight GlobalAmbient;
-	FDirectionalLight DirectionalLights[MAX_DIRECTIONAL_LIGHTS];
-	int NumDirectionalLights;
+	FAmbientLight GlobalAmbient;    // 16 bytes - Scene-wide ambient illumination
+	uint32 UnifiedLightCount;       // 4 bytes  - Number of lights in unified StructuredBuffer
+	float Padding[3];               // 12 bytes - Padding for 16-byte alignment
 };

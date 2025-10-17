@@ -9,7 +9,11 @@ public:
     void Execute(FRenderingContext& Context) override;
     void Release() override;
 
-    void UpdateLightsFromContext(FRenderingContext& Context);
+    /**
+     * @brief Update lights from rendering context and upload to GPU
+     * @return Number of dynamic lights in the unified buffer
+     */
+    uint32 UpdateLightsFromContext(FRenderingContext& Context);
 
 private:
     ID3D11VertexShader* VS = nullptr;
