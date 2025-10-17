@@ -39,8 +39,7 @@ struct PS_OUTPUT
 PS_OUTPUT mainPS(PS_INPUT Input) : SV_Target
 {
     PS_OUTPUT Output;
-
-    float4 FinalColor = float4(0.f, 0.f, 0.f, 1.f);
+	
     float2 UV = Input.Tex;
 
     // Base diffuse color
@@ -71,7 +70,7 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_Target
     float3 FinalLitColor = CalculateLighting(AmbientColor, DiffuseColor, SpecularColor, Shininess,
         Input.WorldPosition, Input.WorldNormal, ViewWorldLocation);
 
-    float4 FinalColor;
+	float4 FinalColor = float4(0.f, 0.f, 0.f, 1.f);
     FinalColor.rgb = FinalLitColor;
 
     // 3. 알파 값 처리 (기존 코드와 동일)

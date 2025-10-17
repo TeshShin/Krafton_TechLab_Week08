@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Core/Public/Math/Vector.h"
 #include "Core/Public/Math/Matrix.h"
 #include "Core/Public/Types.h"
@@ -10,6 +10,12 @@
 //	uint32 ZGridStartIndex; // 인덱스 버퍼에서, z방향쪽 그리드가 시작되는 인덱스
 //	uint32 BoundingBoxStartIndex; // 인덱스 버퍼에서, 바운딩박스가 시작되는 인덱스
 //};
+
+struct FModelConstants
+{
+	FMatrix World;
+	FMatrix WorldInverseTranspose;
+};
 
 struct FCameraConstants
 {
