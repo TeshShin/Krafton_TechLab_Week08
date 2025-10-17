@@ -21,9 +21,10 @@ Texture2D AlphaTexture : register(t4);		// map_d
 Texture2D BumpTexture : register(t5);		// map_bump
 
 // [IMPORTANT] Light Type Enumeration - Must match C++ EDynamicLightType
-#define LIGHT_TYPE_POINT 0
-#define LIGHT_TYPE_SPOT  1
-#define LIGHT_TYPE_RECT  2
+#define LIGHT_TYPE_DIRECTIONAL 0
+#define LIGHT_TYPE_POINT       1
+#define LIGHT_TYPE_SPOT        2
+#define LIGHT_TYPE_RECT        3
 
 // [IMPORTANT] Must match C++ FUnifiedDynamicLight exactly (field names and order)
 struct FUnifiedDynamicLight
@@ -62,14 +63,46 @@ struct PS_OUTPUT
 // [UNIFIED FORWARD RENDERING] Calculate dynamic light contribution using Blinn-Phong
 float3 CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower)
 {
-    float3 LightVec = Light.Position - WorldPos;
-    float Distance = length(LightVec);
+    float3 LightDir;
+    float Attenuation = Light.Intensity;
 
-    // Early exit if outside light influence radius
-    if (Distance > Light.SourceRadius)
-        return float3(0, 0, 0);
+    // Directional Light: parallel rays, no distance attenuation
+    if (Light.LightType == LIGHT_TYPE_DIRECTIONAL)
+    {
+        LightDir = normalize(-Light.Direction);
+    }
+    // Point/Spot Lights: radial light with distance attenuation
+    else
+    {
+        float3 LightVec = Light.Position - WorldPos;
+        float Distance = length(LightVec);
 
-    float3 LightDir = normalize(LightVec);
+        // Early exit if outside light influence radius
+        if (Distance > Light.SourceRadius)
+            return float3(0, 0, 0);
+
+        LightDir = normalize(LightVec);
+
+        // Distance Attenuation (radial falloff)
+        float NormalizedDist = Distance / Light.SourceRadius;
+        Attenuation = saturate(1.0f - pow(NormalizedDist, Light.FalloffExponent));
+        Attenuation *= Light.Intensity;
+
+        // Spot-specific attenuation (if applicable)
+        if (Light.LightType == LIGHT_TYPE_SPOT)
+        {
+            float Theta = dot(LightDir, -Light.Direction);
+            float InnerCos = cos(Light.Param0);  // InnerConeAngle
+            float OuterCos = cos(Light.Param1);  // OuterConeAngle
+
+            if (Theta < OuterCos)
+                return float3(0, 0, 0); // Outside cone
+
+            // Smooth cone falloff
+            float SpotAttenuation = saturate((Theta - OuterCos) / (InnerCos - OuterCos));
+            Attenuation *= SpotAttenuation;
+        }
+    }
 
     // Diffuse (Lambertian)
     float NdotL = saturate(dot(Normal, LightDir));
@@ -79,28 +112,8 @@ float3 CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPos, float3
     float NdotH = saturate(dot(Normal, HalfVec));
     float Specular = pow(NdotH, SpecularPower);
 
-    // Distance Attenuation (radial falloff)
-    float NormalizedDist = Distance / Light.SourceRadius;
-    float Attenuation = saturate(1.0f - pow(NormalizedDist, Light.FalloffExponent));
-    Attenuation *= Light.Intensity;
-
-    // Spot-specific attenuation (if applicable)
-    float SpotAttenuation = 1.0f;
-    if (Light.LightType == LIGHT_TYPE_SPOT)
-    {
-        float Theta = dot(LightDir, -Light.Direction);
-        float InnerCos = cos(Light.Param0);  // InnerConeAngle
-        float OuterCos = cos(Light.Param1);  // OuterConeAngle
-
-        if (Theta < OuterCos)
-            return float3(0, 0, 0); // Outside cone
-
-        // Smooth cone falloff
-        SpotAttenuation = saturate((Theta - OuterCos) / (InnerCos - OuterCos));
-    }
-
     // Combine diffuse + specular with all attenuation factors
-    return Light.Color * (NdotL + Specular * 0.3f) * Attenuation * SpotAttenuation;
+    return Light.Color * (NdotL + Specular * 0.3f) * Attenuation;
 }
 
 PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET

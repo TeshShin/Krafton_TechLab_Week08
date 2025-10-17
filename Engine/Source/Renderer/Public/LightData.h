@@ -48,10 +48,11 @@ static_assert(sizeof(FSpotLightData) == 64, "FSpotLightData must be 64 bytes for
  */
 enum class EDynamicLightType : uint32
 {
-    Point = 0,      // Point light (omnidirectional)
-    Spot = 1,       // Spot light (cone-shaped)
-    Rect = 2,       // Rect light (area light) - Reserved for future use
-    Max = 3
+    Directional = 0,  // Directional light (infinite distance, parallel rays)
+    Point = 1,        // Point light (omnidirectional)
+    Spot = 2,         // Spot light (cone-shaped)
+    Rect = 3,         // Rect light (area light) - Reserved for future use
+    Max = 4
 };
 
 /**
@@ -61,6 +62,7 @@ enum class EDynamicLightType : uint32
  *          Designed for efficient light culling and distance-based sorting
  *
  * Usage:
+ * - Directional Light: Uses Direction, Intensity, Color (Position unused, infinite distance)
  * - Point Light: Uses Position, Intensity, Color, SourceRadius, FalloffExponent
  * - Spot Light:  Uses all fields except Param2
  *   - Param0 = InnerConeAngle

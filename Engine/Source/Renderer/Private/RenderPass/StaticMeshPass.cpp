@@ -1,13 +1,11 @@
 #include "pch.h"
 #include "Renderer/Public/RenderPass/StaticMeshPass.h"
 #include "Scene/Public/Component/StaticMeshComponent.h"
-#include "Scene/Public/Component/PointLightComponent.h"
-#include "Scene/Public/Component/SpotLightComponent.h"
+#include "Scene/Public/Component/LightComponentBase.h"
 #include "Renderer/Public/Pipeline.h"
 #include "Renderer/Public/RenderResourceFactory.h"
 #include "Renderer/Public/LightData.h"
 #include "Asset/Public/Texture.h"
-#include "Scene/Public/Component/LightComponentBase.h"
 
 FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferCamera, ID3D11Buffer* InConstantBufferModel,
                                  ID3D11VertexShader* InVS, ID3D11PixelShader* InPS, ID3D11InputLayout* InLayout, ID3D11DepthStencilState* InDS)
@@ -37,32 +35,20 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	FPipelineInfo PipelineInfo = { InputLayout, VS, RS, DS, PS, nullptr };
 	Pipeline->UpdatePipeline(PipelineInfo);
 
+	// [UNIFIED FORWARD RENDERING] Only Ambient light uses ConstantBuffer now
+	// All dynamic lights (Directional, Point, Spot) use unified StructuredBuffer
 	FLightConstants LightConstants;
-	int32 DirectionalLightCount = 0;
 
 	for (ULightComponentBase* Light : Context.Lights)
 	{
-		switch (Light->GetLightType())
+		if (Light->GetLightType() == ELightComponentType::LightType_Ambient)
 		{
-		case ELightComponentType::LightType_Ambient:
-			{
-				LightConstants.GlobalAmbient.Color = Light->GetLightColor();
-				LightConstants.GlobalAmbient.Intensity = Light->GetIntensity();
-				break;
-			}
-		case ELightComponentType::LightType_Directional:
-			{
-				if (DirectionalLightCount >= MAX_DIRECTIONAL_LIGHTS) { continue; }
-				LightConstants.DirectionalLights[DirectionalLightCount].Color = Light->GetLightColor();
-				LightConstants.DirectionalLights[DirectionalLightCount].Intensity = Light->GetIntensity();
-				LightConstants.DirectionalLights[DirectionalLightCount].Direction = Light->GetWorldForwardVector();
-				DirectionalLightCount++;
-				break;
-			}
-		default: ;
+			LightConstants.GlobalAmbient.Color = Light->GetLightColor();
+			LightConstants.GlobalAmbient.Intensity = Light->GetIntensity();
+			break; // Only one ambient light is supported
 		}
 	}
-	LightConstants.NumDirectionalLights = DirectionalLightCount;
+
 	Pipeline->SetConstantBuffer(10, false, ConstantBufferLight);
 	FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
 	// Set a default sampler to slot 0 to ensure one is always bound
@@ -215,50 +201,13 @@ void FStaticMeshPass::UpdateLightsFromContext(FRenderingContext& Context)
 	{
 		if (!Light || !Light->IsVisible()) continue;
 
-		FUnifiedDynamicLight UnifiedLight = {};
+		// Skip Ambient light - it's handled separately via ConstantBuffer
+		if (Light->GetLightType() == ELightComponentType::LightType_Ambient)
+			continue;
 
-		switch (Light->GetLightType())
-		{
-		case ELightComponentType::LightType_Point:
-		{
-			UPointLightComponent* PointLight = Cast<UPointLightComponent>(Light);
-			if (!PointLight) continue;
-
-			UnifiedLight.Position = PointLight->GetWorldLocation();
-			UnifiedLight.Intensity = PointLight->GetIntensity();
-			UnifiedLight.Color = PointLight->GetLightColor();
-			UnifiedLight.SourceRadius = max(PointLight->GetSourceRadius(), 1000.0f);  // Temp: ensure minimum radius
-			UnifiedLight.FalloffExponent = PointLight->GetLightFalloffExtent();
-			UnifiedLight.LightType = static_cast<uint32>(EDynamicLightType::Point);
-
-			UnifiedLights.push_back(UnifiedLight);
-			break;
-		}
-		//case ELightComponentType::LightType_Spot:
-		//{
-		//	USpotLightComponent* SpotLight = Cast<USpotLightComponent>(Light);
-		//	if (!SpotLight) continue;
-
-		//	UnifiedLight.Position = SpotLight->GetWorldLocation();
-		//	UnifiedLight.Intensity = SpotLight->GetIntensity();
-		//	UnifiedLight.Color = SpotLight->GetLightColor();
-		//	UnifiedLight.SourceRadius = 1000.0f;
-		//	UnifiedLight.Direction = SpotLight->GetWorldForwardVector();
-		//	UnifiedLight.FalloffExponent = SpotLight->GetLight
-		//	//UnifiedLight.Param0 = SpotLight->GetInnerConeAngle();
-		//	//UnifiedLight.Param1 = SpotLight->GetOuterConeAngle();
-		//	UnifiedLight.LightType = static_cast<uint32>(EDynamicLightType::Spot);
-
-		//	UnifiedLights.push_back(UnifiedLight);
-		//	break;
-		//}
-		case ELightComponentType::LightType_Ambient:
-		case ELightComponentType::LightType_Directional:
-			// These are handled via ConstantBuffer, skip here
-			break;
-		default:
-			break;
-		}
+		// Each component provides its own unified light data
+		FUnifiedDynamicLight UnifiedLight = Light->GetUnifiedLightData();
+		UnifiedLights.push_back(UnifiedLight);
 	}
 
 	// Step 2: Reallocate buffer if capacity exceeded

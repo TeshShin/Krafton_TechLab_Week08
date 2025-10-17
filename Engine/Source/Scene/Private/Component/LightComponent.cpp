@@ -1,6 +1,7 @@
 ﻿# include "pch.h"
 # include "Scene/Public/Component/LightComponent.h"
 # include "Asset/Public/JsonSerializer.h"
+# include "Renderer/Public/LightData.h"
 
 IMPLEMENT_ABSTRACT_CLASS(ULightComponent, ULightComponentBase)
 
@@ -18,4 +19,11 @@ UObject* ULightComponent::Duplicate()
 void ULightComponent::DuplicateSubObjects(UObject* DuplicatedObject)
 {
 	Super::DuplicateSubObjects(DuplicatedObject);
+}
+
+FUnifiedDynamicLight ULightComponent::GetUnifiedLightData() const
+{
+	// Base implementation returns dummy data
+	// Derived classes should override this to provide specific light data
+	return FUnifiedDynamicLight();
 }

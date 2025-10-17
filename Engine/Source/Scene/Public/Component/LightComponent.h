@@ -31,4 +31,10 @@ public:
 	 -----------------------------------------------------------------------------*/
 public:
 	ELightComponentType GetLightType() const override { return ELightComponentType::LightType_Max; }
+
+	/**
+	 * @brief Base implementation returns dummy data
+	 * @note Derived classes should override this to provide specific light data
+	 */
+	virtual struct FUnifiedDynamicLight GetUnifiedLightData() const override;
 };
