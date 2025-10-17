@@ -198,7 +198,7 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FName& PathFileName, cons
 		StaticMesh->MaterialInfo[0].Name = "DefaultMaterial";
 		StaticMesh->MaterialInfo[0].Kd = FVector(0.9f, 0.9f, 0.9f);
 	}
-	
+
 	/** #4. 오브젝트의 서브메쉬 정보를 저장 */
 	if (ObjectInfo.MaterialNameList.empty())
 	{
@@ -319,7 +319,7 @@ void FObjManager::CreateMaterialsFromMTL(UStaticMesh* StaticMesh, FStaticMesh* S
 				UTexture* NormalTexture = AssetManager.LoadTexture(TexturePathStr);
 				if (NormalTexture)
 				{
-					Material->SetNormalTexture(NormalTexture);
+					Material->SetBumpTexture(NormalTexture);
 				}
 			}
 		}
