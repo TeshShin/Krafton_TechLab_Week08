@@ -129,10 +129,19 @@ namespace
     }
 }
 
-FDecalPass::FDecalPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferCamera, ID3D11VertexShader* InVS, ID3D11PixelShader* InPS, ID3D11InputLayout* InLayout, ID3D11DepthStencilState* InDS_Read, ID3D11BlendState* InBlendState)
-    : FRenderPass(InPipeline, InConstantBufferCamera, nullptr),
-    VS(InVS), PS(InPS), InputLayout(InLayout), DS_Read(InDS_Read), BlendState(InBlendState)
+FDecalPass::FDecalPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferCamera, ID3D11DepthStencilState* InDS_Read, ID3D11BlendState* InBlendState)
+    : FRenderPass(InPipeline, InConstantBufferCamera, nullptr), DS_Read(InDS_Read), BlendState(InBlendState)
 {
+    TArray<D3D11_INPUT_ELEMENT_DESC> DecalLayout =
+    {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Position), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Normal), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Color), D3D11_INPUT_PER_VERTEX_DATA, 0	},
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FNormalVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0	}
+    };
+    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/DecalShader.hlsl", DecalLayout, &VS, &InputLayout);
+    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/DecalShader.hlsl", &PS);
+    
     ConstantBufferPrim = FRenderResourceFactory::CreateConstantBuffer<FModelConstants>();
     ConstantBufferDecal = FRenderResourceFactory::CreateConstantBuffer<FDecalConstants>();
 }
@@ -243,6 +252,10 @@ void FDecalPass::Execute(FRenderingContext& Context)
 
 void FDecalPass::Release()
 {
+    SafeRelease(VS);
+    SafeRelease(PS);
+    SafeRelease(InputLayout);
+    
     SafeRelease(ConstantBufferPrim);
     SafeRelease(ConstantBufferDecal);
 }

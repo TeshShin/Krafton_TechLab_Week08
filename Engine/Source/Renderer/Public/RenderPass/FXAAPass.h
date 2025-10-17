@@ -24,13 +24,7 @@ public:
 	 * @param InLayout 입력 레이아웃입니다.
 	 * @param InSampler 샘플러 상태입니다.
 	 */
-	FFXAAPass(UPipeline* InPipeline,
-	  UDeviceResources* InDeviceResources,
-	  ID3D11VertexShader* InVS,
-	  ID3D11PixelShader* InPS,
-	  ID3D11InputLayout* InLayout,
-	  ID3D11SamplerState* InSampler);
-
+	FFXAAPass(UPipeline* InPipeline, UDeviceResources* InDeviceResources);
 	/**
 	 * @brief FXAAPass 클래스의 소멸자입니다.
 	 */

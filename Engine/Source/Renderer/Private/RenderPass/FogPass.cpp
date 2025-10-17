@@ -5,11 +5,12 @@
 #include "Renderer/Public/RenderResourceFactory.h"
 
 FFogPass::FFogPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferViewProj,
-                   ID3D11VertexShader* InVS, ID3D11PixelShader* InPS, ID3D11InputLayout* InLayout, ID3D11DepthStencilState* InDS_Read,
-                   ID3D11BlendState* InBlendState)
+                   ID3D11DepthStencilState* InDS_Read, ID3D11BlendState* InBlendState)
         : FRenderPass(InPipeline, InConstantBufferViewProj, nullptr),
-            VS(InVS), PS(InPS), InputLayout(InLayout), DS_Read(InDS_Read), BlendState(InBlendState)
+             DS_Read(InDS_Read), BlendState(InBlendState)
 {
+    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/HeightFogShader.hlsl", {}, &VS, nullptr);
+    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/HeightFogShader.hlsl", &PS);
     ConstantBufferFog = FRenderResourceFactory::CreateConstantBuffer<FFogConstants>();
     ConstantBufferCameraInverse = FRenderResourceFactory::CreateConstantBuffer<FCameraInverseConstants>();
     ConstantBufferViewportInfo = FRenderResourceFactory::CreateConstantBuffer<FViewportConstants>();
@@ -38,8 +39,7 @@ void FFogPass::Execute(FRenderingContext& Context)
     Renderer.GetDeviceContext()->OMSetRenderTargets(1, &RTV, nullptr);
     
     // --- Set Pipeline State --- //
-    FPipelineInfo PipelineInfo = { InputLayout, VS, FRenderResourceFactory::GetRasterizerState({ ECullMode::Back, EFillMode::Solid }),
-        DS_Read, PS, BlendState };
+    FPipelineInfo PipelineInfo = { nullptr, VS, FRenderResourceFactory::GetRasterizerState({ ECullMode::Back, EFillMode::Solid }),DS_Read, PS, BlendState };
     Pipeline->UpdatePipeline(PipelineInfo);
     
     // --- Draw Fog --- //
@@ -85,6 +85,8 @@ void FFogPass::Execute(FRenderingContext& Context)
 
 void FFogPass::Release()
 {
+    SafeRelease(VS);
+    SafeRelease(PS);
     SafeRelease(ConstantBufferFog);
     SafeRelease(ConstantBufferCameraInverse);
     SafeRelease(ConstantBufferViewportInfo);

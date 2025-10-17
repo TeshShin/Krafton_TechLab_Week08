@@ -30,12 +30,7 @@ public:
 	void CreateSamplerState();
 	void CreateDefaultShader();
 	void CreateTextureShader();
-	void CreateDecalShader();
-	void CreatePointLightShader();
-	void CreateFogShader();
 	void CreateConstantBuffers();
-	void CreateFXAAShader();
-
 	
 	// Release
 	void ReleaseConstantBuffers();
@@ -102,31 +97,11 @@ private:
 	ID3D11PixelShader* DefaultPixelShader = nullptr;
 	ID3D11InputLayout* DefaultInputLayout = nullptr;
 
-	// FXAA Shaders
-	ID3D11VertexShader* FXAAVertexShader = nullptr;
-	ID3D11PixelShader* FXAAPixelShader = nullptr;
-	ID3D11InputLayout* FXAAInputLayout = nullptr;
-	ID3D11SamplerState* FXAASamplerState = nullptr;
-	
 	// Texture Shaders
 	ID3D11VertexShader* TextureVertexShader = nullptr;
 	ID3D11PixelShader* TexturePixelShader = nullptr;
 	ID3D11InputLayout* TextureInputLayout = nullptr;
-
-	// Decal Shaders
-	ID3D11VertexShader* DecalVertexShader = nullptr;
-	ID3D11PixelShader* DecalPixelShader = nullptr;
-	ID3D11InputLayout* DecalInputLayout = nullptr;
-
-	// Point Light Shaders
-	ID3D11VertexShader* PointLightVertexShader = nullptr;
-	ID3D11PixelShader* PointLightPixelShader = nullptr;
-	ID3D11InputLayout* PointLightInputLayout = nullptr;
 	
-	// Fog Shaders
-	ID3D11VertexShader* FogVertexShader = nullptr;
-	ID3D11PixelShader* FogPixelShader = nullptr;
-	ID3D11InputLayout* FogInputLayout = nullptr;
 	ID3D11SamplerState* DefaultSampler = nullptr;
 	
 	uint32 Stride = 0;
