@@ -18,6 +18,7 @@ private:
     ID3D11DepthStencilState* DS = nullptr;
     
     ID3D11Buffer* ConstantBufferMaterial = nullptr;
+    ID3D11Buffer* ConstantBufferLight = nullptr;
 
     ID3D11Buffer* PointLightStructuredBuffer = nullptr;
     ID3D11ShaderResourceView* PointLightSRV = nullptr;
@@ -26,6 +27,4 @@ private:
     ID3D11Buffer* SpotLightStructuredBuffer = nullptr;
     ID3D11ShaderResourceView* SpotLightSRV = nullptr;
     uint32 SpotLightCapacity;
-
-
 };

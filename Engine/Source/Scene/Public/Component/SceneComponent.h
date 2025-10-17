@@ -43,6 +43,10 @@ public:
     void SetWorldRotation(const FQuaternion& NewRotation);
     void SetWorldScale3D(const FVector& NewScale);
 
+	FVector GetWorldForwardVector() const;
+	FVector GetWorldRightVector() const;
+	FVector GetWorldUpVector() const;
+
 private:
 	mutable bool bIsTransformDirty = true;
 	mutable bool bIsTransformDirtyInverse = true;

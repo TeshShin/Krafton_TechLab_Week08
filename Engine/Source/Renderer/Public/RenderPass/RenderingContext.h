@@ -1,4 +1,5 @@
-﻿#pragma once
+#pragma once
+#include "Core/Public/CoreTypes.h"
 
 struct FRenderingContext
 {
@@ -21,6 +22,6 @@ struct FRenderingContext
     TArray<class UTextComponent*> Texts;
     TArray<class UUUIDTextComponent*> UUIDs;
     TArray<class UDecalComponent*> Decals;
-    TArray<class UPointLightComponent*> PointLights;
+    TArray<class ULightComponentBase*> Lights;
     TArray<class UHeightFogComponent*> Fogs;
 };

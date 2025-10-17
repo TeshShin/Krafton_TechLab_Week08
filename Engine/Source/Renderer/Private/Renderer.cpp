@@ -361,10 +361,7 @@ void URenderer::RenderLevel(FViewportClient& InViewportClient)
 		}
 	}
 
-	for (const auto& PointLight : CurrentLevel->GetPointLights())
-	{
-		RenderingContext.PointLights.push_back(PointLight);
-	}
+	RenderingContext.Lights = CurrentLevel->GetLights();
 
 	// 2. Collect HeightFogComponents from all actors in the level
 	for (const auto& Actor : CurrentLevel->GetLevelActors())

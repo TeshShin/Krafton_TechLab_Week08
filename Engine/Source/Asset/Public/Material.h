@@ -71,6 +71,8 @@ public:
 	float GetRefractionIndex() const { return MaterialData.Ni; }
 	float GetDissolveFactor() const { return MaterialData.D; }
 
+	void SetMaterialData(const FMaterial& InMaterialData) { MaterialData = InMaterialData; }
+	
 	// Texture access functions
 	UTexture* GetDiffuseTexture() const { return DiffuseTexture; }
 	UTexture* GetAmbientTexture() const { return AmbientTexture; }

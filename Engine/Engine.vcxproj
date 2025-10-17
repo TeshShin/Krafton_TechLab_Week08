@@ -356,6 +356,7 @@
     <ClInclude Include="Source\Editor\Public\UI\Widget\CameraControlWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\DecalTextureSelectionWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\HeightFogComponentWidget.h" />
+    <ClInclude Include="Source\Editor\Public\UI\Widget\Component\LightComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\PointLightComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\ProjectileMovementComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\RotatingMovementComponentWidget.h" />
@@ -431,11 +432,14 @@
     <ClInclude Include="Source\Renderer\Public\RenderPass\TextPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderResourceFactory.h" />
     <ClInclude Include="Source\Scene\Public\Actor\Actor.h" />
+    <ClInclude Include="Source\Scene\Public\Actor\AmbientLightActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\BillBoardActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\CubeActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\DecalActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\DecalSpotLightActor.h" />
+    <ClInclude Include="Source\Scene\Public\Actor\DirectionalLightActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\HeightFogActor.h" />
+    <ClInclude Include="Source\Scene\Public\Actor\LightActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\MovingCubeActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\PointLightActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\SphereActor.h" />
@@ -445,9 +449,11 @@
     <ClInclude Include="Source\Scene\Public\Actor\TextActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\TriangleActor.h" />
     <ClInclude Include="Source\Scene\Public\Component\ActorComponent.h" />
+    <ClInclude Include="Source\Scene\Public\Component\AmbientLightComponent.h" />
     <ClInclude Include="Source\Scene\Public\Component\BillBoardComponent.h" />
     <ClInclude Include="Source\Scene\Public\Component\DecalComponent.h" />
     <ClInclude Include="Source\Scene\Public\Component\DecalSpotLightComponent.h" />
+    <ClInclude Include="Source\Scene\Public\Component\DirectionalLightComponent.h" />
     <ClInclude Include="Source\Scene\Public\Component\HeightFogComponent.h" />
     <ClInclude Include="Source\Scene\Public\Component\LightComponent.h">
       <DeploymentContent>false</DeploymentContent>
@@ -539,6 +545,7 @@
     </ClCompile>
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\HeightFogComponentWidget.cpp">
     </ClCompile>
+    <ClCompile Include="Source\Editor\Private\UI\Widget\Component\LightComponentWidget.cpp" />
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\PointLightComponentWidget.cpp">
     </ClCompile>
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\ProjectileMovementComponentWidget.cpp">
@@ -652,6 +659,7 @@
     </ClCompile>
     <ClCompile Include="Source\Scene\Private\Actor\Actor.cpp">
     </ClCompile>
+    <ClCompile Include="Source\Scene\Private\Actor\AmbientLightActor.cpp" />
     <ClCompile Include="Source\Scene\Private\Actor\BillBoardActor.cpp">
     </ClCompile>
     <ClCompile Include="Source\Scene\Private\Actor\CubeActor.cpp">
@@ -660,8 +668,10 @@
     </ClCompile>
     <ClCompile Include="Source\Scene\Private\Actor\DecalSpotLightActor.cpp">
     </ClCompile>
+    <ClCompile Include="Source\Scene\Private\Actor\DirectionalLightActor.cpp" />
     <ClCompile Include="Source\Scene\Private\Actor\HeightFogActor.cpp">
     </ClCompile>
+    <ClCompile Include="Source\Scene\Private\Actor\LightActor.cpp" />
     <ClCompile Include="Source\Scene\Private\Actor\MovingCubeActor.cpp">
     </ClCompile>
     <ClCompile Include="Source\Scene\Private\Actor\PointLightActor.cpp">
@@ -677,12 +687,14 @@
     </ClCompile>
     <ClCompile Include="Source\Scene\Private\Component\ActorComponent.cpp">
     </ClCompile>
+    <ClCompile Include="Source\Scene\Private\Component\AmbientLightComponent.cpp" />
     <ClCompile Include="Source\Scene\Private\Component\BillBoardComponent.cpp">
     </ClCompile>
     <ClCompile Include="Source\Scene\Private\Component\DecalComponent.cpp">
     </ClCompile>
     <ClCompile Include="Source\Scene\Private\Component\DecalSpotLightComponent.cpp">
     </ClCompile>
+    <ClCompile Include="Source\Scene\Private\Component\DirectionalLightComponent.cpp" />
     <ClCompile Include="Source\Scene\Private\Component\HeightFogComponent.cpp">
     </ClCompile>
     <ClCompile Include="Source\Scene\Private\Component\LightComponent.cpp">
@@ -733,6 +745,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewerDebug|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Asset\Shader\SceneDepthShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewerDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\AmbientDirectionalLighting.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewerDebug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>

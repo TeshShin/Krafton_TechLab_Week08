@@ -1,4 +1,5 @@
 #include "TextureVS.hlsl"
+#include "AmbientDirectionalLighting.hlsl"
 
 cbuffer MaterialConstants : register(b2)
 {
@@ -142,14 +143,20 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
     if (MaterialFlags & HAS_DIFFUSE_MAP)
     {
         DiffuseColor *= DiffuseTexture.Sample(SamplerWrap, UV);
-        FinalColor.a = DiffuseColor.a;
     }
 
-    // Ambient contribution
+    // Ambient color for material
     float4 AmbientColor = Ka;
     if (MaterialFlags & HAS_AMBIENT_MAP)
     {
         AmbientColor *= AmbientTexture.Sample(SamplerWrap, UV);
+    }
+    
+    // Specular color for material
+    float4 SpecularColor = Ks;
+    if (MaterialFlags & HAS_SPECULAR_MAP)
+    {
+        SpecularColor *= SpecularTexture.Sample(SamplerWrap, UV);
     }
 
     // Start with ambient lighting
@@ -180,14 +187,14 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
     // Apply lighting to diffuse color
     FinalColor.rgb = DiffuseColor.rgb * Lighting;
 
-    // Alpha handling
+    // 3. 알파 값 처리 (기존 코드와 동일)
+    FinalColor.a = D; // 기본 알파값
     if (MaterialFlags & HAS_ALPHA_MAP)
     {
         float alpha = AlphaTexture.Sample(SamplerWrap, UV).r;
-        FinalColor.a = D;
-        FinalColor.a *= alpha;
+        FinalColor.a = D * alpha;
     }
-      // -----------------------
+
     // Normal mapping
     // -----------------------
     float3 wsNormal;
@@ -224,6 +231,6 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 
     float3 EncodedNormal = wsNormal * 0.5f + 0.5f;
     Output.NormalData = float4(EncodedNormal, 1.0f);
-
+    
     return Output;
 }

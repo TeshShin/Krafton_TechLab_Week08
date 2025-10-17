@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Renderer/Public/RenderPass/StaticMeshPass.h"
 #include "Scene/Public/Component/StaticMeshComponent.h"
 #include "Scene/Public/Component/PointLightComponent.h"
@@ -7,9 +7,10 @@
 #include "Renderer/Public/RenderResourceFactory.h"
 #include "Renderer/Public/LightData.h"
 #include "Asset/Public/Texture.h"
+#include "Scene/Public/Component/LightComponentBase.h"
 
 FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferCamera, ID3D11Buffer* InConstantBufferModel,
-	ID3D11VertexShader* InVS, ID3D11PixelShader* InPS, ID3D11InputLayout* InLayout, ID3D11DepthStencilState* InDS)
+                                 ID3D11VertexShader* InVS, ID3D11PixelShader* InPS, ID3D11InputLayout* InLayout, ID3D11DepthStencilState* InDS)
 	: FRenderPass(InPipeline, InConstantBufferCamera, InConstantBufferModel), VS(InVS), PS(InPS), InputLayout(InLayout), DS(InDS)
 {
 	ConstantBufferMaterial = FRenderResourceFactory::CreateConstantBuffer<FMaterialConstants>();
@@ -40,6 +41,34 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	FPipelineInfo PipelineInfo = { InputLayout, VS, RS, DS, PS, nullptr };
 	Pipeline->UpdatePipeline(PipelineInfo);
 
+	FLightConstants LightConstants;
+	int32 DirectionalLightCount = 0;
+
+	for (ULightComponentBase* Light : Context.Lights)
+	{
+		switch (Light->GetLightType())
+		{
+		case ELightComponentType::LightType_Ambient:
+			{
+				LightConstants.GlobalAmbient.Color = Light->GetLightColor();
+				LightConstants.GlobalAmbient.Intensity = Light->GetIntensity();
+				break;
+			}
+		case ELightComponentType::LightType_Directional:
+			{
+				if (DirectionalLightCount >= MAX_DIRECTIONAL_LIGHTS) { continue; }
+				LightConstants.DirectionalLights[DirectionalLightCount].Color = Light->GetLightColor();
+				LightConstants.DirectionalLights[DirectionalLightCount].Intensity = Light->GetIntensity();
+				LightConstants.DirectionalLights[DirectionalLightCount].Direction = Light->GetWorldForwardVector();
+				DirectionalLightCount++;
+				break;
+			}
+		default: ;
+		}
+	}
+	LightConstants.NumDirectionalLights = DirectionalLightCount;
+	Pipeline->SetConstantBuffer(10, false, ConstantBufferLight);
+	FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
 	// Set a default sampler to slot 0 to ensure one is always bound
 	Pipeline->SetSamplerState(0, false, URenderer::GetInstance().GetDefaultSampler());
 
@@ -187,7 +216,7 @@ void FStaticMeshPass::UpdateLightsFromContext(FRenderingContext& Context)
 	UE_LOG("StaticMeshPass: PointLights in Context = %d", Context.PointLights.size());
 
 	// PointLight 데이터 변환
-	for (auto PointLight : Context.PointLights)
+	for (auto PointLight : Context.Lights)
 	{
 		if (!PointLight || !PointLight->IsVisible()) continue;
 
@@ -266,9 +295,4 @@ void FStaticMeshPass::UpdateLightsFromContext(FRenderingContext& Context)
 void FStaticMeshPass::Release()
 {
 	SafeRelease(ConstantBufferMaterial);
-
-	SafeRelease(PointLightSRV);
-	SafeRelease(PointLightStructuredBuffer);
-	SafeRelease(SpotLightSRV);
-	SafeRelease(SpotLightStructuredBuffer);
 }
