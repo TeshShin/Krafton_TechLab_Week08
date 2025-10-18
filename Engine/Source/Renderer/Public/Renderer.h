@@ -1,7 +1,6 @@
 #pragma once
 #include "DeviceResources.h"
 #include "Core/Public/Object/Object.h"
-#include "Scene/Public/Component/PrimitiveComponent.h"
 #include "Editor/Public/EditorPrimitive.h"
 #include "Renderer/Public/Pipeline.h"
 
@@ -27,23 +26,18 @@ public:
 	// Initialize
 	void CreateDepthStencilState();
 	void CreateBlendState();
-	void CreateSamplerState();
 	void CreateDefaultShader();
-	void CreateTextureShader(const D3D_SHADER_MACRO* InDefines, ID3D11VertexShader** OutTextureVertexShader, ID3D11PixelShader** OutTexturePixelShader);
 	void CreateConstantBuffers();
-	
+
 	// Release
 	void ReleaseConstantBuffers();
 	void ReleaseDefaultShader();
 	void ReleaseDepthStencilState();
 	void ReleaseBlendState();
-	void ReleaseSamplerState();
-	
+
 	// Render
-	void Update();
-	void RenderBegin() const;
-	void RenderLevel(FViewportClient& InViewportClient);
-	void RenderEnd() const;
+	void Render();
+
 	void RenderEditorPrimitive(const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState, uint32 InStride = 0, uint32 InIndexBufferStride = 0);
 
 	void OnResize(uint32 Inwidth = 0, uint32 InHeight = 0) const;
@@ -52,73 +46,67 @@ public:
 	ID3D11Device* GetDevice() const { return DeviceResources->GetDevice(); }
 	ID3D11DeviceContext* GetDeviceContext() const { return DeviceResources->GetDeviceContext(); }
 	IDXGISwapChain* GetSwapChain() const { return DeviceResources->GetSwapChain(); }
-	
-	ID3D11SamplerState* GetDefaultSampler() const { return DefaultSampler; }
-	ID3D11ShaderResourceView* GetDepthSRV() const { return DeviceResources->GetDepthStencilSRV(); }
-	
-	ID3D11RenderTargetView* GetRenderTargetView() const { return DeviceResources->GetRenderTargetView(); }
-	ID3D11RenderTargetView* GetSceneColorRenderTargetView()const {return DeviceResources->GetSceneColorRenderTargetView(); }
-	
+
+	ID3D11RenderTargetView* GetBackBufferRTV() const { return DeviceResources->GetBackBufferRTV(); }
+	ID3D11ShaderResourceView* GetBackBufferSRV() const { return DeviceResources->GetBackBufferSRV(); }
+
+	ID3D11RenderTargetView* GetDestinationRTV() const {return DeviceResources->GetDestinationRTV(); }
+	ID3D11ShaderResourceView* GetSourceSRV() const{return DeviceResources->GetSourceSRV(); }
+	ID3D11RenderTargetView* GetSourceRTV() const{return DeviceResources->GetSourceRTV(); }
+
+	ID3D11RenderTargetView* GetNormalBufferRTV() const { return DeviceResources->GetNormalBufferRTV(); }
+	ID3D11ShaderResourceView* GetNormalBufferSRV() const { return DeviceResources->GetNormalBufferSRV(); }
+
+	ID3D11DepthStencilView* GetDepthBufferDSV() const { return DeviceResources->GetDepthBufferDSV(); }
+	ID3D11ShaderResourceView* GetDepthBufferSRV() const { return DeviceResources->GetDepthBufferSRV(); }
+
 	UDeviceResources* GetDeviceResources() const { return DeviceResources; }
 	FViewport* GetViewportClient() const { return ViewportClient; }
 	UPipeline* GetPipeline() const { return Pipeline; }
 	bool GetIsResizing() const { return bIsResizing; }
-	bool GetFXAA() const { return bFXAAEnabled; }
-
-	ID3D11DepthStencilState* GetDefaultDepthStencilState() const { return DefaultDepthStencilState; }
-	ID3D11DepthStencilState* GetDisabledDepthStencilState() const { return DisabledDepthStencilState; }
-	ID3D11BlendState* GetAlphaBlendState() const { return AlphaBlendState; }
-	ID3D11Buffer* GetConstantBufferModels() const { return ConstantBufferModels; }
-	ID3D11Buffer* GetConstantBufferViewProj() const { return ConstantBufferViewProj; }
 
 	void SetIsResizing(bool isResizing) { bIsResizing = isResizing; }
 
 private:
+	void RenderBegin() const;
+
+	void RenderLevel(struct FRenderingContext& RenderingContext);
+	void RenderPostProcess(struct FRenderingContext& RenderingContext);
+	void RenderByViewMode(struct FRenderingContext& RenderingContext);
+	void RenderEditorDepth(struct FRenderingContext& RenderingContext);
+	void RenderEditorOverlay(struct FRenderingContext& RenderingContext);
+
+	void RenderEnd() const;
+
 	UPipeline* Pipeline = nullptr;
 	UDeviceResources* DeviceResources = nullptr;
-	TArray<UPrimitiveComponent*> PrimitiveComponents;
 
-	// States
-	ID3D11DepthStencilState* DefaultDepthStencilState = nullptr;
-	ID3D11DepthStencilState* DecalDepthStencilState = nullptr;
-	ID3D11DepthStencilState* DisabledDepthStencilState = nullptr;
+	// DS
+	ID3D11DepthStencilState* DefaultDS = nullptr;
+	ID3D11DepthStencilState* ReadOnlyDS = nullptr;
+	ID3D11DepthStencilState* DisabledDS = nullptr;
+
+	// BS
 	ID3D11BlendState* AlphaBlendState = nullptr;
 	ID3D11BlendState* AdditiveBlendState = nullptr;
-	
+
 	// Constant Buffers
 	ID3D11Buffer* ConstantBufferModels = nullptr;
 	ID3D11Buffer* ConstantBufferViewProj = nullptr;
 	ID3D11Buffer* ConstantBufferColor = nullptr;
-	
-	FLOAT ClearColor[4] = {0.025f, 0.025f, 0.025f, 1.0f};
 
 	// Default Shaders
 	ID3D11VertexShader* DefaultVertexShader = nullptr;
 	ID3D11PixelShader* DefaultPixelShader = nullptr;
 	ID3D11InputLayout* DefaultInputLayout = nullptr;
 
-	// Texture Shaders
-	ID3D11VertexShader* TexturePhongVertexShader = nullptr;
-	ID3D11PixelShader* TexturePhongPixelShader = nullptr;
-
-	ID3D11VertexShader* TextureLambertVertexShader = nullptr;
-	ID3D11PixelShader* TextureLambertPixelShader = nullptr;
-
-	ID3D11VertexShader* TextureGouraudVertexShader = nullptr;
-	ID3D11PixelShader* TextureGouraudPixelShader = nullptr;
-
-	ID3D11InputLayout* TextureInputLayout = nullptr;
-	
-	ID3D11SamplerState* DefaultSampler = nullptr;
-	
-	uint32 Stride = 0;
-
 	FViewport* ViewportClient = nullptr;
-	
+
 	bool bIsResizing = false;
-	bool bFXAAEnabled = true;
 
-	TArray<class FRenderPass*> RenderPasses;
-
-	FFXAAPass* FXAAPass = nullptr;
+	TArray<class FRenderPass*> LevelPasses;
+	TArray<class FRenderPass*> PostProcessPasses;
+	TMap<EViewModeIndex, class FRenderPass*> ViewModePasses;
+	TArray<class FRenderPass*> EditorDepthPasses;
+	TArray<class FRenderPass*> EditorOverlayPasses;
 };

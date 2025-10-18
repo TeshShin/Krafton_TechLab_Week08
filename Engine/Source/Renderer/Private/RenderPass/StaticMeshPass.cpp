@@ -7,19 +7,39 @@
 #include "Renderer/Public/LightData.h"
 #include "Asset/Public/Texture.h"
 
-FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferCamera, ID3D11Buffer* InConstantBufferModel,
-                                 ID3D11VertexShader* InVSPhong, ID3D11PixelShader* InPSPhong, ID3D11VertexShader* InVSLambert, ID3D11PixelShader* InPSLambert, ID3D11VertexShader* InVSGouraud, ID3D11PixelShader* InPSGouraud, ID3D11InputLayout* InLayout, ID3D11DepthStencilState* InDS)
-	: FRenderPass(InPipeline, InConstantBufferCamera, InConstantBufferModel), VSPhong(InVSPhong), PSPhong(InPSPhong), VSLambert(InVSLambert), PSLambert(InPSLambert), VSGouraud(InVSGouraud), PSGouraud(InPSGouraud), InputLayout(InLayout), DS(InDS)
+FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferModel, ID3D11DepthStencilState* InDS)
+	: FRenderPass(InPipeline, InConstantBufferModel), DS(InDS)
 {
+	TArray<D3D11_INPUT_ELEMENT_DESC> TextureLayout =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Position), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Normal), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Color), D3D11_INPUT_PER_VERTEX_DATA, 0	},
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FNormalVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0	},
+		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Tangent), D3D11_INPUT_PER_VERTEX_DATA, 0 }
+	};
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/TextureVS.hlsl", TextureLayout, &VS, &InputLayout);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/TexturePS.hlsl", &PS);
+
 	ConstantBufferMaterial = FRenderResourceFactory::CreateConstantBuffer<FMaterialConstants>();
 	ConstantBufferLight = FRenderResourceFactory::CreateConstantBuffer<FLightConstants>();
 
 	// Unified Dynamic Light Buffer (Point, Spot, Rect)
 	UnifiedLightCapacity = 128;  // Initial capacity for all dynamic lights
-	UnifiedLightStructuredBuffer = FRenderResourceFactory::CreateStructuredBuffer<FUnifiedDynamicLight>(
-		UnifiedLightCapacity);
-	UnifiedLightSRV = FRenderResourceFactory::CreateBufferSRV(
-		UnifiedLightStructuredBuffer, UnifiedLightCapacity);
+	UnifiedLightStructuredBuffer = FRenderResourceFactory::CreateStructuredBuffer<FUnifiedDynamicLight>(UnifiedLightCapacity);
+	UnifiedLightSRV = FRenderResourceFactory::CreateBufferSRV(UnifiedLightStructuredBuffer, UnifiedLightCapacity);
+}
+
+bool FStaticMeshPass::CanRender(const FRenderingContext& Context)
+{
+	return Context.ShowFlags & EEngineShowFlags::SF_StaticMesh;
+}
+
+void FStaticMeshPass::SetRenderTargets(class UDeviceResources* DeviceResources)
+{
+	ID3D11RenderTargetView* RTVs[] = { DeviceResources->GetDestinationRTV(), DeviceResources->GetNormalBufferRTV() };
+	ID3D11DepthStencilView* DSV = DeviceResources->GetDepthBufferDSV();
+	Pipeline->SetRenderTargets(2, RTVs, DSV);
 }
 
 void FStaticMeshPass::Execute(FRenderingContext& Context)
@@ -115,7 +135,8 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	Pipeline->SetConstantBuffer(1, true, ConstantBufferCamera);
 	Pipeline->SetConstantBuffer(1, false, ConstantBufferCamera);
 
-	if (!(Context.ShowFlags & EEngineShowFlags::SF_StaticMesh)) { return; }
+	//Pipeline->SetSamplerState(0, false, URenderer::GetInstance().GetDefaultSampler());
+
 	TArray<UStaticMeshComponent*>& MeshComponents = Context.StaticMeshes;
 	sort(MeshComponents.begin(), MeshComponents.end(),
 		[](UStaticMeshComponent* A, UStaticMeshComponent* B) {
@@ -126,29 +147,6 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 
 	FStaticMesh* CurrentMeshAsset = nullptr;
 	UMaterial* CurrentMaterial = nullptr;
-
-	// --- RTVs Setup ---
-
-	/**
-	 * @todo Find a better way to reduce depdency upon Renderer class.
-	 * @note How about introducing methods like BeginPass(), EndPass() to set up and release pass specific state?
-	 */
-	const auto& Renderer = URenderer::GetInstance();
-	const auto& DeviceResources = Renderer.GetDeviceResources();
-	ID3D11RenderTargetView* RTV = nullptr;
-	if (Renderer.GetFXAA())
-	{
-		RTV = DeviceResources->GetSceneColorRenderTargetView();
-	}
-	else
-	{
-		RTV = DeviceResources->GetRenderTargetView();
-	}
-	ID3D11RenderTargetView* RTVs[2] = { RTV, DeviceResources->GetNormalRenderTargetView() };
-	ID3D11DepthStencilView* DSV = DeviceResources->GetDepthStencilView();
-	Pipeline->SetRenderTargets(2, RTVs, DSV);
-
-	// --- RTVs Setup End ---
 
 	for (UStaticMeshComponent* MeshComp : MeshComponents)
 	{
@@ -242,17 +240,6 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 		}
 	}
 	Pipeline->SetConstantBuffer(2, false, nullptr);
-
-
-	// --- RTVs Reset ---
-
-	/**
-	 * @todo Find a better way to reduce depdency upon Renderer class.
-	 * @note How about introducing methods like BeginPass(), EndPass() to set up and release pass specific state?
-	 */
-	Pipeline->SetRenderTargets(2, RTVs, DSV);
-
-	// --- RTVs Reset End ---
 }
 
 TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderingContext& Context)

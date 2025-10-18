@@ -47,7 +47,7 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 			UConfigManager::GetInstance().SetCameraSettingsFromJson(PerspectiveCameraData);
 			URenderer::GetInstance().GetViewportClient()->ApplyAllCameraDataToViewportClients();
 		}
-		
+
 		JSON ActorsJson;
 		if (FJsonSerializer::ReadObject(InOutHandle, "Actors", ActorsJson))
 		{
@@ -57,9 +57,9 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 
 				FString TypeString;
 				FJsonSerializer::ReadString(ActorDataJson, "Type", TypeString);
-				
+
 				UClass* ActorClass = UClass::FindClass(TypeString);
-				SpawnActorToLevel(ActorClass, &ActorDataJson); 
+				SpawnActorToLevel(ActorClass, &ActorDataJson);
 			}
 		}
 	}
@@ -79,7 +79,7 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		{
 			JSON ActorJson;
 			ActorJson["Type"] = Actor->GetClass()->GetName().ToString();
-			Actor->Serialize(bInIsLoading, ActorJson); 
+			Actor->Serialize(bInIsLoading, ActorJson);
 
 			ActorsJson[std::to_string(Actor->GetUUID())] = ActorJson;
 		}
@@ -170,7 +170,7 @@ void ULevel::UnregisterComponent(UActorComponent* InComponent)
 	{
 		// StaticOctree에서 제거 시도
 		StaticOctree->Remove(PrimitiveComponent);
-	
+
 		OnPrimitiveUnregistered(PrimitiveComponent);
 	}
 	else if (auto LightComponent = Cast<ULightComponentBase>(InComponent))
@@ -178,9 +178,9 @@ void ULevel::UnregisterComponent(UActorComponent* InComponent)
 		if (auto It = std::find(Lights.begin(), Lights.end(), LightComponent); It != Lights.end())
 		{
 			Lights.erase(It);
-		}	
+		}
 	}
-	
+
 }
 
 void ULevel::AddLevelComponent(AActor* Actor)
@@ -194,7 +194,7 @@ void ULevel::AddLevelComponent(AActor* Actor)
 	{
 		if (auto PrimitiveComponent = Cast<UPrimitiveComponent>(Component))
 		{
-			OnPrimitiveUpdated(PrimitiveComponent);			
+			OnPrimitiveUpdated(PrimitiveComponent);
 		}
 		else if (auto LightComponent = Cast<ULightComponentBase>(Component))
 		{
@@ -249,7 +249,6 @@ void ULevel::UpdatePrimitiveInOctree(UPrimitiveComponent* InComponent)
 UObject* ULevel::Duplicate()
 {
 	ULevel* Level = Cast<ULevel>(Super::Duplicate());
-	Level->ShowFlags = ShowFlags;
 	return Level;
 }
 
@@ -276,10 +275,10 @@ void ULevel::UpdateOctree()
 	{
 		return;
 	}
-	
+
 	uint32 Count = 0;
 	FDynamicPrimitiveQueue NotInsertedQueue;
-	
+
 	while (!DynamicPrimitiveQueue.empty() && Count < MAX_OBJECTS_TO_INSERT_PER_FRAME)
 	{
 		auto [Component, TimePoint] = DynamicPrimitiveQueue.front();
@@ -309,7 +308,7 @@ void ULevel::UpdateOctree()
 			}
 		}
 	}
-	
+
 	DynamicPrimitiveQueue = NotInsertedQueue;
 	if (Count != 0)
 	{

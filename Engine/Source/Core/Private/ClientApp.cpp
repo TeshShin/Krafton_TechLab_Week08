@@ -82,7 +82,7 @@ int FClientApp::InitializeSystem() const
 	// Initialize By Get Instance
 	UTimeManager::GetInstance();
 	UInputManager::GetInstance();
-	
+
 	auto& Renderer = URenderer::GetInstance();
 	Renderer.Init(Window->GetWindowHandle());
 
@@ -91,14 +91,14 @@ int FClientApp::InitializeSystem() const
 	// StatOverlay Initialize
 	auto& StatOverlay = UStatOverlay::GetInstance();
 	StatOverlay.Initialize();
-	
+
 	GEditor = NewObject<UEditorEngine>();
-	
+
 	// UIManager Initialize
 	auto& UIManger = UUIManager::GetInstance();
 	UIManger.Initialize(Window->GetWindowHandle());
 	UUIWindowFactory::CreateDefaultUILayout();
-	
+
 	return S_OK;
 }
 
@@ -126,10 +126,10 @@ void FClientApp::UpdateSystem() const
 	{
 		TIME_PROFILE(UIManager)
 		UIManager.Update();
-	}	
+	}
 	{
 		TIME_PROFILE(Renderer)
-		Renderer.Update();
+		Renderer.Render();
 	}
 }
 
@@ -188,7 +188,7 @@ void FClientApp::ShutdownSystem() const
 {
 	delete GEditor;
 	delete Window;
-	
+
 	UStatOverlay::GetInstance().Release();
 	UUIManager::GetInstance().Shutdown();
 	UAssetManager::GetInstance().Release();

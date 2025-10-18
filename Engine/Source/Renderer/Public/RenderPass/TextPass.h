@@ -19,17 +19,21 @@ struct FFontConstantBuffer
 class FTextPass : public FRenderPass
 {
 public:
-    FTextPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferViewProj, ID3D11Buffer* InConstantBufferModel);
+    FTextPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferModel, ID3D11DepthStencilState* InDS, ID3D11BlendState* InBS);
+	bool CanRender(const FRenderingContext& Context) override;
+	void SetRenderTargets(class UDeviceResources* DeviceResources) override;
     void Execute(FRenderingContext& Context) override;
     void Release() override;
 
 private:
     void RenderTextInternal(const FString& Text, const FMatrix& WorldMatrix);
-    
+
+	ID3D11DepthStencilState* DS;
+	ID3D11BlendState* BS;
     // Font rendering resources
-    ID3D11VertexShader* FontVertexShader = nullptr;
-    ID3D11PixelShader* FontPixelShader = nullptr;
-    ID3D11InputLayout* FontInputLayout = nullptr;
+    ID3D11VertexShader* VS = nullptr;
+    ID3D11PixelShader* PS = nullptr;
+    ID3D11InputLayout* InputLayout = nullptr;
     ID3D11Buffer* DynamicVertexBuffer = nullptr;
     ID3D11Buffer* FontDataConstantBuffer = nullptr;
     class UTexture* FontTexture = nullptr;

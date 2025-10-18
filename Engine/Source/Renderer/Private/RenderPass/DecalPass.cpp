@@ -92,7 +92,7 @@ namespace
             Dot_t = Distance.X * R[0][0] + Distance.Y * R[1][0] + Distance.Z * R[2][0];
             RightAABBValue = AABBHalf.X * AbsR[0][0] + AABBHalf.Y * AbsR[1][0] + AABBHalf.Z * AbsR[2][0];
             if (Abs(Dot_t) > OBBExtents[0] + RightAABBValue) return false;
- 
+
             // Uy (j=1)
             Dot_t = Distance.X * R[0][1] + Distance.Y * R[1][1] + Distance.Z * R[2][1];
             RightAABBValue = AABBHalf.X * AbsR[0][1] + AABBHalf.Y * AbsR[1][1] + AABBHalf.Z * AbsR[2][1];
@@ -129,8 +129,8 @@ namespace
     }
 }
 
-FDecalPass::FDecalPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferCamera, ID3D11DepthStencilState* InDS_Read, ID3D11BlendState* InBlendState)
-    : FRenderPass(InPipeline, InConstantBufferCamera, nullptr), DS_Read(InDS_Read), BlendState(InBlendState)
+FDecalPass::FDecalPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS_Read, ID3D11BlendState* InBlendState)
+    : FRenderPass(InPipeline, nullptr), DS_Read(InDS_Read), BlendState(InBlendState)
 {
     TArray<D3D11_INPUT_ELEMENT_DESC> DecalLayout =
     {
@@ -139,31 +139,41 @@ FDecalPass::FDecalPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferCame
         { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Color), D3D11_INPUT_PER_VERTEX_DATA, 0	},
         { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FNormalVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0	}
     };
-    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/DecalShader.hlsl", DecalLayout, nullptr, &VS, &InputLayout);
-    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/DecalShader.hlsl", nullptr, &PS);
+    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/DecalShader.hlsl", DecalLayout, &VS, &InputLayout);
+    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/DecalShader.hlsl", &PS);
 
     ConstantBufferPrim = FRenderResourceFactory::CreateConstantBuffer<FModelConstants>();
     ConstantBufferDecal = FRenderResourceFactory::CreateConstantBuffer<FDecalConstants>();
+}
+
+bool FDecalPass::CanRender(const FRenderingContext& Context)
+{
+	return (Context.ShowFlags & EEngineShowFlags::SF_Decal) && (Context.ViewMode != EViewModeIndex::VMI_SceneDepth);
+}
+
+void FDecalPass::SetRenderTargets(class UDeviceResources* DeviceResources)
+{
+	ID3D11RenderTargetView* RTVs[] = { DeviceResources->GetDestinationRTV() };
+	ID3D11DepthStencilView* DSV = DeviceResources->GetDepthBufferDSV();
+	Pipeline->SetRenderTargets(1, RTVs, DSV);
 }
 
 void FDecalPass::Execute(FRenderingContext& Context)
 {
 	TIME_PROFILE(DecalPass)
 
-    if (!(Context.ShowFlags & EEngineShowFlags::SF_Decal) || (Context.ViewMode == EViewModeIndex::VMI_SceneDepth)) return;
-    
+
     // --- Set Pipeline State ---
     FPipelineInfo PipelineInfo = { InputLayout, VS, FRenderResourceFactory::GetRasterizerState({ ECullMode::Back, EFillMode::Solid }),
         DS_Read, PS, BlendState };
     Pipeline->UpdatePipeline(PipelineInfo);
-    Pipeline->SetConstantBuffer(1, true, ConstantBufferCamera);
 
     // --- Decals Stats ---
     uint32 RenderedDecal = 0;
     uint32 CollidedComps = 0;
-    
+
     TArray<UPrimitiveComponent*>& DynamicPrimitives = GWorld->GetLevel()->GetDynamicPrimitives();
-    
+
     // --- Render Decals ---
     for (UDecalComponent* Decal : Context.Decals)
     {
@@ -172,7 +182,7 @@ void FDecalPass::Execute(FRenderingContext& Context)
         const IBoundingVolume* DecalBV = Decal->GetBoundingBox();
         if (!DecalBV || DecalBV->GetType() != EBoundingVolumeType::OBB) { continue; }
         RenderedDecal++;
-        
+
         const FOBB* DecalOBB = static_cast<const FOBB*>(DecalBV);
 
         Decal->UpdateProjectionMatrix();
@@ -203,15 +213,10 @@ void FDecalPass::Execute(FRenderingContext& Context)
         }
 
         TArray<UPrimitiveComponent*> Primitives;
-
-        // --- Enable Octree Optimization --- 
         ULevel* CurrentLevel = GWorld->GetLevel();
 
         Query(CurrentLevel->GetStaticOctree(), Decal, Primitives);
         Primitives.insert(Primitives.end(), DynamicPrimitives.begin(), DynamicPrimitives.end());
-
-        // --- Disable Octree Optimization --- 
-        // Primitives = Context.DefaultPrimitives;
 
         for (UPrimitiveComponent* Prim : Primitives)
         {
@@ -219,11 +224,11 @@ void FDecalPass::Execute(FRenderingContext& Context)
 
             const IBoundingVolume* PrimBV = Prim->GetBoundingBox();
         	if (!PrimBV || PrimBV->GetType() != EBoundingVolumeType::AABB) { continue; }
-        
+
         	FVector WorldMin, WorldMax;
         	Prim->GetWorldAABB(WorldMin, WorldMax);
         	const FAABB WorldAABB(WorldMin, WorldMax);
-        
+
         	if (!Intersects(*DecalOBB, WorldAABB))
         	{
         		continue;
@@ -255,7 +260,7 @@ void FDecalPass::Release()
     SafeRelease(VS);
     SafeRelease(PS);
     SafeRelease(InputLayout);
-    
+
     SafeRelease(ConstantBufferPrim);
     SafeRelease(ConstantBufferDecal);
 }
@@ -277,7 +282,7 @@ void FDecalPass::Query(FOctree* InOctree, UDecalComponent* InDecal, TArray<UPrim
         return;
     }
 
-    
+
     for (auto Child : InOctree->GetChildren())
     {
         Query(Child, InDecal, OutPrimitives);
