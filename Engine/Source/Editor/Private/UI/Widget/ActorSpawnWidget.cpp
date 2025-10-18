@@ -35,14 +35,14 @@ void UActorSpawnWidget::RenderWidget()
 	{
 		Names.push_back(ClassName.c_str());
 	}
-	
+
 	ImGui::Combo(
 		"##ActorType",
 		&SelectedActorClassIndex,
 		Names.data(),
 		Names.size()
 	);
-	
+
 	// Spawn 버튼과 개수 입력
 	ImGui::Text("Number of Spawn:");
 	ImGui::SameLine();
@@ -107,7 +107,8 @@ void UActorSpawnWidget::SpawnActors()
 void UActorSpawnWidget::LoadActorClasses()
 {
 	for (UClass* Class : UClass::FindClasses(AActor::StaticClass()))
-	{ 
+	{
+		if (Class->IsAbstract()) { continue; }
 		ActorClasses.push_back(Class);
 		ActorClassNames.push_back(Class->GetName().ToString().substr(1));
 	}
