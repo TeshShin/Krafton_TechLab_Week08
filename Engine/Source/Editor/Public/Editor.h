@@ -35,6 +35,9 @@ public:
 	void SetViewMode(EViewModeIndex InNewViewMode) { CurrentViewMode = InNewViewMode; }
 	EViewModeIndex GetViewMode() const { return CurrentViewMode; }
 
+	uint64 GetShowFlags() const { return ShowFlags; }
+	void SetShowFlags(uint64 InShowFlags) { ShowFlags = InShowFlags; }
+
 	void SetSingleViewportLayout(int InActiveIndex);
 	void RestoreMultiViewportLayout();
 
@@ -51,7 +54,7 @@ public:
 	SSplitter* GetRootSplitter() { return &RootSplitter; }
 	SSplitter* GetLeftSplitter() { return &LeftSplitter; }
 	SSplitter* GetRightSplitter() { return &RightSplitter; }
-	
+
 private:
 	void InitializeLayout();
 	void UpdateBatchLines();
@@ -88,12 +91,19 @@ private:
 	FViewportClient* InteractionViewport = nullptr; // 뷰포트의 상호작용을 고정하는 포인터
 
 	EViewModeIndex CurrentViewMode = EViewModeIndex::VMI_Lit;
+	uint64 ShowFlags =
+		static_cast<uint64>(EEngineShowFlags::SF_Billboard) |
+		static_cast<uint64>(EEngineShowFlags::SF_Bounds) |
+		static_cast<uint64>(EEngineShowFlags::SF_StaticMesh) |
+		static_cast<uint64>(EEngineShowFlags::SF_Text) |
+		static_cast<uint64>(EEngineShowFlags::SF_Decal) |
+		static_cast<uint64>(EEngineShowFlags::SF_Fog);
 
 	// Animation
 	EViewportLayoutState ViewportLayoutState = EViewportLayoutState::Multi;
 	EViewportLayoutState TargetViewportLayoutState = EViewportLayoutState::Multi;
 	float AnimationStartTime = 0.0f;
-	float AnimationDuration = 0.2f; 
+	float AnimationDuration = 0.2f;
 	float SourceRootRatio = 0.5f;
 	float SourceLeftRatio = 0.5f;
 	float SourceRightRatio = 0.5f;

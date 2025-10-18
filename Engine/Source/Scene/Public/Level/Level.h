@@ -31,9 +31,6 @@ public:
 	void UnregisterComponent(UActorComponent* InComponent);
 	bool DestroyActor(AActor* InActor);
 
-	uint64 GetShowFlags() const { return ShowFlags; }
-	void SetShowFlags(uint64 InShowFlags) { ShowFlags = InShowFlags; }
-
 	void UpdatePrimitiveInOctree(UPrimitiveComponent* InComponent);
 
 	FOctree* GetStaticOctree() { return StaticOctree; }
@@ -65,20 +62,12 @@ private:
 	// 지연 삭제를 위한 리스트
 	TArray<AActor*> ActorsToDelete;
 
-	uint64 ShowFlags =
-		static_cast<uint64>(EEngineShowFlags::SF_Billboard) |
-		static_cast<uint64>(EEngineShowFlags::SF_Bounds) |
-		static_cast<uint64>(EEngineShowFlags::SF_StaticMesh) |
-		static_cast<uint64>(EEngineShowFlags::SF_Text) |
-		static_cast<uint64>(EEngineShowFlags::SF_Decal) |
-		static_cast<uint64>(EEngineShowFlags::SF_Fog);
-	
 	/*-----------------------------------------------------------------------------
 		Octree Management
 	-----------------------------------------------------------------------------*/
 public:
 	void UpdateOctree();
-	
+
 private:
 	void OnPrimitiveUpdated(UPrimitiveComponent* InComponent);
 
@@ -86,7 +75,7 @@ private:
 
 	/** @brief 한 프레임에 Octree에 삽입할 오브젝트의 최대 크기를 결정해서 부하를 여러 프레임에 분산함. */
 	static constexpr uint32 MAX_OBJECTS_TO_INSERT_PER_FRAME = 256;
-	
+
 	/** @brief 가장 오래전에 움직인 UPrimitiveComponent를 Octree에 삽입하기 위해 필요한 구조체. */
 	struct FDynamicPrimitiveData
 	{
@@ -98,9 +87,9 @@ private:
 			return LastMoveTimePoint > Other.LastMoveTimePoint;
 		}
 	};
-	
+
 	using FDynamicPrimitiveQueue = TQueue<FDynamicPrimitiveData>;
-	
+
 	FOctree* StaticOctree = nullptr;
 
 	/** @deprecated 기존 코드와의 호환성을 위해 유지, 직접 사용하거나 업데이트하는 것을 금지함 */
@@ -111,12 +100,12 @@ private:
 
 	/** @brief 각 UPrimitiveComponent가 움직인 가장 마지막 시간을 기록 */
 	TMap<UPrimitiveComponent*, float> DynamicPrimitiveMap;
-	
+
 	/*-----------------------------------------------------------------------------
 		Lighting Management
 	-----------------------------------------------------------------------------*/
 public:
-	const TArray<ULightComponentBase*>& GetLights() const { return Lights; } 
+	const TArray<ULightComponentBase*>& GetLights() const { return Lights; }
 
 private:
 	TArray<ULightComponentBase*> Lights;

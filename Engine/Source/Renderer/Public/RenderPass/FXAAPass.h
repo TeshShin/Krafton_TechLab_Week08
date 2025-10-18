@@ -6,6 +6,7 @@ class UDeviceResources;
 struct alignas(16) FFXAAConstants
 {
     FVector2 InvResolution = FVector2();
+    FVector2 RenderTargetSize = FVector2();
     float FXAASpanMax = 16.0f;
     float FXAAReduceMul = 1.0f / 16.0f;
     float FXAAReduceMin = 1.0f / 256.0f;
@@ -19,10 +20,6 @@ public:
 	 * @brief FXAAPass 클래스의 생성자입니다.
 	 * @param InPipeline 파이프라인 객체입니다.
 	 * @param InDeviceResources 디바이스 리소스 객체입니다.
-	 * @param InVS 정점 셰이더입니다.
-	 * @param InPS 픽셀 셰이더입니다.
-	 * @param InLayout 입력 레이아웃입니다.
-	 * @param InSampler 샘플러 상태입니다.
 	 */
 	FFXAAPass(UPipeline* InPipeline, UDeviceResources* InDeviceResources);
 	/**
@@ -30,6 +27,8 @@ public:
 	 */
 	~FFXAAPass();
 
+	bool CanRender(const FRenderingContext& Context) override;
+	void SetRenderTargets(class UDeviceResources* DeviceResources) override;
 	/**
 	 * @brief FXAA 렌더링 패스를 실행합니다.
 	 * @param Context 렌더링 컨텍스트입니다.
@@ -48,16 +47,6 @@ private:
 	 */
 	void InitializeFullscreenQuad();
 
-	/**
-	 * @brief FXAA에 사용되는 상수 버퍼를 업데이트합니다.
-	 */
-	void UpdateConstants();
-
-	/**
-	 * @brief 렌더 타겟을 설정합니다.
-	 */
-	void SetRenderTargets();
-    
 private:
     UDeviceResources* DeviceResources = nullptr;
 
@@ -73,4 +62,6 @@ private:
 
     ID3D11Buffer* FXAAConstantBuffer = nullptr;
     FFXAAConstants FXAAParams{};
+
+	ID3D11ShaderResourceView* SceneSRV = nullptr;
 };

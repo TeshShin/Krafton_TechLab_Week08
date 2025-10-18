@@ -9,10 +9,22 @@ class UPipeline;
 class FRenderPass
 {
 public:
-    FRenderPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferCamera, ID3D11Buffer* InConstantBufferModel)
-        : Pipeline(InPipeline), ConstantBufferCamera(InConstantBufferCamera), ConstantBufferModel(InConstantBufferModel) {}
+    FRenderPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferModel)
+        : Pipeline(InPipeline), ConstantBufferModel(InConstantBufferModel) {}
 
     virtual ~FRenderPass() = default;
+
+    /**
+     * @brief 현재 렌더 패스를 렌더할 수 있는지 확인 (ViewMode, ShowFlag 등에 영향받음)
+     */
+    virtual bool CanRender(const FRenderingContext& Context) = 0;
+
+    /**
+     * @brief 프레임마다 실행할 렌더 타겟 설정 함수
+     * Execute 전에 호출되어 해당 Pass의 렌더 타겟을 설정함
+     * @param DeviceResources RTV/DSV/Buffer 등을 담고 있는 DeviceResources 객체
+     */
+    virtual void SetRenderTargets(class UDeviceResources* DeviceResources) = 0;
 
     /**
      * @brief 프레임마다 실행할 렌더 함수
@@ -27,6 +39,5 @@ public:
 
 protected:
     UPipeline* Pipeline;
-    ID3D11Buffer* ConstantBufferCamera;
     ID3D11Buffer* ConstantBufferModel;
 };

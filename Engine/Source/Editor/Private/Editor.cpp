@@ -157,8 +157,6 @@ void UEditor::InitializeLayout()
 
 void UEditor::UpdateBatchLines()
 {
-	uint64 ShowFlags = GWorld->GetLevel()->GetShowFlags();
-
 	if (ShowFlags & EEngineShowFlags::SF_Octree)
 	{
 		BatchLines.UpdateOctreeVertices(GWorld->GetLevel()->GetStaticOctree());
@@ -181,9 +179,9 @@ void UEditor::UpdateBatchLines()
 					FAABB AABB(WorldMin, WorldMax);
 					BatchLines.UpdateBoundingBoxVertices(&AABB);
 				}
-				else 
-				{ 
-					BatchLines.UpdateBoundingBoxVertices(PrimitiveComponent->GetBoundingBox()); 
+				else
+				{
+					BatchLines.UpdateBoundingBoxVertices(PrimitiveComponent->GetBoundingBox());
 
 					// 만약 선택된 타입이 decalspotlightcomponent라면
 					if (Component->IsA(UDecalSpotLightComponent::StaticClass()))
@@ -191,7 +189,7 @@ void UEditor::UpdateBatchLines()
 						BatchLines.UpdateSpotLightVertices(Cast<UDecalSpotLightComponent>(Component));
 					}
 				}
-				return; 
+				return;
 			}
 		}
 	}
@@ -300,7 +298,7 @@ void UEditor::UpdateLayout()
 	}
 
 	// 4. 매 프레임 현재 비율에 맞게 전체 레이아웃 크기를 다시 계산하고, 그 결과를 실제 FViewport에 반영합니다.
-	const ImGuiViewport* Viewport = ImGui::GetMainViewport(); // 사용자에게만 보이는 영역의 정보를 가져옵니다. 
+	const ImGuiViewport* Viewport = ImGui::GetMainViewport(); // 사용자에게만 보이는 영역의 정보를 가져옵니다.
 	FRect WorkableRect = { Viewport->WorkPos.x, Viewport->WorkPos.y, Viewport->WorkSize.x, Viewport->WorkSize.y };
 	RootSplitter.Resize(WorkableRect);
 
@@ -409,27 +407,24 @@ void UEditor::ProcessMouseInput()
 
 		if (!ImGui::GetIO().WantCaptureMouse && InputManager.IsKeyPressed(EKeyInput::MouseLeft))
 		{
-			if (GWorld->GetLevel()->GetShowFlags())
+			TArray<UPrimitiveComponent*> Candidate;
+
+			ULevel* CurrentLevel = GWorld->GetLevel();
+			ObjectPicker.FindCandidateFromOctree(CurrentLevel->GetStaticOctree(), WorldRay, Candidate);
+
+			TArray<UPrimitiveComponent*>& DynamicCandidates = CurrentLevel->GetDynamicPrimitives();
+			if (!DynamicCandidates.empty())
 			{
-				TArray<UPrimitiveComponent*> Candidate;
-
-				ULevel* CurrentLevel = GWorld->GetLevel();
-				ObjectPicker.FindCandidateFromOctree(CurrentLevel->GetStaticOctree(), WorldRay, Candidate);
-
-				TArray<UPrimitiveComponent*>& DynamicCandidates = CurrentLevel->GetDynamicPrimitives();
-				if (!DynamicCandidates.empty())
-				{
-					Candidate.insert(Candidate.end(), DynamicCandidates.begin(), DynamicCandidates.end());
-				}
-				
-
-				TStatId StatId("Picking");
-				FScopeCycleCounter PickCounter(StatId);
-				UPrimitiveComponent* PrimitiveCollided = ObjectPicker.PickPrimitive(CurrentCamera, WorldRay, Candidate, &ActorDistance);
-				ActorPicked = PrimitiveCollided ? PrimitiveCollided->GetOwner() : nullptr;
-				float ElapsedMs = PickCounter.Finish(); // 피킹 시간 측정 종료
-				UStatOverlay::GetInstance().RecordPickingStats(ElapsedMs);
+				Candidate.insert(Candidate.end(), DynamicCandidates.begin(), DynamicCandidates.end());
 			}
+
+
+			TStatId StatId("Picking");
+			FScopeCycleCounter PickCounter(StatId);
+			UPrimitiveComponent* PrimitiveCollided = ObjectPicker.PickPrimitive(CurrentCamera, WorldRay, Candidate, &ActorDistance);
+			ActorPicked = PrimitiveCollided ? PrimitiveCollided->GetOwner() : nullptr;
+			float ElapsedMs = PickCounter.Finish(); // 피킹 시간 측정 종료
+			UStatOverlay::GetInstance().RecordPickingStats(ElapsedMs);
 		}
 
 		if (Gizmo.GetGizmoDirection() == EGizmoDirection::None)
@@ -470,7 +465,7 @@ FVector UEditor::GetGizmoDragLocation(UCamera* InActiveCamera, FRay& WorldRay)
 		// FVector RadRotation = FVector::GetDegreeToRadian(Gizmo.GetComponentRotation());
 		// GizmoAxis = GizmoAxis4 * FMatrix::RotationMatrix(RadRotation);
 		FQuaternion q = Gizmo.GetTargetComponent()->GetWorldRotationAsQuaternion();
-		GizmoAxis = q.RotateVector(GizmoAxis); 
+		GizmoAxis = q.RotateVector(GizmoAxis);
 	}
 
 	if (ObjectPicker.IsRayCollideWithPlane(WorldRay, PlaneOrigin, InActiveCamera->CalculatePlaneNormal(GizmoAxis).Cross(GizmoAxis), MouseWorld))
@@ -490,7 +485,7 @@ FVector UEditor::GetGizmoDragRotation(UCamera* InActiveCamera, FRay& WorldRay)
 	if (!Gizmo.IsWorldMode())
 	{
 		FQuaternion q = Gizmo.GetTargetComponent()->GetWorldRotationAsQuaternion();
-		GizmoAxis = q.RotateVector(GizmoAxis); 
+		GizmoAxis = q.RotateVector(GizmoAxis);
 	}
 
 	if (ObjectPicker.IsRayCollideWithPlane(WorldRay, PlaneOrigin, GizmoAxis, MouseWorld))
@@ -525,10 +520,10 @@ FVector UEditor::GetGizmoDragScale(UCamera* InActiveCamera, FRay& WorldRay)
 	FVector MouseWorld;
 	FVector PlaneOrigin = Gizmo.GetGizmoLocation();
 	FVector CardinalAxis = Gizmo.GetGizmoAxis();
-	
+
 	FVector GizmoAxis = Gizmo.GetGizmoAxis();
 	FQuaternion q = Gizmo.GetTargetComponent()->GetWorldRotationAsQuaternion();
-	GizmoAxis = q.RotateVector(GizmoAxis); 
+	GizmoAxis = q.RotateVector(GizmoAxis);
 
 	FVector PlaneNormal = InActiveCamera->CalculatePlaneNormal(GizmoAxis).Cross(GizmoAxis);
 	if (ObjectPicker.IsRayCollideWithPlane(WorldRay, PlaneOrigin, PlaneNormal, MouseWorld))
@@ -564,7 +559,7 @@ FVector UEditor::GetGizmoDragScale(UCamera* InActiveCamera, FRay& WorldRay)
 void UEditor::SelectActor(AActor* InActor)
 {
 	if (InActor == SelectedActor) return;
-	
+
 	SelectedActor = InActor;
 	if (SelectedActor) { SelectComponent(InActor->GetRootComponent()); }
 	else { SelectComponent(nullptr); }
@@ -573,7 +568,7 @@ void UEditor::SelectActor(AActor* InActor)
 void UEditor::SelectComponent(UActorComponent* InComponent)
 {
 	if (InComponent == SelectedComponent) return;
-	
+
 	if (SelectedComponent)
 	{
 		SelectedComponent->OnDeselected();

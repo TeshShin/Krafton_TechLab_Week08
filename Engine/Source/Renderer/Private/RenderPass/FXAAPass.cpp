@@ -11,7 +11,7 @@ struct FFullscreenVertex
 };
 
 FFXAAPass::FFXAAPass(UPipeline* InPipeline, UDeviceResources* InDeviceResources)
-    :FRenderPass(InPipeline,nullptr,nullptr), DeviceResources(InDeviceResources)
+    :FRenderPass(InPipeline, nullptr), DeviceResources(InDeviceResources)
 {
     InitializeFullscreenQuad();
     TArray<D3D11_INPUT_ELEMENT_DESC> FXAALayout =
@@ -21,8 +21,8 @@ FFXAAPass::FFXAAPass(UPipeline* InPipeline, UDeviceResources* InDeviceResources)
     };
     FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/FXAAShader.hlsl", FXAALayout, &VertexShader, &InputLayout);
     FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/FXAAShader.hlsl", &PixelShader);
-	
-    SamplerState = FRenderResourceFactory::CreateSamplerState(D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP);
+
+    SamplerState = FRenderResourceFactory::CreateSamplerState(D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_CLAMP);
     FXAAConstantBuffer = FRenderResourceFactory::CreateConstantBuffer<FFXAAConstants>();
 }
 
@@ -31,16 +31,32 @@ FFXAAPass::~FFXAAPass()
     Release();
 }
 
+bool FFXAAPass::CanRender(const FRenderingContext& Context)
+{
+	return Context.ShowFlags & EEngineShowFlags::SF_FXAA;
+}
+
+void FFXAAPass::SetRenderTargets(class UDeviceResources* DeviceResources)
+{
+	// PP는 Swap Buffer
+	DeviceResources->SwapFrameBuffers();
+
+	ID3D11RenderTargetView* RTVs[] = { DeviceResources->GetDestinationRTV() };
+	Pipeline->SetRenderTargets(1, RTVs, nullptr);
+	SceneSRV = DeviceResources->GetSourceSRV();
+}
+
 void FFXAAPass::Execute(FRenderingContext& Context)
 {
-    ID3D11ShaderResourceView* SceneSRV = DeviceResources->GetSceneColorShaderResourceView(); // 오프스크린 컬러입력
-    if (!SceneSRV)
-    {
-        return;
-    }
+	FXAAParams.InvResolution = FVector2(1.0f / Context.RTSize.X, 1.0f / Context.RTSize.Y);
+	FXAAParams.RenderTargetSize = Context.RTSize;
 
-    UpdateConstants();
-    SetRenderTargets();
+	// FXAA 품질 설정값을 명시적으로 업데이트
+	FXAAParams.FXAASpanMax = 8.0f;
+	FXAAParams.FXAAReduceMul = 1.0f / 8.0f;
+	FXAAParams.FXAAReduceMin = 1.0f / 128.0f;
+
+	FRenderResourceFactory::UpdateConstantBufferData(FXAAConstantBuffer, FXAAParams);
 
     FPipelineInfo PipelineInfo = {};
     PipelineInfo.InputLayout = InputLayout;
@@ -52,7 +68,6 @@ void FFXAAPass::Execute(FRenderingContext& Context)
 
     Pipeline->UpdatePipeline(PipelineInfo);
 
-    UINT offset = 0;
     Pipeline->SetVertexBuffer(FullscreenVB, FullscreenStride);
     Pipeline->SetIndexBuffer(FullscreenIB, 0);
 
@@ -61,8 +76,6 @@ void FFXAAPass::Execute(FRenderingContext& Context)
     Pipeline->SetSamplerState(0, false, SamplerState);
 
     Pipeline->DrawIndexed(FullscreenIndexCount, 0, 0);
-
-    // 정리
     Pipeline->SetTexture(0, false, nullptr);
 }
 
@@ -107,26 +120,4 @@ void FFXAAPass::InitializeFullscreenQuad()
     IBData.pSysMem = Indices;
 
     DeviceResources->GetDevice()->CreateBuffer(&IBDesc, &IBData, &FullscreenIB);
-}
-
-void FFXAAPass::UpdateConstants()
-{
-    const D3D11_VIEWPORT& VP = DeviceResources->GetViewportInfo();
-    FXAAParams.InvResolution = FVector2(1.0f / VP.Width, 1.0f / VP.Height);
-
-    // FXAA 품질 설정값을 명시적으로 업데이트                                           
-    FXAAParams.FXAASpanMax = 8.0f;                                        
-    FXAAParams.FXAAReduceMul = 1.0f / 8.0f;                               
-    FXAAParams.FXAAReduceMin = 1.0f / 128.0f;
-    
-    FRenderResourceFactory::UpdateConstantBufferData(FXAAConstantBuffer, FXAAParams);
-}
-
-void FFXAAPass::SetRenderTargets()
-{
-    ID3D11RenderTargetView* RTV = DeviceResources->GetRenderTargetView(); // 스왑체인 RTV
-    DeviceResources->GetDeviceContext()->OMSetRenderTargets(1, &RTV, nullptr);
-
-    const D3D11_VIEWPORT& VP = DeviceResources->GetViewportInfo();
-    DeviceResources->GetDeviceContext()->RSSetViewports(1, &VP);
 }

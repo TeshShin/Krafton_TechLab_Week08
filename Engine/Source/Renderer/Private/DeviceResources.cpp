@@ -19,20 +19,14 @@ void UDeviceResources::Create(HWND InWindowHandle)
 	Height = ClientRect.bottom - ClientRect.top;
 
 	CreateDeviceAndSwapChain(InWindowHandle);
-	CreateFrameBuffer();
-	CreateNormalBuffer();
-	CreateDepthBuffer();
-	CreateSceneColorTarget();
+	CreateBuffers();
 	CreateFactories();
 }
 
 void UDeviceResources::Release()
 {
 	ReleaseFactories();
-	ReleaseSceneColorTarget();
-	ReleaseFrameBuffer();
-	ReleaseNormalBuffer();
-	ReleaseDepthBuffer();
+	ReleaseBuffers();
 	ReleaseDeviceAndSwapChain();
 }
 
@@ -43,7 +37,7 @@ void UDeviceResources::Release()
 void UDeviceResources::CreateDeviceAndSwapChain(HWND InWindowHandle)
 {
 	// 지원하는 Direct3D 기능 레벨을 정의
-	D3D_FEATURE_LEVEL featurelevels[] = {D3D_FEATURE_LEVEL_11_0};
+	D3D_FEATURE_LEVEL FeatureLevels[] = {D3D_FEATURE_LEVEL_11_0};
 
 	// 스왑 체인 설정 구조체 초기화
 	DXGI_SWAP_CHAIN_DESC SwapChainDescription = {};
@@ -60,7 +54,7 @@ void UDeviceResources::CreateDeviceAndSwapChain(HWND InWindowHandle)
 	// Direct3D 장치와 스왑 체인을 생성
 	HRESULT hr = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
 	                                           D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG ,
-	                                           featurelevels, ARRAYSIZE(featurelevels), D3D11_SDK_VERSION,
+	                                           FeatureLevels, ARRAYSIZE(FeatureLevels), D3D11_SDK_VERSION,
 	                                           &SwapChainDescription, &SwapChain, &Device, nullptr, &DeviceContext);
 
 	if (FAILED(hr))
@@ -111,60 +105,11 @@ void UDeviceResources::ReleaseDeviceAndSwapChain()
 	// 	DebugPointer->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
 	// 	DebugPointer->Release();
 	// }
-	
+
 	if (Device)
 	{
 		Device->Release();
 		Device = nullptr;
-	}
-}
-
-/**
- * @brief FrameBuffer 생성 함수
- */
-void UDeviceResources::CreateFrameBuffer()
-{
-	// 스왑 체인으로부터 백 버퍼 텍스처 가져오기
-	SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&FrameBuffer);
-
-	// 렌더 타겟 뷰 생성
-	D3D11_RENDER_TARGET_VIEW_DESC framebufferRTVdesc = {};
-	framebufferRTVdesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB; // 색상 포맷
-	framebufferRTVdesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D; // 2D 텍스처
-
-	Device->CreateRenderTargetView(FrameBuffer, &framebufferRTVdesc, &FrameBufferRTV);
-
-	// 셰이더 리소스 뷰 생성
-	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.MipLevels = 1;
-
-	Device->CreateShaderResourceView(FrameBuffer, &srvDesc, &FrameBufferSRV);
-}
-
-/**
- * @brief 프레임 버퍼를 해제하는 함수
- */
-void UDeviceResources::ReleaseFrameBuffer()
-{
-	if (FrameBuffer)
-	{
-		FrameBuffer->Release();
-		FrameBuffer = nullptr;
-	}
-
-	if (FrameBufferRTV)
-	{
-		FrameBufferRTV->Release();
-		FrameBufferRTV = nullptr;
-	}
-
-	if (FrameBufferSRV)
-	{
-		FrameBufferSRV->Release();
-		FrameBufferSRV = nullptr;
 	}
 }
 
@@ -189,7 +134,7 @@ void UDeviceResources::CreateNormalBuffer()
 	RenderTargetViewDesc.Format = Texture2DDesc.Format;
 	RenderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 	RenderTargetViewDesc.Texture2D.MipSlice = 0;
-	
+
 	Device->CreateRenderTargetView(NormalBuffer, &RenderTargetViewDesc, &NormalBufferRTV);
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -222,18 +167,117 @@ void UDeviceResources::ReleaseNormalBuffer()
 	}
 }
 
-
-/**
- * @brief Scene Color Texture, SRV, RTV 생성 함수
- */
-void UDeviceResources::CreateSceneColorTarget()
+void UDeviceResources::CreateDepthBuffer()
 {
-	ReleaseSceneColorTarget();
+	D3D11_TEXTURE2D_DESC TextureDesc = {};
+	TextureDesc.Width = Width;
+	TextureDesc.Height = Height;
+	TextureDesc.MipLevels = 1;
+	TextureDesc.ArraySize = 1;
+	TextureDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+	TextureDesc.SampleDesc.Count = 1;
+	TextureDesc.SampleDesc.Quality = 0;
+	TextureDesc.Usage = D3D11_USAGE_DEFAULT;
+	TextureDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+	TextureDesc.CPUAccessFlags = 0;
+	TextureDesc.MiscFlags = 0;
 
-	if (!Device || Width == 0 || Height == 0)
+	Device->CreateTexture2D(&TextureDesc, nullptr, &DepthBuffer);
+
+	D3D11_DEPTH_STENCIL_VIEW_DESC DSVDesc = {};
+	DSVDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	DSVDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	DSVDesc.Texture2D.MipSlice = 0;
+
+	Device->CreateDepthStencilView(DepthBuffer, &DSVDesc, &DepthBufferDSV);
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+	SRVDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	SRVDesc.Texture2D.MostDetailedMip = 0;
+	SRVDesc.Texture2D.MipLevels = 1;
+
+	Device->CreateShaderResourceView(DepthBuffer, &SRVDesc, &DepthBufferSRV);
+}
+
+void UDeviceResources::ReleaseDepthBuffer()
+{
+	if (DepthBufferDSV)
 	{
-		return;
+		DepthBufferDSV->Release();
+		DepthBufferDSV = nullptr;
 	}
+	if (DepthBuffer)
+	{
+		DepthBuffer->Release();
+		DepthBuffer = nullptr;
+	}
+	if (DepthBufferSRV)
+	{
+		DepthBufferSRV->Release();
+		DepthBufferSRV = nullptr;
+	}
+}
+
+void UDeviceResources::UpdateViewport()
+{
+	DXGI_SWAP_CHAIN_DESC SwapChainDescription = {};
+	SwapChain->GetDesc(&SwapChainDescription);
+
+	// 전체 화면 크기
+	float FullWidth = static_cast<float>(SwapChainDescription.BufferDesc.Width);
+	float FullHeight = static_cast<float>(SwapChainDescription.BufferDesc.Height);
+
+	// 메뉴바 아래에 위치하도록 뷰포트 조정
+	ViewportInfo = { 0.f, 0.f, FullWidth, FullHeight, 0.0f, 1.0f };
+
+	Width = SwapChainDescription.BufferDesc.Width;
+	Height = SwapChainDescription.BufferDesc.Height;
+}
+
+void UDeviceResources::CreateBackBuffer()
+{
+	SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&BackBuffer);
+
+	D3D11_RENDER_TARGET_VIEW_DESC RTVDesc = {};
+	RTVDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+
+	Device->CreateRenderTargetView(BackBuffer, &RTVDesc, &BackBufferRTV);
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+	SRVDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+	SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	SRVDesc.Texture2D.MostDetailedMip = 0;
+	SRVDesc.Texture2D.MipLevels = 1;
+
+	Device->CreateShaderResourceView(BackBuffer, &SRVDesc, &BackBufferSRV);
+}
+
+void UDeviceResources::ReleaseBackBuffer()
+{
+	if (BackBufferRTV)
+	{
+		BackBufferRTV->Release();
+		BackBufferRTV = nullptr;
+	}
+	if (BackBuffer)
+	{
+		BackBuffer->Release();
+		BackBuffer = nullptr;
+	}
+	if (BackBufferSRV)
+	{
+		BackBufferSRV->Release();
+		BackBufferSRV = nullptr;
+	}
+}
+
+void UDeviceResources::CreateFrameBuffers()
+{
+	ReleaseFrameBuffers();
+
+	if (!Device || Width == 0 || Height == 0) { return; }
 
 	D3D11_TEXTURE2D_DESC SceneDesc = {};
 	SceneDesc.Width = Width;
@@ -248,129 +292,64 @@ void UDeviceResources::CreateSceneColorTarget()
 	SceneDesc.CPUAccessFlags = 0;
 	SceneDesc.MiscFlags = 0;
 
-
-	HRESULT Result = Device->CreateTexture2D(&SceneDesc, nullptr, &SceneColorTexture);
-	if (FAILED(Result))
+	for (uint32 Idx = 0; Idx < 2; ++Idx)
 	{
-		UE_LOG_ERROR("DeviceResources: SceneColor Texture 생성 실패");
-		ReleaseSceneColorTarget();
-		return;
-	}
+		HRESULT Result = Device->CreateTexture2D(&SceneDesc, nullptr, &FrameBuffer[Idx]);
+		if (FAILED(Result))
+		{
+			UE_LOG_ERROR("DeviceResources: FrameBuffer Texture 생성 실패");
+			ReleaseFrameBuffers();
+			return;
+		}
 
-	Result = Device->CreateRenderTargetView(SceneColorTexture, nullptr, &SceneColorTextureRTV);
-	if (FAILED(Result))
-	{
-		UE_LOG_ERROR("DeviceResources: SceneColor RTV 생성 실패");
-		ReleaseSceneColorTarget();
-		return;
-	}
+		Result = Device->CreateRenderTargetView(FrameBuffer[Idx], nullptr, &FrameBufferRTV[Idx]);
+		if (FAILED(Result))
+		{
+			UE_LOG_ERROR("DeviceResources: FrameBuffer RTV 생성 실패");
+			ReleaseFrameBuffers();
+			return;
+		}
 
-	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
-	SRVDesc.Format = SceneDesc.Format;
-	SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	SRVDesc.Texture2D.MostDetailedMip = 0;
-	SRVDesc.Texture2D.MipLevels = 1;
+		D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+		SRVDesc.Format = SceneDesc.Format;
+		SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		SRVDesc.Texture2D.MostDetailedMip = 0;
+		SRVDesc.Texture2D.MipLevels = 1;
 
-	Result = Device->CreateShaderResourceView(SceneColorTexture, &SRVDesc, &SceneColorTextureSRV);
-	if (FAILED(Result))
-	{
-		UE_LOG_ERROR("DeviceResources: SceneColor SRV 생성 실패");
-		ReleaseSceneColorTarget();
+		Result = Device->CreateShaderResourceView(FrameBuffer[Idx], &SRVDesc, &FrameBufferSRV[Idx]);
+		if (FAILED(Result))
+		{
+			UE_LOG_ERROR("DeviceResources: FrameBuffer SRV 생성 실패");
+			ReleaseFrameBuffers();
+		}
 	}
 }
 
 /**
- * @brief Scene Color Texture, SRV, RTV를 해제하는 함수
+ * @brief 프레임 버퍼를 해제하는 함수
  */
-void UDeviceResources::ReleaseSceneColorTarget()
+void UDeviceResources::ReleaseFrameBuffers()
 {
-	SafeRelease(SceneColorTextureSRV);
-	SafeRelease(SceneColorTextureRTV);
-	SafeRelease(SceneColorTexture);
-}
-
-
-void UDeviceResources::CreateDepthBuffer()
-{
-	D3D11_TEXTURE2D_DESC dsDesc = {};
-	dsDesc.Width = Width;
-	dsDesc.Height = Height;
-	dsDesc.MipLevels = 1;
-	dsDesc.ArraySize = 1;
-	dsDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
-	dsDesc.SampleDesc.Count = 1;
-	dsDesc.SampleDesc.Quality = 0;
-	dsDesc.Usage = D3D11_USAGE_DEFAULT;
-	dsDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
-	dsDesc.CPUAccessFlags = 0;
-	dsDesc.MiscFlags = 0;
-
-	Device->CreateTexture2D(&dsDesc, nullptr, &DepthBuffer);
-
-	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	dsvDesc.Texture2D.MipSlice = 0;
-
-	Device->CreateDepthStencilView(DepthBuffer, &dsvDesc, &DepthStencilView);
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.MipLevels = 1;
-
-	Device->CreateShaderResourceView(DepthBuffer, &srvDesc, &DepthBufferSRV);
-	Device->CreateShaderResourceView(DepthBuffer, &srvDesc, &DepthStencilSRV);
-}
-
-void UDeviceResources::ReleaseDepthBuffer()
-{
-	if (DepthStencilView)
+	for (uint32 Idx = 0; Idx < 2; ++Idx)
 	{
-		DepthStencilView->Release();
-		DepthStencilView = nullptr;
+		if (FrameBuffer[Idx])
+		{
+			FrameBuffer[Idx]->Release();
+			FrameBuffer[Idx] = nullptr;
+		}
+
+		if (FrameBufferRTV[Idx])
+		{
+			FrameBufferRTV[Idx]->Release();
+			FrameBufferRTV[Idx] = nullptr;
+		}
+
+		if (FrameBufferSRV[Idx])
+		{
+			FrameBufferSRV[Idx]->Release();
+			FrameBufferSRV[Idx] = nullptr;
+		}
 	}
-	if (DepthStencilSRV)
-	{
-		DepthStencilSRV->Release();
-		DepthStencilSRV = nullptr;
-	}
-	if (DepthBuffer)
-	{
-		DepthBuffer->Release();
-		DepthBuffer = nullptr;
-	}
-	if (DepthBufferSRV)
-	{
-		DepthBufferSRV->Release();
-		DepthBufferSRV = nullptr;
-	}
-}
-
-
-
-void UDeviceResources::UpdateViewport(float InMenuBarHeight)
-{
-	DXGI_SWAP_CHAIN_DESC SwapChainDescription = {};
-	SwapChain->GetDesc(&SwapChainDescription);
-
-	// 전체 화면 크기
-	float FullWidth = static_cast<float>(SwapChainDescription.BufferDesc.Width);
-	float FullHeight = static_cast<float>(SwapChainDescription.BufferDesc.Height);
-
-	// 메뉴바 아래에 위치하도록 뷰포트 조정
-	ViewportInfo = {
-		0.f,
-		0.f,
-		FullWidth,
-		FullHeight,
-		0.0f,
-		1.0f
-	};
-
-	Width = SwapChainDescription.BufferDesc.Width;
-	Height = SwapChainDescription.BufferDesc.Height;
 }
 
 void UDeviceResources::CreateFactories()
@@ -387,4 +366,25 @@ void UDeviceResources::ReleaseFactories()
 		DWriteFactory->Release();
 		DWriteFactory = nullptr;
 	}
+}
+
+void UDeviceResources::CreateBuffers()
+{
+	CreateBackBuffer();
+	CreateFrameBuffers();
+	CreateNormalBuffer();
+	CreateDepthBuffer();
+}
+
+void UDeviceResources::ReleaseBuffers()
+{
+	ReleaseDepthBuffer();
+	ReleaseNormalBuffer();
+	ReleaseFrameBuffers();
+	ReleaseBackBuffer();
+}
+
+void UDeviceResources::SwapFrameBuffers()
+{
+	std::swap(SourceIdx, DestinationIdx);
 }

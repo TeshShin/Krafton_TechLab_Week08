@@ -4,8 +4,10 @@
 class FBillboardPass : public FRenderPass
 {
 public:
-    FBillboardPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferCamera, ID3D11Buffer* InConstantBufferModel,
-        ID3D11VertexShader* InVS, ID3D11PixelShader* InPS, ID3D11InputLayout* InLayout, ID3D11DepthStencilState* InDS, ID3D11BlendState* InBS);
+    FBillboardPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferModel, ID3D11DepthStencilState* InDS, ID3D11BlendState* InBS);
+
+	bool CanRender(const FRenderingContext& Context) override;
+	void SetRenderTargets(class UDeviceResources* DeviceResources) override;
     void Execute(FRenderingContext& Context) override;
     void Release() override;
 
@@ -15,6 +17,4 @@ private:
     ID3D11InputLayout* InputLayout = nullptr;
     ID3D11DepthStencilState* DS = nullptr;
     ID3D11BlendState* BS = nullptr;
-    ID3D11Buffer* ConstantBufferMaterial = nullptr;
-    FMaterialConstants BillboardMaterialConstants;
 };
