@@ -465,6 +465,9 @@
     <ClCompile Include="Source\ImGui\imgui_widgets.cpp">
       <Filter>Engine\Source\ImGui</Filter>
     </ClCompile>
+    <ClCompile Include="Asset\Shader\LightTilesComputeShader.hlsl">
+      <Filter>Engine\Asset\Shader</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Scene\Public\Component\LightComponent.h">
