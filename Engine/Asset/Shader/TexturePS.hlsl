@@ -4,18 +4,11 @@
 // [UNIFIED FORWARD RENDERING] Light Data Structures
 //--------------------------------------------------------------------------------------
 
-// Ambient Light (Scene-wide global illumination)
-struct FAmbientLight
-{
-    float3 Color;
-    float Intensity;
-};
-
 // Light Constants (ConstantBuffer b10)
 cbuffer LightConstants : register(b10)
 {
-    uint UnifiedLightCount;             // 4 bytes  - Number of lights in StructuredBuffer
-    float3 Padding;                     // 12 bytes - Alignment padding
+	uint UnifiedLightCount; // 4 bytes  - Number of lights in StructuredBuffer
+	float3 Padding; // 12 bytes - Alignment padding
 };
 
 //--------------------------------------------------------------------------------------

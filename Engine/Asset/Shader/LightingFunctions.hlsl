@@ -147,8 +147,8 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
         if (Light.LightType == LIGHT_TYPE_SPOT)
         {
             float Theta = dot(LightDir, -Light.Direction);
-            float InnerCos = cos(Light.Param0);  // InnerConeAngle
-            float OuterCos = cos(Light.Param1);  // OuterConeAngle
+			float InnerCos = cos(radians(Light.Param0)); // InnerConeAngle
+            float OuterCos = cos(radians(Light.Param1));  // OuterConeAngle
 
             if (Theta < OuterCos)
                 return Result; // Outside cone
