@@ -29,7 +29,7 @@ public:
 	void CreateBlendState();
 	void CreateSamplerState();
 	void CreateDefaultShader();
-	void CreateTextureShader();
+	void CreateTextureShader(const D3D_SHADER_MACRO* InDefines, ID3D11VertexShader** OutTextureVertexShader, ID3D11PixelShader** OutTexturePixelShader);
 	void CreateConstantBuffers();
 	
 	// Release
@@ -98,8 +98,15 @@ private:
 	ID3D11InputLayout* DefaultInputLayout = nullptr;
 
 	// Texture Shaders
-	ID3D11VertexShader* TextureVertexShader = nullptr;
-	ID3D11PixelShader* TexturePixelShader = nullptr;
+	ID3D11VertexShader* TexturePhongVertexShader = nullptr;
+	ID3D11PixelShader* TexturePhongPixelShader = nullptr;
+
+	ID3D11VertexShader* TextureLambertVertexShader = nullptr;
+	ID3D11PixelShader* TextureLambertPixelShader = nullptr;
+
+	ID3D11VertexShader* TextureGouraudVertexShader = nullptr;
+	ID3D11PixelShader* TextureGouraudPixelShader = nullptr;
+
 	ID3D11InputLayout* TextureInputLayout = nullptr;
 	
 	ID3D11SamplerState* DefaultSampler = nullptr;

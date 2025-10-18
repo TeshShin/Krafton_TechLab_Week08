@@ -19,8 +19,8 @@ FTextPass::FTextPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferCamera
         {"TEXCOORD", 1, DXGI_FORMAT_R32_UINT, 0, offsetof(FFontVertex, CharIndex), D3D11_INPUT_PER_VERTEX_DATA, 0}
     };
 
-    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/ShaderFont.hlsl", LayoutDesc, &FontVertexShader, &FontInputLayout);
-    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/ShaderFont.hlsl", &FontPixelShader);
+    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/ShaderFont.hlsl", LayoutDesc, nullptr, &FontVertexShader, &FontInputLayout);
+    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/ShaderFont.hlsl", nullptr, &FontPixelShader);
 
     // Create dynamic vertex buffer
     D3D11_BUFFER_DESC BufferDesc = {};

@@ -8,8 +8,8 @@
 #include "Asset/Public/Texture.h"
 
 FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferCamera, ID3D11Buffer* InConstantBufferModel,
-                                 ID3D11VertexShader* InVS, ID3D11PixelShader* InPS, ID3D11InputLayout* InLayout, ID3D11DepthStencilState* InDS)
-	: FRenderPass(InPipeline, InConstantBufferCamera, InConstantBufferModel), VS(InVS), PS(InPS), InputLayout(InLayout), DS(InDS)
+                                 ID3D11VertexShader* InVSPhong, ID3D11PixelShader* InPSPhong, ID3D11VertexShader* InVSLambert, ID3D11PixelShader* InPSLambert, ID3D11VertexShader* InVSGouraud, ID3D11PixelShader* InPSGouraud, ID3D11InputLayout* InLayout, ID3D11DepthStencilState* InDS)
+	: FRenderPass(InPipeline, InConstantBufferCamera, InConstantBufferModel), VSPhong(InVSPhong), PSPhong(InPSPhong), VSLambert(InVSLambert), PSLambert(InPSLambert), VSGouraud(InVSGouraud), PSGouraud(InPSGouraud), InputLayout(InLayout), DS(InDS)
 {
 	ConstantBufferMaterial = FRenderResourceFactory::CreateConstantBuffer<FMaterialConstants>();
 	ConstantBufferLight = FRenderResourceFactory::CreateConstantBuffer<FLightConstants>();
@@ -33,7 +33,28 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 		RenderState.CullMode = ECullMode::None; RenderState.FillMode = EFillMode::WireFrame;
 	}
 	ID3D11RasterizerState* RS = FRenderResourceFactory::GetRasterizerState(RenderState);
-	FPipelineInfo PipelineInfo = { InputLayout, VS, RS, DS, PS, nullptr };
+
+	ID3D11VertexShader* VSToUse = nullptr;
+	ID3D11PixelShader* PSToUse = nullptr;
+	switch (Context.ViewMode)
+	{
+	case EViewModeIndex::VMI_Lit_Lambert:
+		VSToUse = VSLambert;
+		PSToUse = PSLambert;
+		break;
+	case EViewModeIndex::VMI_Lit_Gouraud:
+		VSToUse = VSGouraud;
+		PSToUse = PSGouraud;
+		break;
+	case EViewModeIndex::VMI_Lit_Phong:
+		VSToUse = VSPhong;
+		PSToUse = PSPhong;
+		break;
+	default:
+		assert(false && "Unsupported view mode is entered in StaticMeshPass."); // Unsupported view mode
+	}
+
+	FPipelineInfo PipelineInfo = { InputLayout, VSToUse, RS, DS, PSToUse, nullptr };
 	Pipeline->UpdatePipeline(PipelineInfo);
 
 	// [UNIFIED FORWARD RENDERING] Only Ambient light uses ConstantBuffer now
@@ -55,12 +76,23 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 		}
 	}
 
-	Pipeline->SetConstantBuffer(10, false, ConstantBufferLight);
-	FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
-	// Set a default sampler to slot 0 to ensure one is always bound
-	Pipeline->SetSamplerState(0, false, URenderer::GetInstance().GetDefaultSampler());
+	if (Context.ViewMode == EViewModeIndex::VMI_Lit_Gouraud)
+	{
+		Pipeline->SetConstantBuffer(10, true, ConstantBufferLight);
+		FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
+		// Set a default sampler to slot 0 to ensure one is always bound
+		Pipeline->SetSamplerState(0, true, URenderer::GetInstance().GetDefaultSampler());
+	}
+	else
+	{
+		Pipeline->SetConstantBuffer(10, false, ConstantBufferLight);
+		FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
+		// Set a default sampler to slot 0 to ensure one is always bound
+		Pipeline->SetSamplerState(0, false, URenderer::GetInstance().GetDefaultSampler());
+	}
 
 	Pipeline->SetConstantBuffer(0, true, ConstantBufferModel);
+
 	Pipeline->SetConstantBuffer(1, true, ConstantBufferCamera);
 	Pipeline->SetConstantBuffer(1, false, ConstantBufferCamera);
 
@@ -151,32 +183,35 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 				MaterialConstants.Time = MeshComp->GetElapsedTime();
 
 				FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferMaterial, MaterialConstants);
-				Pipeline->SetConstantBuffer(2, false, ConstantBufferMaterial);
 
+				// Gouraud 모드면, Vertex Shader에 Material, Texture들을 바인딩
+				bool bIsGouraud = (Context.ViewMode == EViewModeIndex::VMI_Lit_Gouraud);
+
+				Pipeline->SetConstantBuffer(2, bIsGouraud, ConstantBufferMaterial);
 				if (UTexture* DiffuseTexture = Material->GetDiffuseTexture())
 				{
-					Pipeline->SetTexture(0, false, DiffuseTexture->GetTextureSRV());
-					Pipeline->SetSamplerState(0, false, DiffuseTexture->GetTextureSampler());
+					Pipeline->SetTexture(0, bIsGouraud, DiffuseTexture->GetTextureSRV());
+					Pipeline->SetSamplerState(0, bIsGouraud, DiffuseTexture->GetTextureSampler());
 				}
 				if (UTexture* AmbientTexture = Material->GetAmbientTexture())
 				{
-					Pipeline->SetTexture(1, false, AmbientTexture->GetTextureSRV());
+					Pipeline->SetTexture(1, bIsGouraud, AmbientTexture->GetTextureSRV());
 				}
 				if (UTexture* SpecularTexture = Material->GetSpecularTexture())
 				{
-					Pipeline->SetTexture(2, false, SpecularTexture->GetTextureSRV());
+					Pipeline->SetTexture(2, bIsGouraud, SpecularTexture->GetTextureSRV());
 				}
 				if (UTexture* NormalTexture = Material->GetShininessTexture())
 				{
-					Pipeline->SetTexture(3, false, NormalTexture->GetTextureSRV());
+					Pipeline->SetTexture(3, bIsGouraud, NormalTexture->GetTextureSRV());
 				}
 				if (UTexture* AlphaTexture = Material->GetAlphaTexture())
 				{
-					Pipeline->SetTexture(4, false, AlphaTexture->GetTextureSRV());
+					Pipeline->SetTexture(4, bIsGouraud, AlphaTexture->GetTextureSRV());
 				}
 				if (UTexture* BumpTexture = Material->GetBumpTexture())
 				{
-					Pipeline->SetTexture(5, false, BumpTexture->GetTextureSRV());
+					Pipeline->SetTexture(5, bIsGouraud, BumpTexture->GetTextureSRV());
 				}
 
 				CurrentMaterial = Material;
@@ -238,8 +273,10 @@ uint32 FStaticMeshPass::UpdateLightsFromContext(FRenderingContext& Context)
 	FRenderResourceFactory::UpdateStructuredBufferData(
 		UnifiedLightStructuredBuffer, UnifiedLights);
 
+	// Gouraud 모드면 Vertex Shader에 바인딩
+	bool bIsGouraud = (Context.ViewMode == EViewModeIndex::VMI_Lit_Gouraud);
 	// Step 4: Bind SRV to Pixel Shader (t6)
-	Pipeline->SetTexture(6, false, UnifiedLightSRV);
+	Pipeline->SetTexture(6, bIsGouraud, UnifiedLightSRV);
 
 	// Return actual light count (not including dummy)
 	return ActualLightCount;

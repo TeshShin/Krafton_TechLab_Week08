@@ -206,16 +206,30 @@ void UMainBarWidget::RenderViewMenu()
 		EViewModeIndex CurrentMode = EditorInstance->GetViewMode();
 
 		// ViewMode 메뉴 아이템
-		bool bIsLit = (CurrentMode == EViewModeIndex::VMI_Lit);
+		bool bIsLitPhong = (CurrentMode == EViewModeIndex::VMI_Lit_Phong);
+		bool bIsLitLambert = (CurrentMode == EViewModeIndex::VMI_Lit_Lambert);
+		bool bIsLitGouraud = (CurrentMode == EViewModeIndex::VMI_Lit_Gouraud);
 		bool bIsUnlit = (CurrentMode == EViewModeIndex::VMI_Unlit);
 		bool bIsWireframe = (CurrentMode == EViewModeIndex::VMI_Wireframe);
 		bool bIsSceneDepth = (CurrentMode == EViewModeIndex::VMI_SceneDepth);
 		bool bIsNormalMap = (CurrentMode == EViewModeIndex::VMI_NormalMap);
 
-		if (ImGui::MenuItem("조명 적용(Lit)", nullptr, bIsLit) && !bIsLit)
+		if (ImGui::MenuItem("Lit_Phong", nullptr, bIsLitPhong) && !bIsLitPhong)
 		{
-			EditorInstance->SetViewMode(EViewModeIndex::VMI_Lit);
-			UE_LOG("MainBarWidget: ViewMode를 Lit으로 변경");
+			EditorInstance->SetViewMode(EViewModeIndex::VMI_Lit_Phong);
+			UE_LOG("MainBarWidget: ViewMode를 Lit_Phong으로 변경");
+		}
+
+		if (ImGui::MenuItem("Lit_Lambert", nullptr, bIsLitLambert) && !bIsLitLambert)
+		{
+			EditorInstance->SetViewMode(EViewModeIndex::VMI_Lit_Lambert);
+			UE_LOG("MainBarWidget: ViewMode를 Lit_Lambert으로 변경");
+		}
+
+		if (ImGui::MenuItem("Lit_Gouraud", nullptr, bIsLitGouraud) && !bIsLitGouraud)
+		{
+			EditorInstance->SetViewMode(EViewModeIndex::VMI_Lit_Gouraud);
+			UE_LOG("MainBarWidget: ViewMode를 Lit_Gouraud으로 변경");
 		}
 
 		if (ImGui::MenuItem("조명 비적용(Unlit)", nullptr, bIsUnlit) && !bIsUnlit)

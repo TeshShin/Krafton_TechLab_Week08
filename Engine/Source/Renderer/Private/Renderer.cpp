@@ -45,20 +45,43 @@ void URenderer::Init(HWND InWindowHandle)
 	CreateBlendState();
 	CreateSamplerState();
 	CreateDefaultShader();
-	CreateTextureShader();
+
+	// defines 설정에 따른 Texture 셰이더 생성
+	D3D_SHADER_MACRO TexturePhongDefines[] =
+	{
+		"LIGHTING_MODEL_PHONG", "1",
+		nullptr, nullptr
+	};
+	CreateTextureShader(TexturePhongDefines, &TexturePhongVertexShader, &TexturePhongPixelShader);
+
+	D3D_SHADER_MACRO TextureGouraudDefines[] =
+	{
+		"LIGHTING_MODEL_GOURAUD", "1",
+		nullptr, nullptr
+	};
+	CreateTextureShader(TextureGouraudDefines, &TextureGouraudVertexShader, &TextureGouraudPixelShader);
+
+	D3D_SHADER_MACRO TextureLambertDefines[] =
+	{
+		"LIGHTING_MODEL_LAMBERT", "1",
+		nullptr, nullptr
+	};
+	CreateTextureShader(TextureLambertDefines, &TextureLambertVertexShader, &TextureLambertPixelShader);
+
+	// 상수 버퍼 생성
 	CreateConstantBuffers();
 
 	ViewportClient->InitializeLayout(DeviceResources->GetViewportInfo());
 
 	FStaticMeshPass* StaticMeshPass = new FStaticMeshPass(Pipeline, ConstantBufferViewProj, ConstantBufferModels,
-		TextureVertexShader, TexturePixelShader, TextureInputLayout, DefaultDepthStencilState);
+		TexturePhongVertexShader, TexturePhongPixelShader, TextureLambertVertexShader, TextureLambertPixelShader, TextureGouraudVertexShader, TextureGouraudPixelShader, TextureInputLayout, DefaultDepthStencilState);
 	RenderPasses.push_back(StaticMeshPass);
 
 	FDecalPass* DecalPass = new FDecalPass(Pipeline, ConstantBufferViewProj, DecalDepthStencilState, AlphaBlendState);
 	RenderPasses.push_back(DecalPass);
 	
 	FBillboardPass* BillboardPass = new FBillboardPass(Pipeline, ConstantBufferViewProj, ConstantBufferModels,
-		TextureVertexShader, TexturePixelShader, TextureInputLayout, DefaultDepthStencilState, AlphaBlendState);
+		TexturePhongVertexShader, TexturePhongPixelShader, TextureInputLayout, DefaultDepthStencilState, AlphaBlendState);
 	RenderPasses.push_back(BillboardPass);
 
 	FTextPass* TextPass = new FTextPass(Pipeline, ConstantBufferViewProj, ConstantBufferModels);
@@ -175,12 +198,12 @@ void URenderer::CreateDefaultShader()
 		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Color), D3D11_INPUT_PER_VERTEX_DATA, 0	},
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FNormalVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0	}
 	};
-	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/SampleShader.hlsl", DefaultLayout, &DefaultVertexShader, &DefaultInputLayout);
-	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/SampleShader.hlsl", &DefaultPixelShader);
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/SampleShader.hlsl", DefaultLayout, nullptr, &DefaultVertexShader, &DefaultInputLayout);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/SampleShader.hlsl", nullptr, &DefaultPixelShader);
 	Stride = sizeof(FNormalVertex);
 }
 
-void URenderer::CreateTextureShader()
+void URenderer::CreateTextureShader(const D3D_SHADER_MACRO* InDefines, ID3D11VertexShader** OutTextureVertexShader, ID3D11PixelShader** OutTexturePixelShader)
 {
 	TArray<D3D11_INPUT_ELEMENT_DESC> TextureLayout =
 	{
@@ -189,8 +212,8 @@ void URenderer::CreateTextureShader()
 		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Color), D3D11_INPUT_PER_VERTEX_DATA, 0	},
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FNormalVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0	}
 	};
-	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/TextureVS.hlsl", TextureLayout, &TextureVertexShader, &TextureInputLayout);
-	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/TexturePS.hlsl", &TexturePixelShader);
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/TextureVS.hlsl", TextureLayout, InDefines, OutTextureVertexShader, &TextureInputLayout);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/TexturePS.hlsl", InDefines, OutTexturePixelShader);
 }
 
 
@@ -201,8 +224,15 @@ void URenderer::ReleaseDefaultShader()
 	SafeRelease(DefaultVertexShader);
 	
 	SafeRelease(TextureInputLayout);
-	SafeRelease(TexturePixelShader);
-	SafeRelease(TextureVertexShader);
+
+	SafeRelease(TexturePhongPixelShader);
+	SafeRelease(TexturePhongVertexShader);
+
+	SafeRelease(TextureLambertPixelShader);
+	SafeRelease(TextureLambertVertexShader);
+
+	SafeRelease(TextureGouraudPixelShader);
+	SafeRelease(TextureGouraudVertexShader);
 }
 
 void URenderer::ReleaseDepthStencilState()

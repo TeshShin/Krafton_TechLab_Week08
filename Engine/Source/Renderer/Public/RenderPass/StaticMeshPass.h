@@ -1,11 +1,11 @@
-﻿#pragma once
+#pragma once
 #include "Renderer/Public/RenderPass/RenderPass.h"
 
 class FStaticMeshPass : public FRenderPass
 {
 public:
     FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferViewProj, ID3D11Buffer* InConstantBufferModel,
-        ID3D11VertexShader* InVS, ID3D11PixelShader* InPS, ID3D11InputLayout* InLayout, ID3D11DepthStencilState* InDS);
+        ID3D11VertexShader* InVSPhong, ID3D11PixelShader* InPSPhong, ID3D11VertexShader* InVSLambert, ID3D11PixelShader* InPSLambert, ID3D11VertexShader* InVSGouraud, ID3D11PixelShader* InPSGouraud, ID3D11InputLayout* InLayout, ID3D11DepthStencilState* InDS);
     void Execute(FRenderingContext& Context) override;
     void Release() override;
 
@@ -16,8 +16,15 @@ public:
     uint32 UpdateLightsFromContext(FRenderingContext& Context);
 
 private:
-    ID3D11VertexShader* VS = nullptr;
-    ID3D11PixelShader* PS = nullptr;
+    ID3D11VertexShader* VSPhong = nullptr;
+    ID3D11PixelShader* PSPhong = nullptr;
+
+	ID3D11VertexShader* VSLambert = nullptr;
+	ID3D11PixelShader* PSLambert = nullptr;
+
+	ID3D11VertexShader* VSGouraud = nullptr;
+	ID3D11PixelShader* PSGouraud = nullptr;
+
     ID3D11InputLayout* InputLayout = nullptr;
     ID3D11DepthStencilState* DS = nullptr;
     

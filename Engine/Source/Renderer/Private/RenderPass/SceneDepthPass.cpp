@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Renderer/Public/RenderPass/SceneDepthPass.h"
 #include "Editor/Public/Camera.h"
 #include "Renderer/Public/Renderer.h"
@@ -9,8 +9,8 @@ FSceneDepthPass::FSceneDepthPass(UPipeline* InPipeline, ID3D11Buffer* InConstant
 {
     TArray<D3D11_INPUT_ELEMENT_DESC> LayoutDesc = {};
 
-    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/SceneDepthShader.hlsl", LayoutDesc, &VertexShader, nullptr);
-    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/SceneDepthShader.hlsl", &PixelShader);
+    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/SceneDepthShader.hlsl", LayoutDesc, nullptr, &VertexShader, nullptr);
+    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/SceneDepthShader.hlsl", nullptr, &PixelShader);
 
     SamplerState = FRenderResourceFactory::CreateSamplerState(D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_CLAMP);
     ConstantBufferPerFrame = FRenderResourceFactory::CreateConstantBuffer<FSceneDepthConstants>();
