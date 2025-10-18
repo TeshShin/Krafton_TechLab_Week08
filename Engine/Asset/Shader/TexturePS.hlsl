@@ -104,13 +104,14 @@ uint FP_ComputeClusterID(float4 svpos /* SV_POSITION */, float3 worldPos)
     int tileX = clamp(int(floor(pix.x * (float)FP_NumTilesX / max(FP_ScreenSize.x, 1))), 0, int(FP_NumTilesX - 1));
     int tileY = clamp(int(floor(pix.y * (float)FP_NumTilesY / max(FP_ScreenSize.y, 1))), 0, int(FP_NumTilesY - 1));
 
-	// LH view space depth (camera looks +Z)
-	float3 posVS = mul(float4(worldPos, 1.0f), FP_View).xyz;
-	float depthVS = max(posVS.z, 1e-6);
+    // LH view space depth (camera looks +Z)
+    float3 posVS = mul(float4(worldPos, 1.0f), FP_View).xyz;
+    float depthVS = max(posVS.z, FP_NearZ + 1e-6);
 
-	// Log z-slicing (match your CS!)
-	float zN = saturate((depthVS - FP_NearZ) / (FP_FarZ - FP_NearZ));
-	int zSlice = clamp(int(log(lerp(FP_NearZ, FP_FarZ, zN) / FP_NearZ) / log(FP_FarZ / FP_NearZ) * FP_NumZSlices), 0, int(FP_NumZSlices - 1));
+    // Log z-slicing (exactly match CS partitioning)
+    float logDen = log(FP_FarZ / FP_NearZ);
+    float sliceF = (log(depthVS / FP_NearZ) / logDen) * FP_NumZSlices;
+    int zSlice = clamp(int(floor(sliceF)), 0, int(FP_NumZSlices - 1));
 
 	return (zSlice * FP_NumTilesY + tileY) * FP_NumTilesX + tileX;
 }

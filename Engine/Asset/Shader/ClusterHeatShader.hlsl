@@ -80,22 +80,15 @@ float4 mainPS(VS_OUT input) : SV_TARGET
         sum += FP_ClusterCount[cid];
     }
 
-    // Normalize by a rough maximum (MaxLightsPerCluster * NumZSlices)
-    float denom = max(1.0, (float)(FP_MaxLightsPerCluster) * (float)(FP_NumZSlices));
-    float t = saturate(sum / denom);
+    // Normalize against a dynamic scale favoring visibility.
+    // Use a fraction of total lights so colors warm up with plausible counts.
+    float heatNorm = max(1.0, (float)FP_NumLights * 0.5);
+    float t = saturate(log(1.0 + (float)sum) / log(1.0 + heatNorm));
     float3 rgb = HeatColor(t);
 
-    // Debug cues:
-    // - No lights uploaded at all -> purple
-    // - Lights exist but zero counts -> magenta (indicates culling/CS path issue)
+    // If no lights at all, show deep blue
     if (FP_NumLights == 0)
-        return float4(0.5, 0.0, 0.5, 1.0);
-    if (sum == 0)
-        return float4(1.0, 0.0, 1.0, 1.0);
-
-    // Slight grid tint by tile parity to verify tile addressing
-    float grid = ((tileX & 1) ^ (tileY & 1)) ? 0.12 : 0.0;
-    rgb = saturate(rgb + grid);
+        rgb = float3(0.0, 0.0, 0.25);
 
     return float4(rgb, 1.0);
 }
