@@ -297,7 +297,7 @@ void URenderer::RenderBegin() const
 
 	// @TODO: The clear color for the normal buffer should be a specific value (e.g., {0.5, 0.5, 1.0, 1.0})
 	auto* NormalRenderTargetView = DeviceResources->GetNormalRenderTargetView();
-	GetDeviceContext()->ClearRenderTargetView(NormalRenderTargetView, ClearColor);
+	GetDeviceContext()->ClearRenderTargetView(NormalRenderTargetView, ClearColorNormal);
 
 	auto* DepthStencilView = DeviceResources->GetDepthStencilView();
 	GetDeviceContext()->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);

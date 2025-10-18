@@ -31,14 +31,14 @@ public:
 	void CreateDefaultShader();
 	void CreateTextureShader();
 	void CreateConstantBuffers();
-	
+
 	// Release
 	void ReleaseConstantBuffers();
 	void ReleaseDefaultShader();
 	void ReleaseDepthStencilState();
 	void ReleaseBlendState();
 	void ReleaseSamplerState();
-	
+
 	// Render
 	void Update();
 	void RenderBegin() const;
@@ -52,13 +52,13 @@ public:
 	ID3D11Device* GetDevice() const { return DeviceResources->GetDevice(); }
 	ID3D11DeviceContext* GetDeviceContext() const { return DeviceResources->GetDeviceContext(); }
 	IDXGISwapChain* GetSwapChain() const { return DeviceResources->GetSwapChain(); }
-	
+
 	ID3D11SamplerState* GetDefaultSampler() const { return DefaultSampler; }
 	ID3D11ShaderResourceView* GetDepthSRV() const { return DeviceResources->GetDepthStencilSRV(); }
-	
+
 	ID3D11RenderTargetView* GetRenderTargetView() const { return DeviceResources->GetRenderTargetView(); }
 	ID3D11RenderTargetView* GetSceneColorRenderTargetView()const {return DeviceResources->GetSceneColorRenderTargetView(); }
-	
+
 	UDeviceResources* GetDeviceResources() const { return DeviceResources; }
 	FViewport* GetViewportClient() const { return ViewportClient; }
 	UPipeline* GetPipeline() const { return Pipeline; }
@@ -84,13 +84,14 @@ private:
 	ID3D11DepthStencilState* DisabledDepthStencilState = nullptr;
 	ID3D11BlendState* AlphaBlendState = nullptr;
 	ID3D11BlendState* AdditiveBlendState = nullptr;
-	
+
 	// Constant Buffers
 	ID3D11Buffer* ConstantBufferModels = nullptr;
 	ID3D11Buffer* ConstantBufferViewProj = nullptr;
 	ID3D11Buffer* ConstantBufferColor = nullptr;
-	
-	FLOAT ClearColor[4] = {0.025f, 0.025f, 0.025f, 1.0f};
+
+	FLOAT ClearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+	FLOAT ClearColorNormal[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
 
 	// Default Shaders
 	ID3D11VertexShader* DefaultVertexShader = nullptr;
@@ -101,13 +102,13 @@ private:
 	ID3D11VertexShader* TextureVertexShader = nullptr;
 	ID3D11PixelShader* TexturePixelShader = nullptr;
 	ID3D11InputLayout* TextureInputLayout = nullptr;
-	
+
 	ID3D11SamplerState* DefaultSampler = nullptr;
-	
+
 	uint32 Stride = 0;
 
 	FViewport* ViewportClient = nullptr;
-	
+
 	bool bIsResizing = false;
 	bool bFXAAEnabled = true;
 
