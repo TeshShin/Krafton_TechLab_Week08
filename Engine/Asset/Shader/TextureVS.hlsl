@@ -50,7 +50,7 @@ cbuffer Camera : register(b1)
 {
 	row_major float4x4 View;
 	row_major float4x4 Projection;
-	float3 ViewWorldLocation;    
+	float3 ViewWorldLocation;
 	float NearClip;
 	float FarClip;
 };
@@ -61,6 +61,7 @@ struct VS_INPUT
 	float3 Normal : NORMAL;
 	float4 Color : COLOR;
 	float2 Tex : TEXCOORD0;
+    float4 Tangent : TANGENT; // xyz: tangent, w: handedness
 };
 
 PS_INPUT mainVS(VS_INPUT Input)

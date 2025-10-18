@@ -14,7 +14,6 @@ struct FAmbientLight
 // Light Constants (ConstantBuffer b10)
 cbuffer LightConstants : register(b10)
 {
-    FAmbientLight GlobalAmbient;        // 16 bytes - Scene-wide ambient illumination
     uint UnifiedLightCount;             // 4 bytes  - Number of lights in StructuredBuffer
     float3 Padding;                     // 12 bytes - Alignment padding
 };

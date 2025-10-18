@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Scene/Public/Component/PointLightComponent.h"
 #include "Asset/Public/JsonSerializer.h"
 #include "Editor/Public/UI/Widget/Component/PointLightComponentWidget.h"
@@ -11,21 +11,21 @@ void UPointLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 	Super::Serialize(bInIsLoading, InOutHandle);
 	if (bInIsLoading)
 	{
-		FJsonSerializer::ReadFloat(InOutHandle, "LightFalloffExtent", LightFalloffExtent);
-		FJsonSerializer::ReadFloat(InOutHandle, "SourceRadius", SourceRadius);
+		FJsonSerializer::ReadFloat(InOutHandle, "LightFalloffExponent", LightFalloffExponent);
+		FJsonSerializer::ReadFloat(InOutHandle, "AttenuationRadius", AttenuationRadius);
 	}
 	else
 	{
-		InOutHandle["LightFalloffExtent"] = LightFalloffExtent;
-		InOutHandle["SourceRadius"] = SourceRadius;
+		InOutHandle["LightFalloffExponent"] = LightFalloffExponent;
+		InOutHandle["AttenuationRadius"] = AttenuationRadius;
 	}
 }
 
 UObject* UPointLightComponent::Duplicate()
 {
 	UPointLightComponent* PointLightComponent = Cast<UPointLightComponent>(Super::Duplicate());
-	PointLightComponent->LightFalloffExtent = LightFalloffExtent;
-	PointLightComponent->SourceRadius = SourceRadius;
+	PointLightComponent->LightFalloffExponent = LightFalloffExponent;
+	PointLightComponent->AttenuationRadius = AttenuationRadius;
 
 	return PointLightComponent;
 }
@@ -47,8 +47,8 @@ FUnifiedDynamicLight UPointLightComponent::GetUnifiedLightData() const
     LightData.Position = GetWorldLocation();
     LightData.Intensity = GetIntensity();
     LightData.Color = GetLightColor();
-    LightData.SourceRadius = max(GetSourceRadius(), 1000.0f);  // Temp: ensure minimum radius
-    LightData.FalloffExponent = GetLightFalloffExtent();
+	LightData.AttenuationRadius = GetAttenuationRadius();
+    LightData.FalloffExponent = GetLightFalloffExponent();
     LightData.LightType = static_cast<uint32>(EDynamicLightType::Point);
 
     return LightData;

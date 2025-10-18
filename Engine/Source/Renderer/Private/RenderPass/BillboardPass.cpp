@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Renderer/Public/RenderPass/BillboardPass.h"
 #include "Asset/Public/Texture.h"
 #include "Editor/Public/Camera.h"
@@ -74,7 +74,7 @@ void FBillboardPass::Execute(FRenderingContext& Context)
         FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferModel, WorldMatrix);
         Pipeline->SetConstantBuffer(0, true, ConstantBufferModel);
 
-        Pipeline->SetTexture(0, false, BillBoardComp->GetSprite()->GetTextureSRV());
+        Pipeline->SetSRV(0, false, BillBoardComp->GetSprite()->GetTextureSRV());
         Pipeline->SetSamplerState(0, false, BillBoardComp->GetSprite()->GetTextureSampler());
         
         Pipeline->DrawIndexed(BillBoardComp->GetNumIndices(), 0, 0);

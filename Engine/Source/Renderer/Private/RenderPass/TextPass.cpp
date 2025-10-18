@@ -57,7 +57,7 @@ void FTextPass::Execute(FRenderingContext& Context)
     Pipeline->SetConstantBuffer(2, true, FontDataConstantBuffer);
 
     // Bind resources
-    Pipeline->SetTexture(0, false, FontTexture->GetTextureSRV());
+    Pipeline->SetSRV(0, false, FontTexture->GetTextureSRV());
     Pipeline->SetSamplerState(0, false, FontTexture->GetTextureSampler());
 
     for (UTextComponent* Text : Context.Texts)

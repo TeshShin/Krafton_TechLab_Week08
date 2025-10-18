@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "LightComponent.h"
 
@@ -49,14 +49,14 @@ public:
 public:
     // --- Getters & Setters ---
 
-    float GetLightFalloffExtent() const { return LightFalloffExtent; }
+    float GetLightFalloffExponent() const { return LightFalloffExponent; }
 
-    float GetSourceRadius() const { return SourceRadius;}
+    float GetAttenuationRadius() const { return AttenuationRadius;}
     
     /** @note Sets the light falloff exponent and clamps it to the same range as Unreal Engine (2.0 - 16.0). */
-    void SetLightFalloffExtent(float InLightFalloffExtent) { LightFalloffExtent = std::clamp(InLightFalloffExtent, 2.0f, 16.0f); }
+    void SetLightFalloffExponent(float InLightFalloffExponent) { LightFalloffExponent = std::clamp(InLightFalloffExponent, 2.0f, 16.0f); }
     
-    void SetSourceRadius(float InSourceRadius) { SourceRadius = InSourceRadius; }
+    void SetAttenuationRadius(float InAttenuationRadius) { AttenuationRadius = InAttenuationRadius; }
 
 private:
     /**
@@ -64,8 +64,8 @@ private:
      * 2 is almost linear and very unrealistic and around 8 it looks reasonable.
      * With large exponents, the light has contribution to only a small area of its influence radius but still costs the same as low exponents.
      */
-    float LightFalloffExtent = 2.0f;
+    float LightFalloffExponent = 2.0f;
     
     /** Radius of light source shape. */
-    float SourceRadius = 10.0f;
+    float AttenuationRadius = 10.0f;
 };
