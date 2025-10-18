@@ -15,8 +15,15 @@ public:
 	TArray<FUnifiedDynamicLight> CollectLightsFromContext(FRenderingContext& Context);
 
 private:
-    ID3D11VertexShader* VS = nullptr;
-    ID3D11PixelShader* PS = nullptr;
+    ID3D11VertexShader* VSPhong = nullptr;
+    ID3D11PixelShader* PSPhong = nullptr;
+
+	ID3D11VertexShader* VSLambert = nullptr;
+	ID3D11PixelShader* PSLambert = nullptr;
+
+	ID3D11VertexShader* VSGouraud = nullptr;
+	ID3D11PixelShader* PSGouraud = nullptr;
+
     ID3D11InputLayout* InputLayout = nullptr;
     ID3D11DepthStencilState* DS = nullptr;
 

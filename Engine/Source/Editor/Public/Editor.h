@@ -90,7 +90,7 @@ private:
 	SSplitter* DraggedSplitter = nullptr; // 드래그 상태를 추적하는 포인터
 	FViewportClient* InteractionViewport = nullptr; // 뷰포트의 상호작용을 고정하는 포인터
 
-	EViewModeIndex CurrentViewMode = EViewModeIndex::VMI_Lit;
+	EViewModeIndex CurrentViewMode = EViewModeIndex::VMI_Lit_Phong;
 	uint64 ShowFlags =
 		static_cast<uint64>(EEngineShowFlags::SF_Billboard) |
 		static_cast<uint64>(EEngineShowFlags::SF_Bounds) |

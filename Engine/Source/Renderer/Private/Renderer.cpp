@@ -44,6 +44,8 @@ void URenderer::Init(HWND InWindowHandle)
 	CreateDepthStencilState();
 	CreateBlendState();
 	CreateDefaultShader();
+
+	// 상수 버퍼 생성
 	CreateConstantBuffers();
 
 	ViewportClient->InitializeLayout(DeviceResources->GetViewportInfo());
@@ -66,7 +68,9 @@ void URenderer::Init(HWND InWindowHandle)
 	FFXAAPass* FXAAPass = new FFXAAPass(Pipeline, DeviceResources);
 	PostProcessPasses.push_back(FXAAPass);
 
-	ViewModePasses[EViewModeIndex::VMI_Lit] = new FDefaultViewPass(Pipeline, DisabledDS);
+	ViewModePasses[EViewModeIndex::VMI_Lit_Phong] = new FDefaultViewPass(Pipeline, DisabledDS);
+	ViewModePasses[EViewModeIndex::VMI_Lit_Lambert] = new FDefaultViewPass(Pipeline, DisabledDS);
+	ViewModePasses[EViewModeIndex::VMI_Lit_Gouraud] = new FDefaultViewPass(Pipeline, DisabledDS);
 	ViewModePasses[EViewModeIndex::VMI_Unlit] = new FDefaultViewPass(Pipeline, DisabledDS);
 	ViewModePasses[EViewModeIndex::VMI_Wireframe] = new FDefaultViewPass(Pipeline, DisabledDS);
 	ViewModePasses[EViewModeIndex::VMI_SceneDepth] = new FSceneDepthPass(Pipeline, DisabledDS);

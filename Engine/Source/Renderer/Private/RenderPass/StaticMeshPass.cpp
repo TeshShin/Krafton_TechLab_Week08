@@ -18,8 +18,30 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstant
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FNormalVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0	},
 		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Tangent), D3D11_INPUT_PER_VERTEX_DATA, 0 }
 	};
-	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/TextureVS.hlsl", TextureLayout, &VS, &InputLayout);
-	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/TexturePS.hlsl", &PS);
+
+	D3D_SHADER_MACRO TexturePhongDefines[] =
+	{
+		"LIGHTING_MODEL_PHONG", "1",
+		nullptr, nullptr
+	};
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/TextureVS.hlsl", TextureLayout, &VSPhong, &InputLayout, TexturePhongDefines);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/TexturePS.hlsl", &PSPhong, TexturePhongDefines);
+
+	D3D_SHADER_MACRO TextureGouraudDefines[] =
+	{
+		"LIGHTING_MODEL_GOURAUD", "1",
+		nullptr, nullptr
+	};
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/TextureVS.hlsl", TextureLayout, &VSGouraud, &InputLayout, TextureGouraudDefines);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/TexturePS.hlsl", &PSGouraud, TextureGouraudDefines);
+
+	D3D_SHADER_MACRO TextureLambertDefines[] =
+	{
+		"LIGHTING_MODEL_LAMBERT", "1",
+		nullptr, nullptr
+	};
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/TextureVS.hlsl", TextureLayout, &VSLambert, &InputLayout, TextureLambertDefines);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/TexturePS.hlsl", &PSLambert, TextureLambertDefines);
 
 	ConstantBufferMaterial = FRenderResourceFactory::CreateConstantBuffer<FMaterialConstants>();
 	ConstantBufferLight = FRenderResourceFactory::CreateConstantBuffer<FLightConstants>();
@@ -60,15 +82,46 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 		UnifiedLightStructuredBuffer, UnifiedLights);
 
 	// Bind Unified Light SRV to the pipeline
-	Pipeline->SetSRV(6, false, UnifiedLightSRV);
+	if(Context.ViewMode == EViewModeIndex::VMI_Lit_Gouraud)
+	{
+		Pipeline->SetSRV(6, true, UnifiedLightSRV);
+	}
+	else
+	{
+		Pipeline->SetSRV(6, false, UnifiedLightSRV);
+	}
 
 	FRenderState RenderState = UStaticMeshComponent::GetClassDefaultRenderState();
 	if (Context.ViewMode == EViewModeIndex::VMI_Wireframe)
 	{
-		RenderState.CullMode = ECullMode::None; RenderState.FillMode = EFillMode::WireFrame;
+		RenderState.CullMode = ECullMode::None;
+		RenderState.FillMode = EFillMode::WireFrame;
 	}
 	ID3D11RasterizerState* RS = FRenderResourceFactory::GetRasterizerState(RenderState);
-	FPipelineInfo PipelineInfo = { InputLayout, VS, RS, DS, PS, nullptr };
+
+	ID3D11VertexShader* VSToUse = nullptr;
+	ID3D11PixelShader* PSToUse = nullptr;
+	switch (Context.ViewMode)
+	{
+	case EViewModeIndex::VMI_Lit_Lambert:
+		VSToUse = VSLambert;
+		PSToUse = PSLambert;
+		break;
+	case EViewModeIndex::VMI_Lit_Gouraud:
+		VSToUse = VSGouraud;
+		PSToUse = PSGouraud;
+		break;
+	case EViewModeIndex::VMI_Lit_Phong:
+		VSToUse = VSPhong;
+		PSToUse = PSPhong;
+		break;
+	default: // Normal View 모드에서는 Phong shading에서 normal mapping한 결과가 필요
+		VSToUse = VSPhong;
+		PSToUse = PSPhong;
+		break;
+	}
+
+	FPipelineInfo PipelineInfo = { InputLayout, VSToUse, RS, DS, PSToUse, nullptr };
 	Pipeline->UpdatePipeline(PipelineInfo);
 
 	// [UNIFIED FORWARD RENDERING] All lights (Directional, Point, Spot, Ambient) use StructuredBuffer
@@ -77,8 +130,27 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	// GlobalAmbient is deprecated - all lights now go through unified StructuredBuffer
 	LightConstants.UnifiedLightCount = UnifiedLights.size();
 
-	Pipeline->SetConstantBuffer(10, false, ConstantBufferLight);
-	FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
+	//for (ULightComponentBase* Light : Context.Lights)
+	//{
+	//	if (Light->GetLightType() == ELightComponentType::LightType_Ambient)
+	//	{
+	//		LightConstants.GlobalAmbient.Color = Light->GetLightColor();
+	//		LightConstants.GlobalAmbient.Intensity = Light->GetIntensity();
+	//		break; // Only one ambient light is supported
+	//	}
+	//}
+
+	if (Context.ViewMode == EViewModeIndex::VMI_Lit_Gouraud)
+	{
+		Pipeline->SetConstantBuffer(10, true, ConstantBufferLight);
+		FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
+	}
+	else
+	{
+		Pipeline->SetConstantBuffer(10, false, ConstantBufferLight);
+		FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
+	}
+
 	Pipeline->SetConstantBuffer(0, true, ConstantBufferModel);
 
 	//Pipeline->SetSamplerState(0, false, URenderer::GetInstance().GetDefaultSampler());
@@ -146,7 +218,13 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 				MaterialConstants.Time = MeshComp->GetElapsedTime();
 
 				FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferMaterial, MaterialConstants);
+
+				// Gouraud 모드면, Vertex Shader에도 Material 바인딩
 				Pipeline->SetConstantBuffer(2, false, ConstantBufferMaterial);
+				if(Context.ViewMode == EViewModeIndex::VMI_Lit_Gouraud)
+				{
+					Pipeline->SetConstantBuffer(2, true, ConstantBufferMaterial);
+				}
 
 				if (UTexture* DiffuseTexture = Material->GetDiffuseTexture())
 				{
@@ -212,4 +290,11 @@ void FStaticMeshPass::Release()
 	SafeRelease(ConstantBufferLight);
 	SafeRelease(UnifiedLightStructuredBuffer);
 	SafeRelease(UnifiedLightSRV);
+	SafeRelease(VSPhong);
+	SafeRelease(PSPhong);
+	SafeRelease(VSLambert);
+	SafeRelease(PSLambert);
+	SafeRelease(VSGouraud);
+	SafeRelease(PSGouraud);
+	SafeRelease(InputLayout);
 }

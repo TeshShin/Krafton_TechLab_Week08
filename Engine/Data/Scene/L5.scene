@@ -1,0 +1,105 @@
+{
+  "Actors" : {
+    "132" : {
+      "Components" : [{
+          "IsEditorOnly" : "false",
+          "IsVisualizationComponent" : "false",
+          "Location" : [4.574909, 0.000000, 0.000000],
+          "Name" : "UStaticMeshComponent_1",
+          "ObjStaticMeshAsset" : "Data/Dice.obj",
+          "ParentName" : "",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [10.000000, 10.000000, 10.000000],
+          "Type" : "UStaticMeshComponent"
+        }, {
+          "IsEditorOnly" : "true",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UUUIDTextComponent_5",
+          "ParentName" : "UStaticMeshComponent_1",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [0.300000, 0.300000, 0.300000],
+          "Type" : "UUUIDTextComponent"
+        }],
+      "Location" : [4.574909, 0.000000, 0.000000],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "Scale" : [10.000000, 10.000000, 10.000000],
+      "Type" : "ACubeActor",
+      "bCanEverTick" : "false",
+      "bTickInEditor" : "false"
+    },
+    "135" : {
+      "Components" : [{
+          "IsEditorOnly" : "false",
+          "IsVisualizationComponent" : "false",
+          "Location" : [1.318548, -14.355994, 8.238364],
+          "Name" : "USceneComponent_1",
+          "ParentName" : "",
+          "Rotation" : [-0.000000, 0.000000, -115.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "Type" : "USceneComponent"
+        }, {
+          "IsEditorOnly" : "true",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UUUIDTextComponent_6",
+          "ParentName" : "USceneComponent_1",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [0.300000, 0.300000, 0.300000],
+          "Type" : "UUUIDTextComponent"
+        }, {
+          "AttenuationRadius" : 10.000000,
+          "InnerConeAngle" : 30.000000,
+          "Intensity" : 20.000000,
+          "IsEditorOnly" : "false",
+          "IsVisualizationComponent" : "false",
+          "LightColor" : [1.000000, 1.000000, 1.000000],
+          "LightFalloffExponent" : 2.000000,
+          "Location" : [1.367007, 0.000000, 0.000000],
+          "Name" : "USpotLightComponent_1",
+          "OuterConeAngle" : 77.400002,
+          "ParentName" : "USceneComponent_1",
+          "Rotation" : [0.000000, 0.000000, 3.000000],
+          "Scale" : [1.000000, 1.000000, 1.000000],
+          "Type" : "USpotLightComponent",
+          "bVisible" : true
+        }],
+      "Location" : [1.318548, -14.355994, 8.238364],
+      "Rotation" : [-0.000000, 0.000000, -115.000000],
+      "Scale" : [1.000000, 1.000000, 1.000000],
+      "Type" : "AActor",
+      "bCanEverTick" : "false",
+      "bTickInEditor" : "false"
+    }
+  },
+  "NextUUID" : 0,
+  "PerspectiveCamera" : [{
+      "FOV" : [90.000000],
+      "FarClip" : [1000.000000],
+      "Location" : [-15.000000, 0.000000, 10.000000],
+      "NearClip" : [0.100000],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "ViewportCameraType" : 0
+    }, {
+      "FOV" : [90.000000],
+      "FarClip" : [1000.000000],
+      "Location" : [-15.000000, 0.000000, 10.000000],
+      "NearClip" : [0.100000],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "ViewportCameraType" : 0
+    }, {
+      "FOV" : [90.000000],
+      "FarClip" : [1000.000000],
+      "Location" : [-15.000000, 0.000000, 10.000000],
+      "NearClip" : [0.100000],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "ViewportCameraType" : 0
+    }, {
+      "FOV" : [90.000000],
+      "FarClip" : [1000.000000],
+      "Location" : [-5.655512, -28.327925, 22.447744],
+      "NearClip" : [0.100000],
+      "Rotation" : [0.000000, 50.949722, 84.500137],
+      "ViewportCameraType" : 0
+    }]
+}
