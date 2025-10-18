@@ -18,4 +18,7 @@ public:
     virtual ELightComponentType GetLightType() const override { return ELightComponentType::LightType_Directional; }
 
     virtual struct FUnifiedDynamicLight GetUnifiedLightData() const override;
+
+protected:
+	virtual class UTexture* GetLightBillboardTexture() override;
 };

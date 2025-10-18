@@ -22,4 +22,7 @@ public:
      * @note Ambient light is now handled through StructuredBuffer like all other lights
      */
     virtual struct FUnifiedDynamicLight GetUnifiedLightData() const override;
+
+protected:
+	class UTexture* GetLightBillboardTexture() override;
 };

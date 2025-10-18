@@ -58,6 +58,9 @@ public:
 		OuterConeAngle = std::clamp(InOuterConeAngle, InnerConeAngle + 1.0f, 90.0f);
 	}
 
+protected:
+	UTexture* GetLightBillboardTexture() override;
+
 private:
     // TODO: Add SpotLight specific member variables
     float InnerConeAngle = 30.0f;  // 30 degrees

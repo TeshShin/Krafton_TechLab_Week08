@@ -17,6 +17,7 @@ FBillboardPass::FBillboardPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBu
 
 	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/BillboardShader.hlsl", LayoutDesc, &VS, &InputLayout);
 	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/BillboardShader.hlsl", &PS);
+	ConstantBufferColor = FRenderResourceFactory::CreateConstantBuffer<FVector4>();
 }
 
 bool FBillboardPass::CanRender(const FRenderingContext& Context)
@@ -45,6 +46,8 @@ void FBillboardPass::Execute(FRenderingContext& Context)
 	//Pipeline->SetTexture(0, false, nullptr);
     for (UBillBoardComponent* BillBoardComp : Context.BillBoards)
     {
+    	Pipeline->SetConstantBuffer(2, true, ConstantBufferColor);
+    	FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferColor, BillBoardComp->GetColor());
         BillBoardComp->FaceCamera(Context.CurrentCamera->GetForward());
 
         FMatrix WorldMatrix;
@@ -80,4 +83,5 @@ void FBillboardPass::Release()
     SafeRelease(VS);
     SafeRelease(PS);
     SafeRelease(InputLayout);
+	SafeRelease(ConstantBufferColor);
 }

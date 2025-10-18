@@ -1,15 +1,15 @@
 ﻿#pragma once
-#include "Scene/Public/Actor/Actor.h"
+#include "LightActor.h"
 
 UCLASS()
-class APointLightActor : public AActor
+class APointLightActor : public ALightActor
 {
     GENERATED_BODY()
     DECLARE_CLASS(APointLightActor, AActor)
-	
+
 public:
     APointLightActor();
 
-    virtual UClass* GetDefaultRootComponent() override;
-    virtual void InitializeComponents() override;
+protected:
+	virtual UClass* GetLightClass() override;
 };

@@ -12,7 +12,7 @@ public:
     UPointLightComponent() = default;
 
     virtual ~UPointLightComponent() = default;
-    
+
     /*-----------------------------------------------------------------------------
         UObject Features
      -----------------------------------------------------------------------------*/
@@ -28,12 +28,12 @@ public:
      -----------------------------------------------------------------------------*/
 public:
     virtual void BeginPlay() override { Super::BeginPlay(); }
-    
+
     virtual void TickComponent(float DeltaTime) override { Super::TickComponent(DeltaTime); }
 
     virtual void EndPlay() override { Super::EndPlay(); }
 
-    virtual UClass* GetSpecificWidgetClass() const override; 
+    virtual UClass* GetSpecificWidgetClass() const override;
 
     /*-----------------------------------------------------------------------------
         ULightComponentBase Features
@@ -52,11 +52,14 @@ public:
     float GetLightFalloffExponent() const { return LightFalloffExponent; }
 
     float GetAttenuationRadius() const { return AttenuationRadius;}
-    
+
     /** @note Sets the light falloff exponent and clamps it to the same range as Unreal Engine (2.0 - 16.0). */
     void SetLightFalloffExponent(float InLightFalloffExponent) { LightFalloffExponent = std::clamp(InLightFalloffExponent, 2.0f, 16.0f); }
-    
+
     void SetAttenuationRadius(float InAttenuationRadius) { AttenuationRadius = InAttenuationRadius; }
+
+protected:
+    UTexture* GetLightBillboardTexture() override;
 
 private:
     /**
@@ -65,7 +68,7 @@ private:
      * With large exponents, the light has contribution to only a small area of its influence radius but still costs the same as low exponents.
      */
     float LightFalloffExponent = 2.0f;
-    
+
     /** Radius of light source shape. */
     float AttenuationRadius = 10.0f;
 };

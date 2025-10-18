@@ -24,7 +24,7 @@ public:
     ULightComponentBase() = default;
 
     virtual ~ULightComponentBase() = default;
-    
+
     /*-----------------------------------------------------------------------------
         UObject Features
      -----------------------------------------------------------------------------*/
@@ -32,7 +32,7 @@ public:
     virtual void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
     virtual UObject* Duplicate() override;
-        
+
     virtual void DuplicateSubObjects(UObject* DuplicatedObject) override;
 
     virtual UClass* GetSpecificWidgetClass() const override;
@@ -41,8 +41,8 @@ public:
         UActorComponent Features
      -----------------------------------------------------------------------------*/
 public:
-    virtual void BeginPlay() override { Super::BeginPlay(); }
-    
+    virtual void BeginPlay() override;
+
     virtual void TickComponent(float DeltaTime) override { Super::TickComponent(DeltaTime); }
 
     virtual void EndPlay() override { Super::EndPlay(); }
@@ -73,11 +73,11 @@ public:
     // virtual FBox GetBoundingBox() const;
 
     // virtual FSphere GetBoundingSphere() const;
-    
+
     /** @note Sets the light intensity and clamps it to the same range as Unreal Engine (0.0 - 20.0). */
     void SetIntensity(float InIntensity) { Intensity = std::clamp(InIntensity, 0.0f, 20.0f); }
 
-    void SetLightColor(FVector InLightColor) { LightColor = InLightColor; }
+    void SetLightColor(const FVector& InLightColor);
 
 	void SetVisible(bool bInVisible) { bVisible = bInVisible; }
 
@@ -92,4 +92,16 @@ private:
     FVector LightColor = { 1.0f, 1.0f, 1.0f };
 
     bool bVisible = true;
+
+
+	/*-----------------------------------------------------------------------------
+		Visualization Features
+	 -----------------------------------------------------------------------------*/
+protected:
+	virtual class UTexture* GetLightBillboardTexture() = 0;
+
+private:
+	void CreateIconChild();
+
+	class UBillBoardComponent* IconBillboard = nullptr;
 };

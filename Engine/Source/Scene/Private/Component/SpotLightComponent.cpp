@@ -3,6 +3,7 @@
 #include "Scene/Public/Component/SpotLightComponent.h"
 #include "Asset/Public/JsonSerializer.h"
 #include "Editor/Public/UI/Widget/Component/SpotLightComponentWidget.h"
+#include "Manager/Public/AssetManager.h"
 #include "Renderer/Public/LightData.h"
 
 IMPLEMENT_CLASS(USpotLightComponent, UPointLightComponent)
@@ -19,7 +20,7 @@ void USpotLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 	else
 	{
 		InOutHandle["InnerConeAngle"] = InnerConeAngle;
-		InOutHandle["OuterConeAngle"] = OuterConeAngle;	
+		InOutHandle["OuterConeAngle"] = OuterConeAngle;
 	}
 }
 
@@ -52,4 +53,9 @@ FUnifiedDynamicLight USpotLightComponent::GetUnifiedLightData() const
     LightData.LightType = static_cast<uint32>(EDynamicLightType::Spot);
 
     return LightData;
+}
+
+UTexture* USpotLightComponent::GetLightBillboardTexture()
+{
+	return UAssetManager::GetInstance().LoadTexture("Data/Icons/SpotLight_64x.png");
 }

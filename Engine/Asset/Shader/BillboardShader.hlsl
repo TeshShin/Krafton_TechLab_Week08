@@ -13,6 +13,11 @@ cbuffer Camera : register(b1)
 	float FarClip;
 };
 
+cbuffer Color : register(b2)
+{
+	float4 Color;
+};
+
 struct VS_INPUT
 {
 	float3 Position : POSITION;
@@ -35,7 +40,7 @@ PS_INPUT mainVS(VS_INPUT Input)
 {
 	PS_INPUT Output;
 	Output.Position = mul(mul(mul(float4(Input.Position, 1.0f), World), View), Projection);
-	Output.Color = Input.Color;
+	Output.Color = Color;
 	Output.Tex = Input.Tex;
 
 	return Output;
