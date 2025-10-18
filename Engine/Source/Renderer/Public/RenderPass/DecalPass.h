@@ -15,8 +15,10 @@ struct FDecalConstants
 class FDecalPass : public FRenderPass
 {
 public:
-    FDecalPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferViewProj, ID3D11DepthStencilState* InDS_Read, ID3D11BlendState* InBlendState);
-    
+    FDecalPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS_Read, ID3D11BlendState* InBlendState);
+
+	bool CanRender(const FRenderingContext& Context) override;
+	void SetRenderTargets(class UDeviceResources* DeviceResources) override;
     void Execute(FRenderingContext& Context) override;
     void Release() override;
 

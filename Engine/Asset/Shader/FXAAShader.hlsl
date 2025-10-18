@@ -7,6 +7,7 @@
 cbuffer FXAAParams : register(b0)
 {
     float2 InvResolution;   // 1.0 / resolution (ex: (1/1920, 1/1080))
+    float2 RenderTargetSize;   // 1.0 / resolution (ex: (1/1920, 1/1080))
     float FXAASpanMax;      // Max search span
     float FXAAReduceMul;    // reduce multiplier (ex: 1/8)
     float FXAAReduceMin;    // minimum reduce value (ex: 1/128)
@@ -21,18 +22,30 @@ struct VSInput
     float2 TexCoord : TEXCOORD0;
 };
 
-struct VSOutput
+// ------------------------------------------------
+// Vertex and Pixel Shader I/O
+// ------------------------------------------------
+struct PS_INPUT
 {
-    float4 Position : SV_POSITION;
-    float2 TexCoord : TEXCOORD0;
+	float4 Position : SV_POSITION;
 };
 
-VSOutput mainVS(VSInput input)
+// ================================================================
+// Vertex Shader
+// - Generates a full-screen triangle without needing a vertex buffer.
+// ================================================================
+PS_INPUT mainVS(uint vertexID : SV_VertexID)
 {
-    VSOutput output;
-    output.Position = float4(input.Position, 0.0f, 1.0f);
-    output.TexCoord = input.TexCoord;
-    return output;
+	PS_INPUT output;
+
+	// SV_VertexID를 사용하여 화면을 덮는 큰 삼각형의 클립 공간 좌표를 생성
+	// ID 0 -> (-1, 1), ID 1 -> (3, 1), ID 2 -> (-1, -3) -- 수정된 좌표계
+	// 이 좌표계는 UV가 (0,0)부터 시작하도록 조정합니다.
+	float2 pos = float2((vertexID << 1) & 2, vertexID & 2);
+	output.Position = float4(pos * 2.0f - 1.0f, 0.0f, 1.0f);
+	output.Position.y *= -1.0f;
+
+	return output;
 }
 
 //------------------------------------------------------------------------------
@@ -52,13 +65,13 @@ float Luma(float3 color)
 //------------------------------------------------------------------------------
 // Pixel Shader: Corrected Unreal-style FXAA
 //------------------------------------------------------------------------------
-float4 mainPS(VSOutput input) : SV_Target
+float4 mainPS(PS_INPUT input) : SV_Target
 {
-    float2 tex = input.TexCoord;
+	float2 tex = input.Position.xy / RenderTargetSize;
     float2 inv = InvResolution;
 
     // Fetch 5 samples (center + 4 diagonals)
-    // FXAA는 지그재그/사선 엣지에 강하려고 대각 방향의 그라디언트를 
+    // FXAA는 지그재그/사선 엣지에 강하려고 대각 방향의 그라디언트를
     float3 rgbNW = SceneColor.Sample(SceneSampler, tex + float2(-inv.x, -inv.y)).rgb;
     float3 rgbNE = SceneColor.Sample(SceneSampler, tex + float2( inv.x, -inv.y)).rgb;
     float3 rgbSW = SceneColor.Sample(SceneSampler, tex + float2(-inv.x,  inv.y)).rgb;
@@ -114,7 +127,7 @@ float4 mainPS(VSOutput input) : SV_Target
     // **기울기 편향(orientation bias)**을 줄이고, 다양한 기울기에서 비슷한 체감 스텝을 얻을 수 있다
     // 여기에 dirReduce(바닥 감쇠)를 더해 분모가 절대 0으로 가지 않도록 하고, 과민 반응을 막는다.
     float rcpDirMin = 1.0f / (min(abs(dir.x), abs(dir.y)) + dirReduce);
-    
+
     // *** THIS IS THE CRITICAL FIX ***
     // 앞에서 만든 스케일 팩터로 방향 벡터의 크기를 정규화
     float2 dirScaled = dir * rcpDirMin;
@@ -123,7 +136,7 @@ float4 mainPS(VSOutput input) : SV_Target
     // 양방향(±) 으로 **최대 탐색 길이(= pixel 단위)**를 제한
     dirScaled = clamp(dirScaled, -FXAASpanMax, FXAASpanMax);
     dir = dirScaled * InvResolution;
-    
+
     // Sample along the corrected edge direction
     float3 rgbA = 0.5f * (
         SceneColor.Sample(SceneSampler, tex + dir * (1.0 / 3.0 - 0.5)).rgb +
@@ -143,12 +156,12 @@ float4 mainPS(VSOutput input) : SV_Target
      * rgbB의 휘도가 주변 관측 범위 [lumaMin, lumaMax]를 벗어나면,
      * 경계를 넘어 다른 면/배경을 끌어온 것으로 보고 A로 되돌림 → 후광·디테일 손실 방지.
      */
-     
+
     if ((lumaB < lumaMin) || (lumaB > lumaMax))
     {
         rgbB = rgbA;
     }
-        
+
     // Subpixel blending factor
     // subpix가 클수록 더 부드러워지지만 더 뭉개짐
     const float subpix = 0.99f; // Using a slightly less aggressive blend

@@ -7,25 +7,60 @@
 #include "Renderer/Public/LightData.h"
 #include "Asset/Public/Texture.h"
 
-FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferCamera, ID3D11Buffer* InConstantBufferModel,
-                                 ID3D11VertexShader* InVS, ID3D11PixelShader* InPS, ID3D11InputLayout* InLayout, ID3D11DepthStencilState* InDS)
-	: FRenderPass(InPipeline, InConstantBufferCamera, InConstantBufferModel), VS(InVS), PS(InPS), InputLayout(InLayout), DS(InDS)
+FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferModel, ID3D11DepthStencilState* InDS)
+	: FRenderPass(InPipeline, InConstantBufferModel), DS(InDS)
 {
+	TArray<D3D11_INPUT_ELEMENT_DESC> TextureLayout =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Position), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Normal), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Color), D3D11_INPUT_PER_VERTEX_DATA, 0	},
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FNormalVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0	},
+		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Tangent), D3D11_INPUT_PER_VERTEX_DATA, 0 }
+	};
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/TextureVS.hlsl", TextureLayout, &VS, &InputLayout);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/TexturePS.hlsl", &PS);
+
 	ConstantBufferMaterial = FRenderResourceFactory::CreateConstantBuffer<FMaterialConstants>();
 	ConstantBufferLight = FRenderResourceFactory::CreateConstantBuffer<FLightConstants>();
 
 	// Unified Dynamic Light Buffer (Point, Spot, Rect)
 	UnifiedLightCapacity = 128;  // Initial capacity for all dynamic lights
-	UnifiedLightStructuredBuffer = FRenderResourceFactory::CreateStructuredBuffer<FUnifiedDynamicLight>(
-		UnifiedLightCapacity);
-	UnifiedLightSRV = FRenderResourceFactory::CreateBufferSRV(
-		UnifiedLightStructuredBuffer, UnifiedLightCapacity);
+	UnifiedLightStructuredBuffer = FRenderResourceFactory::CreateStructuredBuffer<FUnifiedDynamicLight>(UnifiedLightCapacity);
+	UnifiedLightSRV = FRenderResourceFactory::CreateBufferSRV(UnifiedLightStructuredBuffer, UnifiedLightCapacity);
+}
+
+bool FStaticMeshPass::CanRender(const FRenderingContext& Context)
+{
+	return Context.ShowFlags & EEngineShowFlags::SF_StaticMesh;
+}
+
+void FStaticMeshPass::SetRenderTargets(class UDeviceResources* DeviceResources)
+{
+	ID3D11RenderTargetView* RTVs[] = { DeviceResources->GetDestinationRTV(), DeviceResources->GetNormalBufferRTV() };
+	ID3D11DepthStencilView* DSV = DeviceResources->GetDepthBufferDSV();
+	Pipeline->SetRenderTargets(2, RTVs, DSV);
 }
 
 void FStaticMeshPass::Execute(FRenderingContext& Context)
 {
-	// Update lights and get count
-	uint32 LightCount = UpdateLightsFromContext(Context);
+	// Collect lights from context
+	TArray<FUnifiedDynamicLight> UnifiedLights = CollectLightsFromContext(Context);
+
+	// Ensure buffer capacity is sufficient
+	if (UnifiedLights.size() > UnifiedLightCapacity)
+	{
+		UnifiedLightCapacity = static_cast<uint32>(UnifiedLights.size() * 2);
+		FRenderResourceFactory::ReallocateStructuredBuffer<FUnifiedDynamicLight>(
+			UnifiedLightStructuredBuffer, UnifiedLightSRV, UnifiedLightCapacity);
+	}
+
+	// Upload Unified Lights to StructuredBuffer
+	FRenderResourceFactory::UpdateStructuredBufferData(
+		UnifiedLightStructuredBuffer, UnifiedLights);
+
+	// Bind Unified Light SRV to the pipeline
+	Pipeline->SetSRV(6, false, UnifiedLightSRV);
 
 	FRenderState RenderState = UStaticMeshComponent::GetClassDefaultRenderState();
 	if (Context.ViewMode == EViewModeIndex::VMI_Wireframe)
@@ -36,35 +71,18 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	FPipelineInfo PipelineInfo = { InputLayout, VS, RS, DS, PS, nullptr };
 	Pipeline->UpdatePipeline(PipelineInfo);
 
-	// [UNIFIED FORWARD RENDERING] Only Ambient light uses ConstantBuffer now
-	// All dynamic lights (Directional, Point, Spot) use unified StructuredBuffer
+	// [UNIFIED FORWARD RENDERING] All lights (Directional, Point, Spot, Ambient) use StructuredBuffer
 	FLightConstants LightConstants = {};
 
-	// Initialize with default ambient (very dark, almost black)
-	LightConstants.GlobalAmbient.Color = FVector(1.0f, 1.0f, 1.0f);
-	LightConstants.GlobalAmbient.Intensity = 0.0f;
-	LightConstants.UnifiedLightCount = LightCount;
-
-	for (ULightComponentBase* Light : Context.Lights)
-	{
-		if (Light->GetLightType() == ELightComponentType::LightType_Ambient)
-		{
-			LightConstants.GlobalAmbient.Color = Light->GetLightColor();
-			LightConstants.GlobalAmbient.Intensity = Light->GetIntensity();
-			break; // Only one ambient light is supported
-		}
-	}
+	// GlobalAmbient is deprecated - all lights now go through unified StructuredBuffer
+	LightConstants.UnifiedLightCount = UnifiedLights.size();
 
 	Pipeline->SetConstantBuffer(10, false, ConstantBufferLight);
 	FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
-	// Set a default sampler to slot 0 to ensure one is always bound
-	Pipeline->SetSamplerState(0, false, URenderer::GetInstance().GetDefaultSampler());
-
 	Pipeline->SetConstantBuffer(0, true, ConstantBufferModel);
-	Pipeline->SetConstantBuffer(1, true, ConstantBufferCamera);
-	Pipeline->SetConstantBuffer(1, false, ConstantBufferCamera);
 
-	if (!(Context.ShowFlags & EEngineShowFlags::SF_StaticMesh)) { return; }
+	//Pipeline->SetSamplerState(0, false, URenderer::GetInstance().GetDefaultSampler());
+
 	TArray<UStaticMeshComponent*>& MeshComponents = Context.StaticMeshes;
 	sort(MeshComponents.begin(), MeshComponents.end(),
 		[](UStaticMeshComponent* A, UStaticMeshComponent* B) {
@@ -75,29 +93,6 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 
 	FStaticMesh* CurrentMeshAsset = nullptr;
 	UMaterial* CurrentMaterial = nullptr;
-
-	// --- RTVs Setup ---
-
-	/**
-	 * @todo Find a better way to reduce depdency upon Renderer class.
-	 * @note How about introducing methods like BeginPass(), EndPass() to set up and release pass specific state?
-	 */
-	const auto& Renderer = URenderer::GetInstance();
-	const auto& DeviceResources = Renderer.GetDeviceResources();
-	ID3D11RenderTargetView* RTV = nullptr;
-	if (Renderer.GetFXAA())
-	{
-		RTV = DeviceResources->GetSceneColorRenderTargetView();
-	}
-	else
-	{
-		RTV = DeviceResources->GetRenderTargetView();
-	}
-	ID3D11RenderTargetView* RTVs[2] = { RTV, DeviceResources->GetNormalRenderTargetView() };
-	ID3D11DepthStencilView* DSV = DeviceResources->GetDepthStencilView();
-	Pipeline->SetRenderTargets(2, RTVs, DSV);
-
-	// --- RTVs Setup End ---
 
 	for (UStaticMeshComponent* MeshComp : MeshComponents)
 	{
@@ -155,28 +150,28 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 
 				if (UTexture* DiffuseTexture = Material->GetDiffuseTexture())
 				{
-					Pipeline->SetTexture(0, false, DiffuseTexture->GetTextureSRV());
+					Pipeline->SetSRV(0, false, DiffuseTexture->GetTextureSRV());
 					Pipeline->SetSamplerState(0, false, DiffuseTexture->GetTextureSampler());
 				}
 				if (UTexture* AmbientTexture = Material->GetAmbientTexture())
 				{
-					Pipeline->SetTexture(1, false, AmbientTexture->GetTextureSRV());
+					Pipeline->SetSRV(1, false, AmbientTexture->GetTextureSRV());
 				}
 				if (UTexture* SpecularTexture = Material->GetSpecularTexture())
 				{
-					Pipeline->SetTexture(2, false, SpecularTexture->GetTextureSRV());
+					Pipeline->SetSRV(2, false, SpecularTexture->GetTextureSRV());
 				}
 				if (UTexture* NormalTexture = Material->GetShininessTexture())
 				{
-					Pipeline->SetTexture(3, false, NormalTexture->GetTextureSRV());
+					Pipeline->SetSRV(3, false, NormalTexture->GetTextureSRV());
 				}
 				if (UTexture* AlphaTexture = Material->GetAlphaTexture())
 				{
-					Pipeline->SetTexture(4, false, AlphaTexture->GetTextureSRV());
+					Pipeline->SetSRV(4, false, AlphaTexture->GetTextureSRV());
 				}
 				if (UTexture* BumpTexture = Material->GetBumpTexture())
 				{
-					Pipeline->SetTexture(5, false, BumpTexture->GetTextureSRV());
+					Pipeline->SetSRV(5, false, BumpTexture->GetTextureSRV());
 				}
 
 				CurrentMaterial = Material;
@@ -185,64 +180,29 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 		}
 	}
 	Pipeline->SetConstantBuffer(2, false, nullptr);
-
-
-	// --- RTVs Reset ---
-
-	/**
-	 * @todo Find a better way to reduce depdency upon Renderer class.
-	 * @note How about introducing methods like BeginPass(), EndPass() to set up and release pass specific state?
-	 */
-	Pipeline->SetRenderTargets(1, RTVs, DSV);
-
-	// --- RTVs Reset End ---
 }
 
-uint32 FStaticMeshPass::UpdateLightsFromContext(FRenderingContext& Context)
+TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderingContext& Context)
 {
-	// Step 1: Collect all dynamic lights into unified buffer
+	// Collect all dynamic lights into unified buffer
 	TArray<FUnifiedDynamicLight> UnifiedLights;
 
 	for (ULightComponentBase* Light : Context.Lights)
 	{
 		if (!Light || !Light->IsVisible()) continue;
 
-		// Skip Ambient light - it's handled separately via ConstantBuffer
-		if (Light->GetLightType() == ELightComponentType::LightType_Ambient)
-			continue;
-
-		// Each component provides its own unified light data
+		// [UNIFIED FORWARD RENDERING] All light types (including Ambient) go through StructuredBuffer
 		FUnifiedDynamicLight UnifiedLight = Light->GetUnifiedLightData();
 		UnifiedLights.push_back(UnifiedLight);
 	}
 
-	// Store actual light count before padding
-	uint32 ActualLightCount = static_cast<uint32>(UnifiedLights.size());
-
-	// Step 2: Reallocate buffer if capacity exceeded
-	// Always maintain minimum capacity of 1 to support empty updates
-	if (UnifiedLights.size() > UnifiedLightCapacity)
-	{
-		UnifiedLightCapacity = static_cast<uint32>(UnifiedLights.size() * 2);
-		FRenderResourceFactory::ReallocateStructuredBuffer<FUnifiedDynamicLight>(
-			UnifiedLightStructuredBuffer, UnifiedLightSRV, UnifiedLightCapacity);
-	}
-
-	// Step 3: Upload to GPU (always update, even if empty, to clear stale data)
 	// When empty, upload one dummy light with Intensity=0 to maintain buffer validity
 	if (UnifiedLights.empty())
 	{
 		UnifiedLights.push_back(FUnifiedDynamicLight());  // All fields zero, Intensity=0
 	}
 
-	FRenderResourceFactory::UpdateStructuredBufferData(
-		UnifiedLightStructuredBuffer, UnifiedLights);
-
-	// Step 4: Bind SRV to Pixel Shader (t6)
-	Pipeline->SetTexture(6, false, UnifiedLightSRV);
-
-	// Return actual light count (not including dummy)
-	return ActualLightCount;
+	return UnifiedLights;
 }
 
 

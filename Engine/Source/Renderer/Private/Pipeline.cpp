@@ -67,7 +67,7 @@ void UPipeline::SetConstantBuffer(uint32 Slot, bool bIsVS, ID3D11Buffer* Constan
 }
 
 /// @brief 텍스처를 설정
-void UPipeline::SetTexture(uint32 Slot, bool bIsVS, ID3D11ShaderResourceView* Srv)
+void UPipeline::SetSRV(uint32 Slot, bool bIsVS, ID3D11ShaderResourceView* Srv)
 {
 	if (bIsVS)
 		DeviceContext->VSSetShaderResources(Slot, 1, &Srv);
@@ -84,10 +84,27 @@ void UPipeline::SetSamplerState(uint32 Slot, bool bIsVS, ID3D11SamplerState* Sam
 		DeviceContext->PSSetSamplers(Slot, 1, &SamplerState);
 }
 
-void UPipeline::SetRenderTargets(uint32 NumViews, ID3D11RenderTargetView* const* RenderTargetViews,
-	ID3D11DepthStencilView* DepthStencilView)
+void UPipeline::SetRenderTargets(uint32 NumViews, ID3D11RenderTargetView* const* RenderTargetViews,	ID3D11DepthStencilView* DepthStencilView)
 {
+	bool bIsDsvSame = (CurrentDSV == DepthStencilView);
+	bool bAreRtvsSame = false;
+
+	if (CurrentRTVs.size() == NumViews)
+	{
+		// RTV 개수가 0이면 항상 같다고 처리, 0이 아니면 비교
+		if (NumViews == 0 || std::memcmp(CurrentRTVs.data(), RenderTargetViews, sizeof(ID3D11RenderTargetView*) * NumViews) == 0)
+		{
+			bAreRtvsSame = true;
+		}
+	}
+
+	// DSV와 RTV 목록이 모두 동일하다면, 함수를 즉시 종료
+	if (bIsDsvSame && bAreRtvsSame) { return; }
+
 	DeviceContext->OMSetRenderTargets(NumViews, RenderTargetViews, DepthStencilView);
+
+	CurrentDSV = DepthStencilView;
+	CurrentRTVs.assign(RenderTargetViews, RenderTargetViews + NumViews);
 }
 
 /// @brief 정점 개수를 기반으로 드로우 호출

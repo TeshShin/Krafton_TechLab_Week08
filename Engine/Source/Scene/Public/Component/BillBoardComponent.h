@@ -22,16 +22,16 @@ public:
 
 	UClass* GetSpecificWidgetClass() const override;
 
-	static const FRenderState& GetClassDefaultRenderState(); 
+	static const FRenderState& GetClassDefaultRenderState();
 
 private:
 	UTexture* Sprite;
 
 // Screen Size Section
-public:	
+public:
 	bool IsScreenSizeScaled() const { return bScreenSizeScaled; }
 	float GetScreenSize() const { return ScreenSize; }
-	void SetScreenSizeScaled(bool bEnable, float InScreenSize = 0.1f)
+	void SetScreenSizeScaled(bool bEnable, float InScreenSize = 5.f)
 	{
 		bScreenSizeScaled = bEnable;
 		ScreenSize = InScreenSize;
@@ -39,5 +39,5 @@ public:
 
 private:
 	bool bScreenSizeScaled = false;
-	float ScreenSize = 0.1f;
+	float ScreenSize = 5.f;
 };

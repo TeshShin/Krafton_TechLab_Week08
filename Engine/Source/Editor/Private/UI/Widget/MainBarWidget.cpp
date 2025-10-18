@@ -255,16 +255,15 @@ void UMainBarWidget::RenderShowFlagsMenu()
 	if (ImGui::BeginMenu("표시 옵션"))
 	{
 		// 현재 레벨 가져오기
-		ULevel* CurrentLevel = GWorld->GetLevel();
-		if (!CurrentLevel)
+		UEditor* Editor = GEditor->GetEditorModule();
+		if (!Editor)
 		{
-			ImGui::Text("현재 레벨을 찾을 수 없습니다");
 			ImGui::EndMenu();
 			return;
 		}
 
 		// ShowFlags 가져오기
-		uint64 ShowFlags = CurrentLevel->GetShowFlags();
+		uint64 ShowFlags = Editor->GetShowFlags();
 
 		// BillBoard Text 표시 옵션
 		bool bShowBillboard = (ShowFlags & EEngineShowFlags::SF_Billboard) != 0;
@@ -280,7 +279,7 @@ void UMainBarWidget::RenderShowFlagsMenu()
 				ShowFlags |= static_cast<uint64>(EEngineShowFlags::SF_Billboard);
 				UE_LOG("MainBarWidget: 빌보드 표시");
 			}
-			CurrentLevel->SetShowFlags(ShowFlags);
+			Editor->SetShowFlags(ShowFlags);
 		}
 
 		// Bounds 표시 옵션
@@ -297,7 +296,7 @@ void UMainBarWidget::RenderShowFlagsMenu()
 				ShowFlags |= static_cast<uint64>(EEngineShowFlags::SF_Bounds);
 				UE_LOG("MainBarWidget: 바운딩박스 표시");
 			}
-			CurrentLevel->SetShowFlags(ShowFlags);
+			Editor->SetShowFlags(ShowFlags);
 		}
 
 		// StaticMesh 표시 옵션
@@ -314,7 +313,7 @@ void UMainBarWidget::RenderShowFlagsMenu()
 				ShowFlags |= static_cast<uint64>(EEngineShowFlags::SF_StaticMesh);
 				UE_LOG("MainBarWidget: 스태틱 메쉬 표시");
 			}
-			CurrentLevel->SetShowFlags(ShowFlags);
+			Editor->SetShowFlags(ShowFlags);
 		}
 
 		// Text 표시 옵션
@@ -331,7 +330,7 @@ void UMainBarWidget::RenderShowFlagsMenu()
 				ShowFlags |= static_cast<uint64>(EEngineShowFlags::SF_Text);
 				UE_LOG("MainBarWidget: 텍스트 표시");
 			}
-			CurrentLevel->SetShowFlags(ShowFlags);
+			Editor->SetShowFlags(ShowFlags);
 		}
 
 		// Decal 표시 옵션
@@ -348,7 +347,7 @@ void UMainBarWidget::RenderShowFlagsMenu()
 				ShowFlags |= static_cast<uint64>(EEngineShowFlags::SF_Decal);
 				UE_LOG("MainBarWidget: 데칼 표시");
 			}
-			CurrentLevel->SetShowFlags(ShowFlags);
+			Editor->SetShowFlags(ShowFlags);
 		}
 
 		// Octree 표시 옵션
@@ -365,9 +364,9 @@ void UMainBarWidget::RenderShowFlagsMenu()
 				ShowFlags |= static_cast<uint64>(EEngineShowFlags::SF_Fog);
 				UE_LOG("MainBarWidget: Fog 표시");
 			}
-			CurrentLevel->SetShowFlags(ShowFlags);
+			Editor->SetShowFlags(ShowFlags);
 		}
-		
+
 		// Octree 표시 옵션
 		bool bShowOctree = (ShowFlags & EEngineShowFlags::SF_Octree) != 0;
 		if (ImGui::MenuItem("Octree 표시", nullptr, bShowOctree))
@@ -382,7 +381,7 @@ void UMainBarWidget::RenderShowFlagsMenu()
 				ShowFlags |= static_cast<uint64>(EEngineShowFlags::SF_Octree);
 				UE_LOG("MainBarWidget: Octree 표시");
 			}
-			CurrentLevel->SetShowFlags(ShowFlags);
+			Editor->SetShowFlags(ShowFlags);
 		}
 
 		// FXAA 표시 옵션
@@ -399,7 +398,7 @@ void UMainBarWidget::RenderShowFlagsMenu()
 				ShowFlags |= static_cast<uint64>(EEngineShowFlags::SF_FXAA);
 				UE_LOG("MainBarWidget: FXAA 활성화");
 			}
-			CurrentLevel->SetShowFlags(ShowFlags);
+			Editor->SetShowFlags(ShowFlags);
 		}
 
 		ImGui::EndMenu();
@@ -424,15 +423,15 @@ void UMainBarWidget::RenderHelpMenu()
 }
 
 void UMainBarWidget::RenderPlayControls()
-{  
+{
 	EPIEState CurrentState = GEditor->GetPIEState();
 
 	// 위치 조정
 	float CurrentMenuEndPos = ImGui::GetCursorPosX();
 	float MainBarWidth = ImGui::GetWindowWidth();
 
-	ImVec2 ButtonPadding(8.0f, 4.0f); 
-	float ButtonFramePaddingX = ButtonPadding.x * 2.0f; 
+	ImVec2 ButtonPadding(8.0f, 4.0f);
+	float ButtonFramePaddingX = ButtonPadding.x * 2.0f;
 
 	ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ButtonPadding);
@@ -447,24 +446,24 @@ void UMainBarWidget::RenderPlayControls()
 	float TrueCenterStart = (MainBarWidth / 2.0f) - (TotalButtonGroupWidth / 2.0f);
 	float StartPos = TrueCenterStart;
 	StartPos = std::max(CurrentMenuEndPos, StartPos);
-	ImGui::SameLine(StartPos); 
+	ImGui::SameLine(StartPos);
 
     // 상태 플래그 정의
-    bool bCanStart = CurrentState == EPIEState::Stopped; 
+    bool bCanStart = CurrentState == EPIEState::Stopped;
     bool bCanPauseOrResume = CurrentState == EPIEState::Playing || CurrentState == EPIEState::Paused;
-    bool bCanStop = CurrentState != EPIEState::Stopped; 
+    bool bCanStop = CurrentState != EPIEState::Stopped;
 
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ButtonPadding);
 
     // =========================================================================
-    if (bCanStart) 
+    if (bCanStart)
     {
        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.6f, 0.0f, 1.0f));
        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.0f, 0.8f, 0.0f, 1.0f));
        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.4f, 0.0f, 1.0f));
     }
-    else 
+    else
     {
        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.1f, 0.3f, 0.1f, 0.6f));
        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.1f, 0.3f, 0.1f, 0.6f));
@@ -473,9 +472,9 @@ void UMainBarWidget::RenderPlayControls()
 
     if (ImGui::Button("▶"))
     {
-       if (bCanStart) 
+       if (bCanStart)
        {
-          GEditor->StartPIE(); 
+          GEditor->StartPIE();
           UE_LOG("MainBarWidget: PIE 세션 시작 요청");
        }
     }
@@ -506,7 +505,7 @@ void UMainBarWidget::RenderPlayControls()
        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.0f, 0.6f));
        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.0f, 0.6f));
     }
-   
+
     if (ImGui::Button("||"))
     {
        if (CurrentState == EPIEState::Playing)
@@ -537,7 +536,7 @@ void UMainBarWidget::RenderPlayControls()
        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.0f, 0.0f, 0.6f));
        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.0f, 0.0f, 0.6f));
     }
-   
+
     if (ImGui::Button("■"))
     {
        if (bCanStop)

@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Scene/Public/Component/DirectionalLightComponent.h"
 #include "Renderer/Public/LightData.h"
 
@@ -12,7 +12,6 @@ FUnifiedDynamicLight UDirectionalLightComponent::GetUnifiedLightData() const
     LightData.Intensity = GetIntensity();
     LightData.Color = GetLightColor();
     LightData.LightType = static_cast<uint32>(EDynamicLightType::Directional);
-    // Position, SourceRadius, FalloffExponent unused for directional lights
 
     return LightData;
 }

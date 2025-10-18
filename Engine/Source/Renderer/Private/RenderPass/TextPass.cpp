@@ -9,18 +9,17 @@
 #include "Editor/Public/Editor.h"
 #include "Renderer/Public/Renderer.h"
 
-FTextPass::FTextPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferCamera, ID3D11Buffer* InConstantBufferModel)
-    : FRenderPass(InPipeline, InConstantBufferCamera, InConstantBufferModel)
+FTextPass::FTextPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferModel, ID3D11DepthStencilState* InDS, ID3D11BlendState* InBS)
+    : FRenderPass(InPipeline, InConstantBufferModel), DS(InDS), BS(InBS)
 {
-    // Create shaders
     TArray<D3D11_INPUT_ELEMENT_DESC> LayoutDesc = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FFontVertex, Position), D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FFontVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"TEXCOORD", 1, DXGI_FORMAT_R32_UINT, 0, offsetof(FFontVertex, CharIndex), D3D11_INPUT_PER_VERTEX_DATA, 0}
     };
 
-    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/ShaderFont.hlsl", LayoutDesc, &FontVertexShader, &FontInputLayout);
-    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/ShaderFont.hlsl", &FontPixelShader);
+    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/ShaderFont.hlsl", LayoutDesc, &VS, &InputLayout);
+    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/ShaderFont.hlsl", &PS);
 
     // Create dynamic vertex buffer
     D3D11_BUFFER_DESC BufferDesc = {};
@@ -38,26 +37,35 @@ FTextPass::FTextPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferCamera
     FontTexture = ResourceManager.LoadTexture("Data/Texture/DejaVu Sans Mono.png");
 }
 
+bool FTextPass::CanRender(const FRenderingContext& Context)
+{
+    return Context.ShowFlags & EEngineShowFlags::SF_Text;
+}
+
+void FTextPass::SetRenderTargets(class UDeviceResources* DeviceResources)
+{
+	ID3D11RenderTargetView* RTVs[] = { DeviceResources->GetDestinationRTV() };
+	ID3D11DepthStencilView* DSV = DeviceResources->GetDepthBufferDSV();
+	Pipeline->SetRenderTargets(1, RTVs, DSV);
+}
+
 void FTextPass::Execute(FRenderingContext& Context)
 {
-    // Set up pipeline
-    FPipelineInfo PipelineInfo = {};
-    PipelineInfo.InputLayout = FontInputLayout;
-    PipelineInfo.VertexShader = FontVertexShader;
-    PipelineInfo.PixelShader = FontPixelShader;
-    PipelineInfo.RasterizerState = FRenderResourceFactory::GetRasterizerState({ ECullMode::None, EFillMode::Solid });
-    PipelineInfo.BlendState = URenderer::GetInstance().GetAlphaBlendState();
-    PipelineInfo.DepthStencilState = URenderer::GetInstance().GetDefaultDepthStencilState(); // Or DisabledDepthStencilState based on a flag
-    Pipeline->UpdatePipeline(PipelineInfo);
-    if (!(Context.ShowFlags & EEngineShowFlags::SF_Text)) { return; }
 
-    // Set constant buffers
-    Pipeline->SetConstantBuffer(1, true, ConstantBufferCamera);
-    FRenderResourceFactory::UpdateConstantBufferData(FontDataConstantBuffer, ConstantBufferData);
+	FPipelineInfo PipelineInfo = {};
+	PipelineInfo.InputLayout = InputLayout;
+	PipelineInfo.VertexShader = VS;
+	PipelineInfo.PixelShader = PS;
+	PipelineInfo.RasterizerState = FRenderResourceFactory::GetRasterizerState({ ECullMode::None, EFillMode::Solid });
+	PipelineInfo.BlendState = BS;
+	PipelineInfo.DepthStencilState = DS;
+	Pipeline->UpdatePipeline(PipelineInfo);
+
+	FRenderResourceFactory::UpdateConstantBufferData(FontDataConstantBuffer, ConstantBufferData);
     Pipeline->SetConstantBuffer(2, true, FontDataConstantBuffer);
 
     // Bind resources
-    Pipeline->SetTexture(0, false, FontTexture->GetTextureSRV());
+    Pipeline->SetSRV(0, false, FontTexture->GetTextureSRV());
     Pipeline->SetSamplerState(0, false, FontTexture->GetTextureSampler());
 
     for (UTextComponent* Text : Context.Texts)
@@ -124,22 +132,17 @@ void FTextPass::RenderTextInternal(const FString& Text, const FMatrix& WorldMatr
         DeviceContext->Unmap(DynamicVertexBuffer, 0);
     }
 
-    // Update model constant buffer
     FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferModel, WorldMatrix);
     Pipeline->SetConstantBuffer(0, true, ConstantBufferModel);
-
-    // Set vertex buffer
     Pipeline->SetVertexBuffer(DynamicVertexBuffer, sizeof(FFontVertex));
-
-    // Draw
     Pipeline->Draw(VertexCount, 0);
 }
 
 void FTextPass::Release()
 {
-    SafeRelease(FontVertexShader);
-    SafeRelease(FontPixelShader);
-    SafeRelease(FontInputLayout);
+    SafeRelease(VS);
+    SafeRelease(PS);
+    SafeRelease(InputLayout);
     SafeRelease(DynamicVertexBuffer);
     SafeRelease(FontDataConstantBuffer);
 }

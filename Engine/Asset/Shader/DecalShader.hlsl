@@ -54,8 +54,7 @@ PS_INPUT mainVS(VS_INPUT Input)
 float4 mainPS(PS_INPUT Input) : SV_TARGET
 {
     float2 DecalUV;
-	
-	
+
 	// Normal Test
 	float4 DecalForward = mul(float4(1.0f, 0.0f, 0.0f, 0.0f), DecalWorld);
 	if (dot(DecalForward, Input.Normal) > 0.0f) {
@@ -74,16 +73,16 @@ float4 mainPS(PS_INPUT Input) : SV_TARGET
     {
         discard;
     }
-	
+
 	//UV Transition ([-0.5~0.5], [-0.5~0.5]) -> ([0~1.0], [1.0~0])
     DecalUV = ((DecalLocalPos.yz) * float2(0.5f, -0.5f) + 0.5f);
-    
+
 	float4 DecalColor = DecalTexture.Sample(DecalSampler, DecalUV);
 
 	float FadeValue = FadeTexture.Sample(FadeSampler, DecalUV).r;
 	DecalColor.a *= 1.0f - saturate(FadeProgress / (FadeValue + 1e-6));
-	
+
 	if (DecalColor.a < 0.001f) { discard; }
-	
+
 	return DecalColor;
 }

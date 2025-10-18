@@ -1,12 +1,13 @@
 #pragma once
 
 #include "LightComponent.h"
+#include "PointLightComponent.h"
 
 UCLASS()
-class USpotLightComponent : public ULightComponentBase
+class USpotLightComponent : public UPointLightComponent
 {
     GENERATED_BODY()
-    DECLARE_CLASS(USpotLightComponent, ULightComponentBase)
+    DECLARE_CLASS(USpotLightComponent, UPointLightComponent)
 
 public:
     USpotLightComponent() = default;
@@ -48,13 +49,17 @@ public:
      -----------------------------------------------------------------------------*/
 public:
     // --- Getters & Setters ---
-
-    // TODO: Add SpotLight specific properties (e.g., InnerConeAngle, OuterConeAngle, etc.)
+	float GetInnerConeAngle() const { return InnerConeAngle; }
+	float GetOuterConeAngle() const { return OuterConeAngle; }
+	void SetInnerConeAngle(float InInnerConeAngle) {
+		InnerConeAngle = std::clamp(InInnerConeAngle, 0.0f, OuterConeAngle - 1.0f);
+	}
+	void SetOuterConeAngle(float InOuterConeAngle) {
+		OuterConeAngle = std::clamp(InOuterConeAngle, InnerConeAngle + 1.0f, 90.0f);
+	}
 
 private:
     // TODO: Add SpotLight specific member variables
-    float InnerConeAngle = 0.523599f;  // 30 degrees in radians
-    float OuterConeAngle = 0.785398f;  // 45 degrees in radians
-    float SourceRadius = 1000.0f;
-    float FalloffExponent = 8.0f;
+    float InnerConeAngle = 30.0f;  // 30 degrees
+    float OuterConeAngle = 45.0f;  // 45 degrees
 };
