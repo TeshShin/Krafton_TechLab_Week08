@@ -435,6 +435,19 @@ UStaticMesh* FObjManager::LoadObjStaticMesh(const FName& PathFileName, const FOb
 
 	// 2) Load asset-level data (FStaticMesh) if not cached
 	FStaticMesh* StaticMeshAsset = FObjManager::LoadObjStaticMeshAsset(PathFileName, Config);
+
+	// Special handling for Sphere model(normals correction)
+	if (StaticMeshAsset && StaticMeshAsset->PathFileName == "Data/Shapes/Sphere.obj")
+	{
+		// Sphere의 각 버텍스의 Normal을 (0, 0, 0) 위치로부터 해당	버텍스 위치를 향하는 단위벡터로 재설정
+		for (auto& Vertex : StaticMeshAsset->Vertices)
+		{
+			FVector Normal = Vertex.Position;
+			Normal.Normalize();
+			Vertex.Normal = Normal;
+		}
+	}
+
 	if (StaticMeshAsset)
 	{
 		// Create runtime UStaticMesh and register to AssetManager cache (ownership there)

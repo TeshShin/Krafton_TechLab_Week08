@@ -2,6 +2,7 @@
 #include "Scene/Public/Component/PointLightComponent.h"
 #include "Asset/Public/JsonSerializer.h"
 #include "Editor/Public/UI/Widget/Component/PointLightComponentWidget.h"
+#include "Manager/Public/AssetManager.h"
 #include "Renderer/Public/LightData.h"
 
 IMPLEMENT_CLASS(UPointLightComponent, ULightComponentBase)
@@ -52,4 +53,9 @@ FUnifiedDynamicLight UPointLightComponent::GetUnifiedLightData() const
     LightData.LightType = static_cast<uint32>(EDynamicLightType::Point);
 
     return LightData;
+}
+
+UTexture* UPointLightComponent::GetLightBillboardTexture()
+{
+	return UAssetManager::GetInstance().LoadTexture("Data/Icons/PointLight_64x.png");
 }

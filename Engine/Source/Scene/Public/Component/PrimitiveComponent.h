@@ -28,15 +28,14 @@ public:
 	D3D11_PRIMITIVE_TOPOLOGY GetTopology() const;
 	//void Render(const URenderer& Renderer) const override;
 
-	bool IsVisible() const { return bVisible; }
-	void SetVisibility(bool bVisibility) { bVisible = bVisibility; }
-	
-	bool CanPick() const { return bCanPick; }
-	void SetCanPick(bool bInCanPick) { bCanPick = bInCanPick; }
-	
-
 	FVector4 GetColor() const { return Color; }
 	void SetColor(const FVector4& InColor) { Color = InColor; }
+
+	bool IsVisible() const { return bVisible; }
+	void SetVisibility(bool bVisibility) { bVisible = bVisibility; }
+
+	bool CanPick() const { return bCanPick; }
+	void SetCanPick(bool bInCanPick) { bCanPick = bInCanPick; }
 
 	virtual const IBoundingVolume* GetBoundingBox();
 	void GetWorldAABB(FVector& OutMin, FVector& OutMax);
@@ -60,7 +59,7 @@ protected:
 	uint32 NumVertices = 0;
 	uint32 NumIndices = 0;
 
-	FVector4 Color = FVector4{ 0.f,0.f,0.f,0.f };
+	FVector4 Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
 
 	D3D11_PRIMITIVE_TOPOLOGY Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	FRenderState RenderState = {};
@@ -70,7 +69,7 @@ protected:
 
 	IBoundingVolume* BoundingBox = nullptr;
 	bool bOwnsBoundingBox = false;
-	
+
 	mutable FVector CachedWorldMin;
 	mutable FVector CachedWorldMax;
 	mutable bool bIsAABBCacheDirty = true;

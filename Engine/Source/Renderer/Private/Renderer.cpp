@@ -20,6 +20,7 @@
 #include "Renderer/Public/RenderPass/FXAAPass.h"
 #include "Renderer/Public/RenderPass/FogPass.h"
 #include "Renderer/Public/RenderPass/StaticMeshPass.h"
+#include "Renderer/Public/RenderPass/StaticMeshUnlitPass.h"
 #include "Renderer/Public/RenderPass/TextPass.h"
 #include "Renderer/Public/RenderResourceFactory.h"
 #include "Renderer/Public/RenderPass/NormalMapPass.h"
@@ -52,6 +53,9 @@ void URenderer::Init(HWND InWindowHandle)
 
 	FStaticMeshPass* StaticMeshPass = new FStaticMeshPass(Pipeline, ConstantBufferModels, DefaultDS);
 	LevelPasses.push_back(StaticMeshPass);
+
+	FStaticMeshUnlitPass* StaticMeshUnlitPass = new FStaticMeshUnlitPass(Pipeline, ConstantBufferModels, DefaultDS);
+	LevelPasses.push_back(StaticMeshUnlitPass);
 
 	FTextPass* TextPass = new FTextPass(Pipeline, ConstantBufferModels, DefaultDS, AlphaBlendState);
 	LevelPasses.push_back(TextPass);
@@ -277,6 +281,9 @@ void URenderer::RenderLevel(struct FRenderingContext& RenderingContext)
 	RenderingContext.AllPrimitives = FinalVisiblePrims;
 	for (const auto& Prim : FinalVisiblePrims)
 	{
+		// Filter by visibility before adding to RenderingContext
+		if (!Prim->IsVisible()) { continue; }
+
 		if (auto StaticMesh = Cast<UStaticMeshComponent>(Prim))
 		{
 			RenderingContext.StaticMeshes.push_back(StaticMesh);

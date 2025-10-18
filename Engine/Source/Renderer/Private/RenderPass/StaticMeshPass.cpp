@@ -71,7 +71,7 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstant
 
 bool FStaticMeshPass::CanRender(const FRenderingContext& Context)
 {
-	return Context.ShowFlags & EEngineShowFlags::SF_StaticMesh;
+	return (Context.ShowFlags & EEngineShowFlags::SF_StaticMesh) && (Context.ViewMode != EViewModeIndex::VMI_Unlit);
 }
 
 void FStaticMeshPass::SetRenderTargets(class UDeviceResources* DeviceResources)

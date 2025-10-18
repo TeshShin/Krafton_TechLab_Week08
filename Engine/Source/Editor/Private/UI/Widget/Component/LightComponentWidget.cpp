@@ -22,6 +22,13 @@ void ULightComponentWidget::RenderWidget()
         {
             ImGui::Separator();
 
+            // Visibility
+            bool bVisible = LightComponent->IsVisible();
+            if (ImGui::Checkbox("Visible", &bVisible))
+            {
+                LightComponent->SetVisible(bVisible);
+            }
+
             // Light Color
             FVector LightColor = LightComponent->GetLightColor();
             if (ImGui::ColorEdit3("Light Color", &LightColor.X))

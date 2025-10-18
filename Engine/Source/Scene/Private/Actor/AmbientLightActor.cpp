@@ -8,8 +8,3 @@ UClass* AAmbientLightActor::GetLightClass()
 {
     return UAmbientLightComponent::StaticClass();
 }
-
-class UTexture* AAmbientLightActor::GetLightBillboardTexture()
-{
-    return UAssetManager::GetInstance().LoadTexture("Data/Icons/SkyLight_64x.png");
-}

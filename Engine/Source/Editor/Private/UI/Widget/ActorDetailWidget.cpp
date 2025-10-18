@@ -38,7 +38,7 @@ void UActorDetailWidget::RenderWidget()
 	{
 		ImGui::TextUnformatted("No Object Selected");
 		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Detail 확인을 위해 Object를 선택해주세요");
-		SelectedComponent = nullptr; 
+		SelectedComponent = nullptr;
 		CachedSelectedActor = nullptr;
 		return;
 	}
@@ -52,9 +52,9 @@ void UActorDetailWidget::RenderWidget()
 
 	    // Actor 헤더 렌더링 (이름 + rename 기능)
 	    RenderActorHeader(SelectedActor);
-	
+
 	    ImGui::Separator();
-	
+
 	    if (ImGui::CollapsingHeader("Tick Settings"))
 	    {
 	        bool bCanEverTick = SelectedActor->CanTick();
@@ -62,7 +62,7 @@ void UActorDetailWidget::RenderWidget()
 	        {
 	            SelectedActor->SetCanTick(bCanEverTick);
 	        }
-	
+
 	        bool bTickInEditor = SelectedActor->CanTickInEditor();
 	        if (ImGui::Checkbox("Tick in Editor", &bTickInEditor))
 	        {
@@ -73,7 +73,7 @@ void UActorDetailWidget::RenderWidget()
 
 	// 컴포넌트 트리 렌더링
 	RenderComponents(SelectedActor);
-	
+
 	// 선택된 컴포넌트의 트랜스폼 정보 렌더링
 	RenderTransformEdit();
 }
@@ -144,13 +144,13 @@ void UActorDetailWidget::RenderComponents(AActor* InSelectedActor)
 		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "No components");
 		return;
 	}
-	
+
 	if (InSelectedActor->GetRootComponent())
 	{
 		RenderSceneComponents(InSelectedActor->GetRootComponent());
 	}
 	ImGui::Separator();
-	
+
 	bool bHasActorComponents = false;
 	for (UActorComponent* Component : Components)
 	{
@@ -167,7 +167,16 @@ void UActorDetailWidget::RenderSceneComponents(USceneComponent* InSceneComponent
 	FString ComponentName = InSceneComponent->GetName().ToString();
 
 	ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
-	if (!InSceneComponent || InSceneComponent->GetChildren().empty())
+	bool bIsLeaf = true;
+	for (USceneComponent* Child : InSceneComponent->GetChildren())
+	{
+		if (Child && !Child->IsVisualizationComponent())
+		{
+			bIsLeaf = false;
+			break;
+		}
+	}
+	if (bIsLeaf)
 		NodeFlags |= ImGuiTreeNodeFlags_Leaf;
 	if (SelectedComponent == InSceneComponent)
 		NodeFlags |= ImGuiTreeNodeFlags_Selected;
@@ -209,13 +218,13 @@ void UActorDetailWidget::RenderSceneComponents(USceneComponent* InSceneComponent
 				ImGui::EndDragDropTarget();		ImGui::TreePop();
 				return;
 			}
-			
+
 			if (DraggedComp->GetAttachParent() == InSceneComponent)
 			{
 				ImGui::EndDragDropTarget();		ImGui::TreePop();
 				return;
 			}
-			
+
 			// -----------------------------
 			// 자기 자신이나 자식에게 Drop 방지
 			// -----------------------------
@@ -326,7 +335,7 @@ void UActorDetailWidget::RenderActorComponent(UActorComponent* InActorComponent)
 		SelectedComponent = InActorComponent;
 		GEditor->GetEditorModule()->SelectComponent(SelectedComponent);
 	}
-    
+
 	if (bNodeOpen)
 	{
 		ImGui::TreePop();
@@ -345,12 +354,12 @@ void UActorDetailWidget::RenderAddComponentButton(AActor* InSelectedActor)
 	{
 		ImGui::OpenPopup("AddComponentPopup");
 	}
-    ImGui::SetNextWindowContentSize(ImVec2(200.0f, 0.0f)); 
+    ImGui::SetNextWindowContentSize(ImVec2(200.0f, 0.0f));
 	if (ImGui::BeginPopup("AddComponentPopup"))
 	{
 		ImGui::Text("Add Component");
 		ImGui::Separator();
-		
+
 		for (auto& Pair : ComponentClasses)
 		{
 			const char* CName = Pair.first.c_str();
@@ -397,7 +406,7 @@ void UActorDetailWidget::AddComponentByName(AActor* InSelectedActor, const FStri
 		return;
 	}
 
-	UActorComponent* NewComponent = InSelectedActor->AddComponent(ComponentClasses[InComponentName]); 
+	UActorComponent* NewComponent = InSelectedActor->AddComponent(ComponentClasses[InComponentName]);
 	if (!NewComponent)
 	{
 		UE_LOG_ERROR("ActorDetailWidget: 알 수 없는 컴포넌트 타입 '%s'을(를) 추가할 수 없습니다.", InComponentName.data());
@@ -429,7 +438,7 @@ void UActorDetailWidget::AddComponentByName(AActor* InSelectedActor, const FStri
 			NewSceneComponent->AttachToComponent(InSelectedActor->GetRootComponent());
 			UE_LOG_SUCCESS("'%s'를 액터의 루트에 추가했습니다.", NewComponent->GetName().ToString().data());
 		}
-		
+
 		NewSceneComponent->SetRelativeLocation(FVector::Zero());
 		NewSceneComponent->SetRelativeRotation(FQuaternion::Identity());
 		NewSceneComponent->SetRelativeScale3D({1, 1, 1});
@@ -484,7 +493,7 @@ void UActorDetailWidget::CancelRenamingActor()
 void UActorDetailWidget::RenderTransformEdit()
 {
 	if (!SelectedComponent) { return; }
-	
+
 	// --- Component General Properties ---
 	ImGui::Text("Component Properties");
 	ImGui::PushID(SelectedComponent);
@@ -548,7 +557,7 @@ void UActorDetailWidget::RenderTransformEdit()
 	}
 	ImGui::Checkbox("Uniform Scale", &bUniformScale);
 	SceneComponent->SetUniformScale(bUniformScale);
-	
+
 	ImGui::PopID();
 }
 
@@ -623,7 +632,7 @@ void UActorDetailWidget::DecomposeMatrix(const FMatrix& InMatrix, FVector& OutLo
 }
 
 void UActorDetailWidget::SetSelectedComponent(UActorComponent* InComponent)
-{ 
+{
 	SelectedComponent = InComponent;
 }
 

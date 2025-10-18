@@ -56,8 +56,8 @@ void UBillBoardComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
     else
     {
         InOutHandle["BillBoardSprite"] = Sprite->GetFilePath().ToBaseNameString();
-        InOutHandle["BillBoardScreenSizeScaled"] = bScreenSizeScaled ? "true" : "false"; 
-        InOutHandle["BillBoardScreenSize"] = to_string(ScreenSize); 
+        InOutHandle["BillBoardScreenSizeScaled"] = bScreenSizeScaled ? "true" : "false";
+        InOutHandle["BillBoardScreenSize"] = to_string(ScreenSize);
     }}
 
 void UBillBoardComponent::FaceCamera(const FVector& CameraForward)
@@ -65,10 +65,10 @@ void UBillBoardComponent::FaceCamera(const FVector& CameraForward)
     FVector Forward = CameraForward;
     FVector Right = Forward.Cross(FVector::UpVector()); Right.Normalize();
     FVector Up = Right.Cross(Forward); Up.Normalize();
-    
+
     // Construct the rotation matrix from the basis vectors
     FMatrix RotationMatrix = FMatrix(Forward, Right, Up);
-    
+
     // Convert the rotation matrix to a quaternion and set the relative rotation
     SetWorldRotation(FQuaternion::FromRotationMatrix(RotationMatrix));
 }

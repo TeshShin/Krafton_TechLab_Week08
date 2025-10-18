@@ -465,6 +465,7 @@
     <ClCompile Include="Source\ImGui\imgui_widgets.cpp">
       <Filter>Engine\Source\ImGui</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Renderer\Private\RenderPass\StaticMeshUnlitPass.cpp" />
     <ClCompile Include="Asset\Shader\LightTilesComputeShader.hlsl">
       <Filter>Engine\Asset\Shader</Filter>
     </ClCompile>
@@ -948,6 +949,7 @@
     <ClInclude Include="Source\ImGui\imstb_truetype.h">
       <Filter>Engine\Source\ImGui</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Renderer\Public\RenderPass\StaticMeshUnlitPass.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />
