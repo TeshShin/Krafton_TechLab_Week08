@@ -9,12 +9,7 @@ public:
         ID3D11VertexShader* InVS, ID3D11PixelShader* InPS, ID3D11InputLayout* InLayout, ID3D11DepthStencilState* InDS);
     void Execute(FRenderingContext& Context) override;
     void Release() override;
-
-    /**
-     * @brief Update lights from rendering context and upload to GPU
-     * @return Number of dynamic lights in the unified buffer
-     */
-	void UpdateLightsFromContext(FRenderingContext& Context);
+	
 	TArray<FUnifiedDynamicLight> ProcessLightsFromContext(FRenderingContext& Context);
 
 private:

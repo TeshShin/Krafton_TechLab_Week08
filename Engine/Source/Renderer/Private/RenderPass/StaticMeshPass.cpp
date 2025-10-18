@@ -24,12 +24,14 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstant
 
 void FStaticMeshPass::Execute(FRenderingContext& Context)
 {
-	// Update lights and get count
+	// Get Lights from Context
 	TArray<FUnifiedDynamicLight> UnifiedLights = ProcessLightsFromContext(Context);
 
+	// Upload Unified Lights to StructuredBuffer
 	FRenderResourceFactory::UpdateStructuredBufferData(
 		UnifiedLightStructuredBuffer, UnifiedLights);
 
+	// Bind Unified Light SRV to the pipeline
 	Pipeline->SetSRV(6, false, UnifiedLightSRV);
 
 	FRenderState RenderState = UStaticMeshComponent::GetClassDefaultRenderState();
@@ -223,7 +225,7 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::ProcessLightsFromContext(FRenderin
 		UnifiedLights.push_back(FUnifiedDynamicLight());  // All fields zero, Intensity=0
 	}
 
-	return std::move(UnifiedLights);
+	return UnifiedLights;
 }
 
 
