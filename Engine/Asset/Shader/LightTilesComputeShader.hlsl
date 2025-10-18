@@ -12,6 +12,7 @@ cbuffer CameraCB : register(b0)
     row_major float4x4 Proj;
     row_major float4x4 InvProj;
     uint2   ScreenSize;     // pixels (width, height)
+    uint2   ViewportOrigin; // pixels (top-left x,y) [unused in CS, keeps CB layout in sync]
     uint    NumTilesX;      // dispatch dim X
     uint    NumTilesY;      // dispatch dim Y
     uint    NumZSlices;     // dispatch dim Z
@@ -94,16 +95,14 @@ Frustum BuildClusterFrustum(uint tileX, uint tileY, uint zSlice)
     float3 r10 = UnprojectToViewRay(float2(ndcMax.x, ndcMin.y)); // bottom-right
     float3 r01 = UnprojectToViewRay(float2(ndcMin.x, ndcMax.y)); // top-left
     float3 r11 = UnprojectToViewRay(float2(ndcMax.x, ndcMax.y)); // top-right
+    float3 rCenter = normalize(r00 + r10 + r01 + r11);
 
     // Side planes passing through the origin; choose winding so normals point inward
-    // For left edge (between r01 and r00), inward normal = normalize(cross(r00, r01))
-    f.Sides[0].n = normalize(cross(r00, r01)); f.Sides[0].d = 0.0f; // Left
-    // Right edge (between r10 and r11)
-    f.Sides[1].n = normalize(cross(r11, r10)); f.Sides[1].d = 0.0f; // Right
-    // Bottom edge (between r10 and r00)
-    f.Sides[2].n = normalize(cross(r00, r10)); f.Sides[2].d = 0.0f; // Bottom
-    // Top edge (between r01 and r11)
-    f.Sides[3].n = normalize(cross(r11, r01)); f.Sides[3].d = 0.0f; // Top
+    // Build side planes; flip normals so they face inward (dot with rCenter > 0)
+    f.Sides[0].n = normalize(cross(r00, r01)); if (dot(f.Sides[0].n, rCenter) < 0) f.Sides[0].n = -f.Sides[0].n; f.Sides[0].d = 0.0f; // Left
+    f.Sides[1].n = normalize(cross(r11, r10)); if (dot(f.Sides[1].n, rCenter) < 0) f.Sides[1].n = -f.Sides[1].n; f.Sides[1].d = 0.0f; // Right
+    f.Sides[2].n = normalize(cross(r00, r10)); if (dot(f.Sides[2].n, rCenter) < 0) f.Sides[2].n = -f.Sides[2].n; f.Sides[2].d = 0.0f; // Bottom
+    f.Sides[3].n = normalize(cross(r11, r01)); if (dot(f.Sides[3].n, rCenter) < 0) f.Sides[3].n = -f.Sides[3].n; f.Sides[3].d = 0.0f; // Top
 
     // Z range (view space, camera at origin looking +Z for D3D LH)
     f.zNear = zNear;

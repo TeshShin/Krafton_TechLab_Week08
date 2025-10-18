@@ -398,6 +398,23 @@ void UMainBarWidget::RenderShowFlagsMenu()
 			Editor->SetShowFlags(ShowFlags);
 		}
 
+		// Cluster Heat overlay 표시 옵션
+		bool bShowClusterHeat = (ShowFlags & EEngineShowFlags::SF_ClusterHeat) != 0;
+		if (ImGui::MenuItem("클러스터 히트맵 표시", nullptr, bShowClusterHeat))
+		{
+			if (bShowClusterHeat)
+			{
+				ShowFlags &= ~static_cast<uint64>(EEngineShowFlags::SF_ClusterHeat);
+				UE_LOG("MainBarWidget: 클러스터 히트맵 비표시");
+			}
+			else
+			{
+				ShowFlags |= static_cast<uint64>(EEngineShowFlags::SF_ClusterHeat);
+				UE_LOG("MainBarWidget: 클러스터 히트맵 표시");
+			}
+			Editor->SetShowFlags(ShowFlags);
+		}
+
 		// FXAA 표시 옵션
 		bool bEnableFXAA = (ShowFlags & EEngineShowFlags::SF_FXAA) != 0;
 		if (ImGui::MenuItem("FXAA 적용", nullptr, bEnableFXAA))

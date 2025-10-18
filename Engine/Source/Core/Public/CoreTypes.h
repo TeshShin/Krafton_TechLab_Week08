@@ -154,6 +154,7 @@ struct FForwardPlusCameraConstants
 	FMatrix Proj;
 	FMatrix InvProj;
 	std::array<uint32, 2>  ScreenSize;     // pixels (width, height)
+	std::array<uint32, 2>  ViewportOrigin; // pixels (top-left x,y)
 	uint32  NumTilesX;      // dispatch dim X
 	uint32  NumTilesY;      // dispatch dim Y
 	uint32  NumZSlices;     // dispatch dim Z

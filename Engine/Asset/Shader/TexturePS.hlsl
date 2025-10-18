@@ -22,6 +22,7 @@ cbuffer FP_CameraCB : register(b11)
 	row_major float4x4 FP_Projection;
 	row_major float4x4 FP_InvProj;
 	uint2   FP_ScreenSize;     // pixels (width, height)
+	uint2   FP_ViewportOrigin; // pixels (top-left x,y)
 	uint    FP_NumTilesX;      // dispatch dim X
 	uint    FP_NumTilesY;      // dispatch dim Y
 	uint    FP_NumZSlices;     // dispatch dim Z
@@ -98,9 +99,10 @@ struct PS_OUTPUT
 
 uint FP_ComputeClusterID(float4 svpos /* SV_POSITION */, float3 worldPos)
 {
-	// Tile X/Y from pixel coords
-	int tileX = clamp(int(svpos.x) / max(int(FP_ScreenSize.x / FP_NumTilesX), 1), 0, int(FP_NumTilesX - 1));
-	int tileY = clamp(int(svpos.y) / max(int(FP_ScreenSize.y / FP_NumTilesY), 1), 0, int(FP_NumTilesY - 1));
+    // Tile X/Y from pixel coords relative to viewport origin
+    float2 pix = svpos.xy - float2(FP_ViewportOrigin);
+    int tileX = clamp(int(floor(pix.x * (float)FP_NumTilesX / max(FP_ScreenSize.x, 1))), 0, int(FP_NumTilesX - 1));
+    int tileY = clamp(int(floor(pix.y * (float)FP_NumTilesY / max(FP_ScreenSize.y, 1))), 0, int(FP_NumTilesY - 1));
 
 	// LH view space depth (camera looks +Z)
 	float3 posVS = mul(float4(worldPos, 1.0f), FP_View).xyz;

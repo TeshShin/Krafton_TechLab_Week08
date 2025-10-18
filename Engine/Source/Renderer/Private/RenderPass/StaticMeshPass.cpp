@@ -54,8 +54,19 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstant
 
 	LightTilesCS = FRenderResourceFactory::CreateComputeShader(L"Asset/Shader/LightTilesComputeShader.hlsl");
 
-	FP_CameraCB = FRenderResourceFactory::CreateConstantBuffer<FForwardPlusCameraConstants>();
-	FP_ParamsCB = FRenderResourceFactory::CreateConstantBuffer<FForwardPlusConstants>();
+    FP_CameraCB = FRenderResourceFactory::CreateConstantBuffer<FForwardPlusCameraConstants>();
+    FP_ParamsCB = FRenderResourceFactory::CreateConstantBuffer<FForwardPlusConstants>();
+
+    // Debug heat overlay shaders (fullscreen VS + heat PS)
+    TArray<D3D11_INPUT_ELEMENT_DESC> FullscreenLayout = {};
+    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/ClusterHeatShader.hlsl", FullscreenLayout, &HeatVS, nullptr);
+    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/ClusterHeatShader.hlsl", &HeatPS);
+
+    // Create disabled depth-stencil state so overlay always draws on top
+    D3D11_DEPTH_STENCIL_DESC DisabledDesc = {};
+    DisabledDesc.DepthEnable = FALSE;
+    DisabledDesc.StencilEnable = FALSE;
+    URenderer::GetInstance().GetDevice()->CreateDepthStencilState(&DisabledDesc, &DS_Disabled);
 }
 
 bool FStaticMeshPass::CanRender(const FRenderingContext& Context)
@@ -72,9 +83,9 @@ void FStaticMeshPass::SetRenderTargets(class UDeviceResources* DeviceResources)
 
 void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 NumLights)
 {
-	UDeviceResources* DR = URenderer::GetInstance().GetDeviceResources();
-	uint32 Width = DR->GetWidth();
-	uint32 Height = DR->GetHeight();
+    // Use per-viewport size (multi-viewport aware)
+    uint32 Width = static_cast<uint32>(Context.Viewport.Width);
+    uint32 Height = static_cast<uint32>(Context.Viewport.Height);
 
 	uint32 TileSize = 32;
 
@@ -116,7 +127,8 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 	FPcam.View        = CurrentCamera->GetFViewProjConstants().View;                // row_major
 	FPcam.Proj        = CurrentCamera->GetFViewProjConstants().Projection;          // row_major
 	FPcam.InvProj     = CurrentCamera->GetFViewProjConstantsInverse().Projection;
-	FPcam.ScreenSize  = {Width, Height};
+    FPcam.ScreenSize  = {Width, Height};
+    FPcam.ViewportOrigin = { static_cast<uint32>(Context.Viewport.TopLeftX), static_cast<uint32>(Context.Viewport.TopLeftY) };
 	FPcam.NumTilesX   = NumTilesX;
 	FPcam.NumTilesY   = NumTilesY;
 	FPcam.NumZSlices  = NumZSlices;
@@ -373,6 +385,22 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 		}
 	}
 	Pipeline->SetConstantBuffer(2, false, nullptr);
+
+	// --- Debug: draw cluster heat overlay ---
+	bool bOverlayEnabled = (Context.ShowFlags & EEngineShowFlags::SF_ClusterHeat) != 0;
+	if (bOverlayEnabled && HeatVS && HeatPS && ClusterCountSRV)
+	{
+		// Reuse already-bound FP cbuffers (b11,b12) and FP_ClusterCount (t7)
+		// Setup fullscreen pipeline with disabled depth
+		auto RS = FRenderResourceFactory::GetRasterizerState({ ECullMode::None, EFillMode::Solid });
+		FPipelineInfo HeatPipe = { nullptr, HeatVS, RS, DS_Disabled ? DS_Disabled : DS, HeatPS, nullptr };
+		Pipeline->UpdatePipeline(HeatPipe);
+		// Ensure SRV t7 and CBs b11,b12 are bound to PS
+		Pipeline->SetSRV(7, false /*PS*/, ClusterCountSRV);
+		Pipeline->SetConstantBuffer(11, false /*PS*/, FP_CameraCB);
+		Pipeline->SetConstantBuffer(12, false /*PS*/, FP_ParamsCB);
+		Pipeline->Draw(3, 0);
+	}
 }
 
 TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderingContext& Context)
@@ -405,7 +433,7 @@ void FStaticMeshPass::Release()
 	SafeRelease(ConstantBufferLight);
 	SafeRelease(UnifiedLightStructuredBuffer);
 	SafeRelease(UnifiedLightSRV);
-	
+
 	// Forward+ resources
 	SafeRelease(ClusterCountSRV);
 	SafeRelease(ClusterCountUAV);
@@ -423,4 +451,7 @@ void FStaticMeshPass::Release()
 	SafeRelease(VSGouraud);
 	SafeRelease(PSGouraud);
 	SafeRelease(InputLayout);
+    SafeRelease(HeatVS);
+    SafeRelease(HeatPS);
+    SafeRelease(DS_Disabled);
 }

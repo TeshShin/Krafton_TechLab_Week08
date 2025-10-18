@@ -50,5 +50,11 @@ private:
 	ID3D11Buffer* FP_CameraCB = nullptr;
 	ID3D11Buffer* FP_ParamsCB = nullptr;
 
-	void CreateClusterBuffers(FRenderingContext& Context, uint32 NumLights);
+    void CreateClusterBuffers(FRenderingContext& Context, uint32 NumLights);
+
+    // Debug heat overlay resources
+    ID3D11VertexShader* HeatVS = nullptr;
+    ID3D11PixelShader* HeatPS = nullptr;
+    ID3D11DepthStencilState* DS_Disabled = nullptr;
+    bool bShowClusterHeat = true; // simple always-on toggle for now
 };
