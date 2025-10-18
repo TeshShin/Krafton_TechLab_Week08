@@ -1,3 +1,39 @@
+#include "LightingFunctions.hlsl"
+
+
+// For Gouraud shading model
+//--------------------------------------------------------------------------------------
+// [UNIFIED FORWARD RENDERING] Light Data Structures
+//--------------------------------------------------------------------------------------
+
+// Ambient Light (Scene-wide global illumination)
+
+// Light Constants (ConstantBuffer b10)
+cbuffer LightConstants : register(b10)
+{
+	uint UnifiedLightCount; // 4 bytes  - Number of lights in StructuredBuffer
+	float3 Padding; // 12 bytes - Alignment padding
+};
+
+//--------------------------------------------------------------------------------------
+// Material Constants
+//--------------------------------------------------------------------------------------
+
+cbuffer MaterialConstants : register(b2)
+{
+	float4 Ka; // Ambient color
+	float4 Kd; // Diffuse color
+	float4 Ks; // Specular color
+	float Ns; // Specular exponent
+	float Ni; // Index of refraction
+	float D; // Dissolve factor
+	uint MaterialFlags; // Which textures are available (bitfield)
+	float Time;
+};
+
+StructuredBuffer<FUnifiedDynamicLight> DynamicLights : register(t6);
+//--------------------------------------------------------------------------------------
+
 cbuffer Model : register(b0)
 {
 	row_major float4x4 World;
@@ -22,17 +58,6 @@ struct VS_INPUT
     float4 Tangent : TANGENT; // xyz: tangent, w: handedness
 };
 
-struct PS_INPUT
-{
-	float4 Position : SV_POSITION;
-	float3 WorldPosition: TEXCOORD0;
-	float3 WorldNormal : TEXCOORD1;
-	float2 Tex : TEXCOORD2;
-	float3 WorldTangent : TEXCOORD3;
-	float  TangentSign  : TEXCOORD4;
-};
-
-
 PS_INPUT mainVS(VS_INPUT Input)
 {
 	PS_INPUT Output;
@@ -41,10 +66,40 @@ PS_INPUT mainVS(VS_INPUT Input)
 	Output.WorldNormal = normalize(mul(Input.Normal, (float3x3)WorldInverseTranspose));
 	Output.Tex = Input.Tex;
 
-    float3 worldT = mul(Input.Tangent.xyz, (float3x3)World);
-    worldT = normalize(worldT - Output.WorldNormal * dot(Output.WorldNormal, worldT));
-    Output.WorldTangent = worldT;
-    Output.TangentSign = Input.Tangent.w;
+//#define LIGHTING_MODEL_GOURAUD // for coding
+#if defined(LIGHTING_MODEL_GOURAUD)
+	float3 wsNormal = Output.WorldNormal;
+	
+	float3 ViewDir = normalize(ViewWorldLocation - Output.WorldPosition);
+    float SpecularPower = max(Ns, 1.0f); // Prevent division by zero
+	
+    // Accumulate separated diffuse and specular contributions
+    float3 TotalDiffuse = float3(0, 0, 0);
+    float3 TotalSpecular = float3(0, 0, 0);
+    float3 TotalAmbient = float3(0, 0, 0);
 
-    return Output;
+    for (uint i = 0; i < UnifiedLightCount; i++)
+    {
+        FLightingResult LightResult = CalculateDynamicLight(
+            DynamicLights[i], Output.WorldPosition, wsNormal, ViewDir, SpecularPower);
+
+        TotalDiffuse += LightResult.Diffuse;
+        TotalSpecular += LightResult.Specular;
+		TotalAmbient += LightResult.Ambient;
+	}
+
+	Output.TotalAmbient = TotalAmbient;
+	Output.TotalDiffuse = TotalDiffuse;
+	Output.TotalSpecular = TotalSpecular;
+#else
+	Output.TotalDiffuse = Input.Color;
+
+	// pixel shader에서 normal map을 사용할 경우를 대비하여 World Tangent 계산
+	float3 worldT = mul(Input.Tangent.xyz, (float3x3) World);
+	worldT = normalize(worldT - Output.WorldNormal * dot(Output.WorldNormal, worldT));
+	Output.WorldTangent = worldT;
+	Output.TangentSign = Input.Tangent.w;
+#endif
+	
+	return Output;
 }

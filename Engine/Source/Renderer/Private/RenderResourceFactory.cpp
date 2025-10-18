@@ -1,9 +1,9 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Renderer/Public/RenderResourceFactory.h"
 #include "Renderer/Public/Renderer.h"
 
 void FRenderResourceFactory::CreateVertexShaderAndInputLayout(const wstring& InFilePath,
-                                                              const TArray<D3D11_INPUT_ELEMENT_DESC>& InInputLayoutDescs, ID3D11VertexShader** OutVertexShader, ID3D11InputLayout** OutInputLayout)
+                                                              const TArray<D3D11_INPUT_ELEMENT_DESC>& InInputLayoutDescs, ID3D11VertexShader** OutVertexShader, ID3D11InputLayout** OutInputLayout, const D3D_SHADER_MACRO* InDefines)
 {
 	ID3DBlob* VertexShaderBlob = nullptr;
 	ID3DBlob* ErrorBlob = nullptr;
@@ -13,7 +13,7 @@ void FRenderResourceFactory::CreateVertexShaderAndInputLayout(const wstring& InF
 	Flags |= D3DCOMPILE_DEBUG;
 #endif
 
-	HRESULT Result = D3DCompileFromFile(InFilePath.data(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "mainVS", "vs_5_0", Flags, 0, &VertexShaderBlob, &ErrorBlob);
+	HRESULT Result = D3DCompileFromFile(InFilePath.data(), InDefines, D3D_COMPILE_STANDARD_FILE_INCLUDE, "mainVS", "vs_5_0", Flags, 0, &VertexShaderBlob, &ErrorBlob);
 	if (FAILED(Result))
 	{
 		if (ErrorBlob) { OutputDebugStringA(static_cast<char*>(ErrorBlob->GetBufferPointer())); SafeRelease(ErrorBlob); }
@@ -60,7 +60,7 @@ ID3D11Buffer* FRenderResourceFactory::CreateIndexBuffer(const void* InIndices, u
 	return IndexBuffer;
 }
 
-void FRenderResourceFactory::CreatePixelShader(const wstring& InFilePath, ID3D11PixelShader** OutPixelShader)
+void FRenderResourceFactory::CreatePixelShader(const wstring& InFilePath, ID3D11PixelShader** OutPixelShader, const D3D_SHADER_MACRO* InDefines)
 {
 	ID3DBlob* PixelShaderBlob = nullptr;
 	ID3DBlob* ErrorBlob = nullptr;
@@ -70,7 +70,7 @@ void FRenderResourceFactory::CreatePixelShader(const wstring& InFilePath, ID3D11
 	Flags |= D3DCOMPILE_DEBUG;
 #endif
 
-	HRESULT Result = D3DCompileFromFile(InFilePath.data(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "mainPS", "ps_5_0", Flags, 0, &PixelShaderBlob, &ErrorBlob);
+	HRESULT Result = D3DCompileFromFile(InFilePath.data(), InDefines, D3D_COMPILE_STANDARD_FILE_INCLUDE, "mainPS", "ps_5_0", Flags, 0, &PixelShaderBlob, &ErrorBlob);
 	if (FAILED(Result))
 	{
 		if (ErrorBlob) { OutputDebugStringA(static_cast<char*>(ErrorBlob->GetBufferPointer())); SafeRelease(ErrorBlob); }
