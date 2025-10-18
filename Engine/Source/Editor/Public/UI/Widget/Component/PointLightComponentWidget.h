@@ -25,6 +25,6 @@ public:
     /*-----------------------------------------------------------------------------
         UPointLightComponentWidget Features
      -----------------------------------------------------------------------------*/
-private:
+protected:
     UPointLightComponent* PointLightComponent = nullptr;
 };

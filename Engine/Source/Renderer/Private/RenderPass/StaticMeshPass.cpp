@@ -25,7 +25,12 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstant
 void FStaticMeshPass::Execute(FRenderingContext& Context)
 {
 	// Update lights and get count
-	uint32 LightCount = UpdateLightsFromContext(Context);
+	TArray<FUnifiedDynamicLight> UnifiedLights = ProcessLightsFromContext(Context);
+
+	FRenderResourceFactory::UpdateStructuredBufferData(
+		UnifiedLightStructuredBuffer, UnifiedLights);
+
+	Pipeline->SetSRV(6, false, UnifiedLightSRV);
 
 	FRenderState RenderState = UStaticMeshComponent::GetClassDefaultRenderState();
 	if (Context.ViewMode == EViewModeIndex::VMI_Wireframe)
@@ -40,7 +45,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	FLightConstants LightConstants = {};
 
 	// GlobalAmbient is deprecated - all lights now go through unified StructuredBuffer
-	LightConstants.UnifiedLightCount = LightCount;
+	LightConstants.UnifiedLightCount = UnifiedLights.size();
 
 	Pipeline->SetConstantBuffer(10, false, ConstantBufferLight);
 	FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
@@ -142,28 +147,28 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 
 				if (UTexture* DiffuseTexture = Material->GetDiffuseTexture())
 				{
-					Pipeline->SetTexture(0, false, DiffuseTexture->GetTextureSRV());
+					Pipeline->SetSRV(0, false, DiffuseTexture->GetTextureSRV());
 					Pipeline->SetSamplerState(0, false, DiffuseTexture->GetTextureSampler());
 				}
 				if (UTexture* AmbientTexture = Material->GetAmbientTexture())
 				{
-					Pipeline->SetTexture(1, false, AmbientTexture->GetTextureSRV());
+					Pipeline->SetSRV(1, false, AmbientTexture->GetTextureSRV());
 				}
 				if (UTexture* SpecularTexture = Material->GetSpecularTexture())
 				{
-					Pipeline->SetTexture(2, false, SpecularTexture->GetTextureSRV());
+					Pipeline->SetSRV(2, false, SpecularTexture->GetTextureSRV());
 				}
 				if (UTexture* NormalTexture = Material->GetShininessTexture())
 				{
-					Pipeline->SetTexture(3, false, NormalTexture->GetTextureSRV());
+					Pipeline->SetSRV(3, false, NormalTexture->GetTextureSRV());
 				}
 				if (UTexture* AlphaTexture = Material->GetAlphaTexture())
 				{
-					Pipeline->SetTexture(4, false, AlphaTexture->GetTextureSRV());
+					Pipeline->SetSRV(4, false, AlphaTexture->GetTextureSRV());
 				}
 				if (UTexture* BumpTexture = Material->GetBumpTexture())
 				{
-					Pipeline->SetTexture(5, false, BumpTexture->GetTextureSRV());
+					Pipeline->SetSRV(5, false, BumpTexture->GetTextureSRV());
 				}
 
 				CurrentMaterial = Material;
@@ -185,7 +190,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	// --- RTVs Reset End ---
 }
 
-uint32 FStaticMeshPass::UpdateLightsFromContext(FRenderingContext& Context)
+TArray<FUnifiedDynamicLight> FStaticMeshPass::ProcessLightsFromContext(FRenderingContext& Context)
 {
 	// Step 1: Collect all dynamic lights into unified buffer
 	TArray<FUnifiedDynamicLight> UnifiedLights;
@@ -218,14 +223,7 @@ uint32 FStaticMeshPass::UpdateLightsFromContext(FRenderingContext& Context)
 		UnifiedLights.push_back(FUnifiedDynamicLight());  // All fields zero, Intensity=0
 	}
 
-	FRenderResourceFactory::UpdateStructuredBufferData(
-		UnifiedLightStructuredBuffer, UnifiedLights);
-
-	// Step 4: Bind SRV to Pixel Shader (t6)
-	Pipeline->SetTexture(6, false, UnifiedLightSRV);
-
-	// Return actual light count (not including dummy)
-	return ActualLightCount;
+	return std::move(UnifiedLights);
 }
 
 

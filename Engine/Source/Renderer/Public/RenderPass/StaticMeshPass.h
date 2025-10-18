@@ -1,5 +1,6 @@
-﻿#pragma once
+#pragma once
 #include "Renderer/Public/RenderPass/RenderPass.h"
+#include "Renderer/Public/LightData.h"
 
 class FStaticMeshPass : public FRenderPass
 {
@@ -13,7 +14,8 @@ public:
      * @brief Update lights from rendering context and upload to GPU
      * @return Number of dynamic lights in the unified buffer
      */
-    uint32 UpdateLightsFromContext(FRenderingContext& Context);
+	void UpdateLightsFromContext(FRenderingContext& Context);
+	TArray<FUnifiedDynamicLight> ProcessLightsFromContext(FRenderingContext& Context);
 
 private:
     ID3D11VertexShader* VS = nullptr;
@@ -28,4 +30,6 @@ private:
     ID3D11Buffer* UnifiedLightStructuredBuffer = nullptr;
     ID3D11ShaderResourceView* UnifiedLightSRV = nullptr;
     uint32 UnifiedLightCapacity;
+
+	TArray<FUnifiedDynamicLight> UnifiedLights;
 };

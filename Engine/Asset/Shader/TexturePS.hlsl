@@ -53,7 +53,7 @@ struct FUnifiedDynamicLight
     float3 Position;            // 12 bytes - World space light position
     float Intensity;            // 4 bytes  - Light intensity (0.0 - 20.0)
     float3 Color;               // 12 bytes - RGB color filter (0.0 - 1.0 per channel)
-    float SourceRadius;         // 4 bytes  - Light influence radius / Physical size
+    float AttenuationRadius;         // 4 bytes  - Light influence radius / Physical size
     float3 Direction;           // 12 bytes - Light direction (Spot/Rect only, unused for Point)
     float FalloffExponent;      // 4 bytes  - Radial falloff exponent (2.0 - 16.0)
     float Param0;               // 4 bytes  - Spot: InnerConeAngle (radians), Rect: Width
@@ -189,13 +189,13 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
         float Distance = length(LightVec);
 
         // Early exit if outside light influence radius
-        if (Distance > Light.SourceRadius)
+        if (Distance > Light.AttenuationRadius)
             return Result;
 
         LightDir = normalize(LightVec);
 
         // Distance Attenuation (radial falloff)
-        float NormalizedDist = Distance / Light.SourceRadius;
+        float NormalizedDist = Distance / Light.AttenuationRadius;
         Attenuation = saturate(1.0f - pow(NormalizedDist, Light.FalloffExponent));
         Attenuation *= Light.Intensity;
 
@@ -203,8 +203,8 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
         if (Light.LightType == LIGHT_TYPE_SPOT)
         {
             float Theta = dot(LightDir, -Light.Direction);
-            float InnerCos = cos(Light.Param0);  // InnerConeAngle
-            float OuterCos = cos(Light.Param1);  // OuterConeAngle
+            float InnerCos = cos(radians(Light.Param0));  // InnerConeAngle
+            float OuterCos = cos(radians(Light.Param1));  // OuterConeAngle
 
             if (Theta < OuterCos)
                 return Result; // Outside cone

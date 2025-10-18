@@ -73,12 +73,12 @@ void FFogPass::Execute(FRenderingContext& Context)
         Pipeline->SetConstantBuffer(2, false, ConstantBufferViewportInfo);
 
         // Set Resources
-        Pipeline->SetTexture(0, false, Renderer.GetDepthSRV());
+        Pipeline->SetSRV(0, false, Renderer.GetDepthSRV());
         Pipeline->SetSamplerState(0, false, Renderer.GetDefaultSampler());
 
         Pipeline->Draw(3,0);
     }
-    Pipeline->SetTexture(0, false, nullptr);
+    Pipeline->SetSRV(0, false, nullptr);
     
     Renderer.GetDeviceContext()->OMSetRenderTargets(1, &RTV, DSV);
 }
