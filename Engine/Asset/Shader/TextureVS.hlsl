@@ -72,7 +72,7 @@ PS_INPUT mainVS(VS_INPUT Input)
 	Output.WorldNormal = normalize(mul(Input.Normal, (float3x3)WorldInverseTranspose));
 	Output.Tex = Input.Tex;
 
-	//#define LIGHTING_MODEL_GOURAUD // for coding
+//#define LIGHTING_MODEL_GOURAUD // for coding
 #if defined(LIGHTING_MODEL_GOURAUD)
 	float3 wsNormal = Output.WorldNormal;
 	
@@ -82,6 +82,7 @@ PS_INPUT mainVS(VS_INPUT Input)
     // Accumulate separated diffuse and specular contributions
     float3 TotalDiffuse = float3(0, 0, 0);
     float3 TotalSpecular = float3(0, 0, 0);
+    float3 TotalAmbient = float3(0, 0, 0);
 
     for (uint i = 0; i < UnifiedLightCount; i++)
     {
@@ -90,13 +91,20 @@ PS_INPUT mainVS(VS_INPUT Input)
 
         TotalDiffuse += LightResult.Diffuse;
         TotalSpecular += LightResult.Specular;
-    }
+		TotalAmbient += LightResult.Ambient;
+	}
 
-	Output.TotalAmbient = GlobalAmbient.Color * GlobalAmbient.Intensity;
+	Output.TotalAmbient = TotalAmbient;
 	Output.TotalDiffuse = TotalDiffuse;
 	Output.TotalSpecular = TotalSpecular;
 #else
 	Output.TotalDiffuse = Input.Color;
+
+	// pixel shader에서 normal map을 사용할 경우를 대비하여 World Tangent 계산
+	float3 worldT = mul(Input.Tangent.xyz, (float3x3) World);
+	worldT = normalize(worldT - Output.WorldNormal * dot(Output.WorldNormal, worldT));
+	Output.WorldTangent = worldT;
+	Output.TangentSign = Input.Tangent.w;
 #endif
 	
 	return Output;

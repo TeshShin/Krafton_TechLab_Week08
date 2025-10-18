@@ -18,6 +18,7 @@ struct FLightingResult
 {
     float3 Diffuse;   // Diffuse contribution (to be multiplied by Kd)
     float3 Specular;  // Specular contribution (to be multiplied by Ks)
+	float3 Ambient;	  // Ambient contribution (to be multiplied by Ka)
 };
 
 //--------------------------------------------------------------------------------------
@@ -77,7 +78,7 @@ FLightingResult CalculateLambertLighting(float3 LightDir, float3 Normal, float3 
 #define LIGHT_TYPE_DIRECTIONAL 0
 #define LIGHT_TYPE_POINT       1
 #define LIGHT_TYPE_SPOT        2
-#define LIGHT_TYPE_RECT        3
+#define LIGHT_TYPE_AMBIENT     3
 
 // [IMPORTANT] Must match C++ FUnifiedDynamicLight exactly (field names and order)
 struct FUnifiedDynamicLight
@@ -103,7 +104,8 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
 {
     FLightingResult Result;
     Result.Diffuse = float3(0, 0, 0);
-    Result.Specular = float3(0, 0, 0);
+	Result.Specular = float3(0, 0, 0);
+	Result.Ambient = float3(0, 0, 0);
 
     // Early exit for disabled/dummy lights
     if (Light.Intensity <= 0.0f)
@@ -111,7 +113,14 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
 
     float3 LightDir;
     float Attenuation = Light.Intensity;
+	
 
+	// Ambient Light: no direction or attenuation
+	if (Light.LightType == LIGHT_TYPE_AMBIENT)
+	{
+		Result.Ambient = Light.Color * Light.Intensity;
+		return Result;
+	}
     // Directional Light: parallel rays, no distance attenuation
     if (Light.LightType == LIGHT_TYPE_DIRECTIONAL)
     {
@@ -174,6 +183,8 @@ struct PS_INPUT
 	float3 WorldPosition : TEXCOORD0;
 	float3 WorldNormal : TEXCOORD1;
 	float2 Tex : TEXCOORD2;
+	float3 WorldTangent : TEXCOORD3;
+	float TangentSign : TEXCOORD4;
 	float3 TotalAmbient : COLOR0;
 	float3 TotalDiffuse : COLOR1;
 	float3 TotalSpecular : COLOR2;

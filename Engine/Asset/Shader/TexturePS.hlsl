@@ -123,22 +123,12 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 		float3 nTS = BumpTexture.Sample(SamplerWrap, UV).xyz * 2.0f - 1.0f;
 		nTS = normalize(nTS);
 
-        // Derive TBN from screen-space derivatives (no vertex tangents required)
 		float3 N = normalize(Input.WorldNormal);
-		float3 dpdx = ddx(Input.WorldPosition);
-		float3 dpdy = ddy(Input.WorldPosition);
-		float2 dUVdx = ddx(UV);
-		float2 dUVdy = ddy(UV);
+		float3 T = normalize(Input.WorldTangent);
+        // Recompute B using handedness (stored in TangentSign)
+		float3 B = normalize(cross(N, T)) * Input.TangentSign;
 
-        // Robust tangent reconstruction
-		float3 T = dUVdy.y * dpdx - dUVdx.y * dpdy;
-        // float3 B = -dUVdy.x * dpdx + dUVdx.x * dpdy;
-
-        // Orthonormalize
-		T = normalize(T - N * dot(N, T));
-		float3 B_ortho = normalize(cross(N, T));
-
-		float3x3 TBN = float3x3(T, B_ortho, N);
+		float3x3 TBN = float3x3(T, B, N);
 		wsNormal = normalize(mul(nTS, TBN));
 	}
 	else
@@ -155,9 +145,9 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
             DynamicLights[i], Input.WorldPosition, wsNormal, ViewDir, SpecularPower);
 
         TotalDiffuse += LightResult.Diffuse;
-        TotalSpecular += LightResult.Specular;
-    }
-	TotalAmbient = GlobalAmbient.Color * GlobalAmbient.Intensity;
+		TotalSpecular += LightResult.Specular;
+		TotalAmbient += LightResult.Ambient;
+	}
 #endif
 
 	// [PHYSICALLY CORRECT] Apply material properties separately
