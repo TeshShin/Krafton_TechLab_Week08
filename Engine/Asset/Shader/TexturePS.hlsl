@@ -12,6 +12,38 @@ cbuffer LightConstants : register(b10)
 };
 
 //--------------------------------------------------------------------------------------
+// [FORWARD PLUS RENDERING] Light Tile Clustering Data Structures
+//--------------------------------------------------------------------------------------
+
+// Camera and tiling parameters
+cbuffer FP_CameraCB : register(b11)
+{
+	row_major float4x4 FP_View;
+	row_major float4x4 FP_Projection;
+	row_major float4x4 FP_InvProj;
+	uint2   FP_ScreenSize;     // pixels (width, height)
+	uint2   FP_ViewportOrigin; // pixels (top-left x,y)
+	uint    FP_NumTilesX;      // dispatch dim X
+	uint    FP_NumTilesY;      // dispatch dim Y
+	uint    FP_NumZSlices;     // dispatch dim Z
+	float   FP_NearZ;          // view-space near (>= 0)
+	float   FP_FarZ;           // view-space far  (>  NearZ)
+};
+
+// Forward+ control parameters
+cbuffer FP_ForwardPlusCB : register(b12)
+{
+	uint FP_NumLights;                // number of entries in DynamicLights
+	uint FP_MaxLightsPerCluster;      // capacity per cluster
+	uint FP_TotalClusters;            // NumTilesX*NumTilesY*NumZSlices
+	uint FP_Pad0;
+};
+
+// Cluster lists produced by the compute shader
+StructuredBuffer<uint> FP_ClusterCount : register(t7);  // count per cluster
+StructuredBuffer<uint> FP_ClusterIndex : register(t8);  // flat indices array (clusterID*Max + i)
+
+//--------------------------------------------------------------------------------------
 // Material Constants
 //--------------------------------------------------------------------------------------
 
@@ -61,6 +93,29 @@ struct PS_OUTPUT
     float4 NormalData : SV_Target1;
 };
 
+//--------------------------------------------------------------------------------------
+// Functions
+//--------------------------------------------------------------------------------------
+
+uint FP_ComputeClusterID(float4 svpos /* SV_POSITION */, float3 worldPos)
+{
+    // Tile X/Y from pixel coords relative to viewport origin
+    float2 pix = svpos.xy - float2(FP_ViewportOrigin);
+    int tileX = clamp(int(floor(pix.x * (float)FP_NumTilesX / max(FP_ScreenSize.x, 1))), 0, int(FP_NumTilesX - 1));
+    int tileY = clamp(int(floor(pix.y * (float)FP_NumTilesY / max(FP_ScreenSize.y, 1))), 0, int(FP_NumTilesY - 1));
+
+    // LH view space depth (camera looks +Z)
+    float3 posVS = mul(float4(worldPos, 1.0f), FP_View).xyz;
+    float depthVS = max(posVS.z, FP_NearZ + 1e-6);
+
+    // Log z-slicing (exactly match CS partitioning)
+    float logDen = log(FP_FarZ / FP_NearZ);
+    float sliceF = (log(depthVS / FP_NearZ) / logDen) * FP_NumZSlices;
+    int zSlice = clamp(int(floor(sliceF)), 0, int(FP_NumZSlices - 1));
+
+	return (zSlice * FP_NumTilesY + tileY) * FP_NumTilesX + tileX;
+}
+
 PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 {
     PS_OUTPUT Output;
@@ -102,7 +157,7 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 	// #define LIGHTING_MODEL_GOURAUD
 #if defined(LIGHTING_MODEL_GOURAUD)
 	float3 wsNormal = Input.WorldNormal;
-	
+
 	TotalAmbient = Input.TotalAmbient;
 	TotalDiffuse = Input.TotalDiffuse;
 	TotalSpecular = Input.TotalSpecular;
@@ -128,18 +183,23 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 	{
 		wsNormal = normalize(Input.WorldNormal);
 	}
-	
+
     float3 ViewDir = normalize(ViewWorldLocation - Input.WorldPosition);
     float SpecularPower = max(Ns, 1.0f); // Prevent division by zero
 
-    for (uint i = 0; i < UnifiedLightCount; i++)
-    {
-        FLightingResult LightResult = CalculateDynamicLight(
-            DynamicLights[i], Input.WorldPosition, wsNormal, ViewDir, SpecularPower);
+	uint cid   = FP_ComputeClusterID(Input.Position, Input.WorldPosition);
+	uint count = FP_ClusterCount[cid];
+	uint base  = cid * FP_MaxLightsPerCluster;
 
-        TotalDiffuse += LightResult.Diffuse;
+	for (uint i = 0; i < count; ++i)
+	{
+		uint li = FP_ClusterIndex[base + i];
+		FLightingResult LightResult = CalculateDynamicLight(
+			DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, max(Ns, 1.0f));
+
+		TotalDiffuse  += LightResult.Diffuse;
 		TotalSpecular += LightResult.Specular;
-		TotalAmbient += LightResult.Ambient;
+		TotalAmbient  += LightResult.Ambient;
 	}
 #endif
 
@@ -154,7 +214,7 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 	FinalColor.rgb += SpecularColor.rgb * TotalSpecular;
 
 	Output.SceneColor = FinalColor;
-	
+
 	// 알파 값 처리 (기존 코드와 동일)
 	FinalColor.a = D; // 기본 알파값
 	if (MaterialFlags & HAS_ALPHA_MAP)
@@ -162,7 +222,7 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 		float alpha = AlphaTexture.Sample(SamplerWrap, UV).r;
 		FinalColor.a = D * alpha;
 	}
-	
+
     float3 EncodedNormal = wsNormal * 0.5f + 0.5f;
     Output.NormalData = float4(EncodedNormal, 1.0f);
 

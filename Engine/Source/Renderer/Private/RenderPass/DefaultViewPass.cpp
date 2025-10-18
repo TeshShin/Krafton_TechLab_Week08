@@ -3,7 +3,7 @@
 #include "Renderer/Public/RenderResourceFactory.h"
 
 FDefaultViewPass::FDefaultViewPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS)
-    : FRenderPass(InPipeline,  nullptr), DS(InDS)
+	: FRenderPass(InPipeline,  nullptr), DS(InDS)
 {
 	// Fullscreen pass: no input layout required
 	TArray<D3D11_INPUT_ELEMENT_DESC> LayoutDesc = {};
@@ -43,7 +43,7 @@ void FDefaultViewPass::Execute(FRenderingContext& Context)
 
 	// Fullscreen triangle
 	Pipeline->Draw(3, 0);
-    Pipeline->SetSRV(0, false, nullptr);
+	Pipeline->SetSRV(0, false, nullptr);
 }
 
 void FDefaultViewPass::Release()

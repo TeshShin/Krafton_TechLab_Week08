@@ -495,9 +495,10 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Scene\Public\Component\SpotLightComponent.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Editor\Private\UI\Widget\Component\SpotLightComponentWidget.cpp" />
-    <ClCompile Include="Source\Renderer\Private\RenderPass\DefaultViewPass.cpp">
+    <ClCompile Include="Asset\Shader\LightTilesComputeShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Private\UI\Widget\Component\SpotLightComponentWidget.cpp" />
     <ClCompile Include="Source\Renderer\Private\RenderPass\StaticMeshUnlitPass.cpp" />
     <ClCompile Include="Source\Scene\Private\Actor\SpotLightActor.cpp" />
     <ClCompile Include="Source\Scene\Private\Component\SpotLightComponent.cpp" />
@@ -650,6 +651,8 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClCompile Include="Source\Renderer\Private\Renderer.cpp">
     </ClCompile>
     <ClCompile Include="Source\Renderer\Private\RenderPass\BillboardPass.cpp">
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Private\RenderPass\DefaultViewPass.cpp">
     </ClCompile>
     <ClCompile Include="Source\Renderer\Private\RenderPass\DecalPass.cpp">
     </ClCompile>

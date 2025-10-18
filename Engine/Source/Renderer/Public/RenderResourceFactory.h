@@ -176,6 +176,39 @@ public:
 		URenderer::GetInstance().GetDeviceContext()->Unmap(InVertexBuffer, 0);
 	}
 
+	// ===============================
+	// Compute Shader & UAV utilities
+	// ===============================
+
+	static ID3D11ComputeShader* CreateComputeShader(
+		const std::wstring& InFilePath,
+		const D3D_SHADER_MACRO* InDefines = nullptr,
+		const char* Entry = "main",
+		const char* Profile = "cs_5_0");
+
+	// Structured buffer with UAV (no CPU access; DEFAULT usage)
+	static ID3D11Buffer* CreateStructuredBufferWithUAV(
+		uint32 ElementSize,    // sizeof(T) (no padding; D3D requires multiple of 4)
+		uint32 ElementCount,
+		ID3D11ShaderResourceView** OutSRV,
+		ID3D11UnorderedAccessView** OutUAV);
+
+	// UAV creation for an existing structured buffer (DXGI_FORMAT_UNKNOWN)
+	static ID3D11UnorderedAccessView* CreateBufferUAV(
+		ID3D11Buffer* Buffer,
+		uint32 NumElements,
+		DXGI_FORMAT Format = DXGI_FORMAT_UNKNOWN);
+
+	// Helpers to bind/unbind CS resources & dispatch
+	static void CSSetSRV(uint32 Slot, ID3D11ShaderResourceView* SRV);
+	static void CSSetUAV(uint32 Slot, ID3D11UnorderedAccessView* UAV, uint32 InitialCount = 0);
+	static void CSUnsetSRV(uint32 Slot, uint32 Count = 1);
+	static void CSUnsetUAV(uint32 Slot, uint32 Count = 1);
+	static void CSSetShader(ID3D11ComputeShader* CS);
+	static void CSDispatch(uint32 GroupX, uint32 GroupY, uint32 GroupZ);
+
+	// ===============================
+
 private:
 	struct FRasterKey
 	{
