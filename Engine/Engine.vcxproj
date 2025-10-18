@@ -459,6 +459,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Scene\Public\Actor\MovingCubeActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\PointLightActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\SphereActor.h" />
+    <ClInclude Include="Source\Scene\Public\Actor\SpotLightActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\StaticMeshActor.h">
       <DeploymentContent>false</DeploymentContent>
     </ClInclude>
@@ -498,6 +499,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClCompile Include="Source\Renderer\Private\RenderPass\DefaultViewPass.cpp">
     </ClCompile>
     <ClCompile Include="Source\Renderer\Private\RenderPass\StaticMeshUnlitPass.cpp" />
+    <ClCompile Include="Source\Scene\Private\Actor\SpotLightActor.cpp" />
     <ClCompile Include="Source\Scene\Private\Component\SpotLightComponent.cpp" />
     <FxCompile Include="Asset\Shader\HeightFogShader.hlsl">
       <ExcludedFromBuild>true</ExcludedFromBuild>
