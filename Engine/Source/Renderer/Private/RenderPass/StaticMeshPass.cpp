@@ -40,12 +40,20 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 		UnifiedLightStructuredBuffer, UnifiedLights);
 
 	// Bind Unified Light SRV to the pipeline
-	Pipeline->SetSRV(6, false, UnifiedLightSRV);
+	if(Context.ViewMode == EViewModeIndex::VMI_Lit_Gouraud)
+	{
+		Pipeline->SetSRV(6, true, UnifiedLightSRV);
+	}
+	else
+	{
+		Pipeline->SetSRV(6, false, UnifiedLightSRV);
+	}
 
 	FRenderState RenderState = UStaticMeshComponent::GetClassDefaultRenderState();
 	if (Context.ViewMode == EViewModeIndex::VMI_Wireframe)
 	{
-		RenderState.CullMode = ECullMode::None; RenderState.FillMode = EFillMode::WireFrame;
+		RenderState.CullMode = ECullMode::None;
+		RenderState.FillMode = EFillMode::WireFrame;
 	}
 	ID3D11RasterizerState* RS = FRenderResourceFactory::GetRasterizerState(RenderState);
 
@@ -80,15 +88,15 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	// GlobalAmbient is deprecated - all lights now go through unified StructuredBuffer
 	LightConstants.UnifiedLightCount = UnifiedLights.size();
 
-	for (ULightComponentBase* Light : Context.Lights)
-	{
-		if (Light->GetLightType() == ELightComponentType::LightType_Ambient)
-		{
-			LightConstants.GlobalAmbient.Color = Light->GetLightColor();
-			LightConstants.GlobalAmbient.Intensity = Light->GetIntensity();
-			break; // Only one ambient light is supported
-		}
-	}
+	//for (ULightComponentBase* Light : Context.Lights)
+	//{
+	//	if (Light->GetLightType() == ELightComponentType::LightType_Ambient)
+	//	{
+	//		LightConstants.GlobalAmbient.Color = Light->GetLightColor();
+	//		LightConstants.GlobalAmbient.Intensity = Light->GetIntensity();
+	//		break; // Only one ambient light is supported
+	//	}
+	//}
 
 	if (Context.ViewMode == EViewModeIndex::VMI_Lit_Gouraud)
 	{
@@ -242,7 +250,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	 * @todo Find a better way to reduce depdency upon Renderer class.
 	 * @note How about introducing methods like BeginPass(), EndPass() to set up and release pass specific state?
 	 */
-	Pipeline->SetRenderTargets(1, RTVs, DSV);
+	Pipeline->SetRenderTargets(2, RTVs, DSV);
 
 	// --- RTVs Reset End ---
 }
