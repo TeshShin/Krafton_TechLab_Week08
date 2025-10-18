@@ -216,7 +216,7 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
 PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 {
     PS_OUTPUT Output;
-	
+
     float2 UV = Input.Tex;
 
     // Base diffuse color
@@ -291,28 +291,18 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 		float3 nTS = BumpTexture.Sample(SamplerWrap, UV).xyz * 2.0f - 1.0f;
 		nTS = normalize(nTS);
 
-        // Derive TBN from screen-space derivatives (no vertex tangents required)
-		float3 N = normalize(Input.WorldNormal);
-		float3 dpdx = ddx(Input.WorldPosition);
-		float3 dpdy = ddy(Input.WorldPosition);
-		float2 dUVdx = ddx(UV);
-		float2 dUVdy = ddy(UV);
+        float3 N = normalize(Input.WorldNormal);
+        float3 T = normalize(Input.WorldTangent);
+        // Recompute B using handedness (stored in TangentSign)
+        float3 B = normalize(cross(N, T)) * Input.TangentSign;
 
-        // Robust tangent reconstruction
-		float3 T = dUVdy.y * dpdx - dUVdx.y * dpdy;
-        // float3 B = -dUVdy.x * dpdx + dUVdx.x * dpdy;
-
-        // Orthonormalize
-		T = normalize(T - N * dot(N, T));
-		float3 B_ortho = normalize(cross(N, T));
-
-		float3x3 TBN = float3x3(T, B_ortho, N);
-		wsNormal = normalize(mul(nTS, TBN));
-	}
-	else
-	{
-		wsNormal = normalize(Input.WorldNormal);
-	}
+        float3x3 TBN = float3x3(T, B, N);
+        wsNormal = normalize(mul(nTS, TBN));
+    }
+    else
+    {
+        wsNormal = normalize(Input.WorldNormal);
+    }
 
     // 3. 알파 값 처리 (기존 코드와 동일)
     FinalColor.a = D; // 기본 알파값

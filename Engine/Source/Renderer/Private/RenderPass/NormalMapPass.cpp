@@ -42,6 +42,7 @@ void FNormalMapPass::Execute(FRenderingContext& Context)
 
     Pipeline->SetConstantBuffer(0, false, ConstantBufferPerFrame);
     Pipeline->SetTexture(0, false, DeviceResources->GetNormalSRV());
+    Pipeline->SetTexture(1, false, DeviceResources->GetDepthStencilSRV());
     Pipeline->SetSamplerState(0, false, SamplerState);
 
     // Fullscreen triangle

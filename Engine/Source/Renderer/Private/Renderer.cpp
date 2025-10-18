@@ -38,8 +38,8 @@ void URenderer::Init(HWND InWindowHandle)
 	DeviceResources = new UDeviceResources(InWindowHandle);
 	Pipeline = new UPipeline(GetDeviceContext());
 	ViewportClient = new FViewport();
-	
-	
+
+
 	// 렌더링 상태 및 리소스 생성
 	CreateDepthStencilState();
 	CreateBlendState();
@@ -56,7 +56,7 @@ void URenderer::Init(HWND InWindowHandle)
 
 	FDecalPass* DecalPass = new FDecalPass(Pipeline, ConstantBufferViewProj, DecalDepthStencilState, AlphaBlendState);
 	RenderPasses.push_back(DecalPass);
-	
+
 	FBillboardPass* BillboardPass = new FBillboardPass(Pipeline, ConstantBufferViewProj, ConstantBufferModels,
 		TextureVertexShader, TexturePixelShader, TextureInputLayout, DefaultDepthStencilState, AlphaBlendState);
 	RenderPasses.push_back(BillboardPass);
@@ -94,7 +94,7 @@ void URenderer::Release()
 	}
 	FXAAPass->Release();
 	SafeDelete(FXAAPass);
-	
+
 	SafeDelete(ViewportClient);
 	SafeDelete(Pipeline);
 	SafeDelete(DeviceResources);
@@ -187,7 +187,8 @@ void URenderer::CreateTextureShader()
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Position), D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Normal), D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Color), D3D11_INPUT_PER_VERTEX_DATA, 0	},
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FNormalVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0	}
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FNormalVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0	},
+        { "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Tangent), D3D11_INPUT_PER_VERTEX_DATA, 0 }
 	};
 	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/TextureVS.hlsl", TextureLayout, &TextureVertexShader, &TextureInputLayout);
 	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/TexturePS.hlsl", &TexturePixelShader);
@@ -199,7 +200,7 @@ void URenderer::ReleaseDefaultShader()
 	SafeRelease(DefaultInputLayout);
 	SafeRelease(DefaultPixelShader);
 	SafeRelease(DefaultVertexShader);
-	
+
 	SafeRelease(TextureInputLayout);
 	SafeRelease(TexturePixelShader);
 	SafeRelease(TextureVertexShader);
@@ -251,16 +252,16 @@ void URenderer::Update()
         CurrentCamera->Update(ViewportClient.GetViewportInfo());
         FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferViewProj, CurrentCamera->GetFViewProjConstants());
         Pipeline->SetConstantBuffer(1, true, ConstantBufferViewProj);
-	    
+
 	    {
-        	TIME_PROFILE(RenderEditor)
-			GEditor->GetEditorModule()->RenderEditor();
+	        TIME_PROFILE(RenderLevel)
+	        RenderLevel(ViewportClient);
 	    }
-        {
-            TIME_PROFILE(RenderLevel)
-            RenderLevel(ViewportClient);
-        }
-    	
+	    {
+	        TIME_PROFILE(RenderEditor)
+	        GEditor->GetEditorModule()->RenderEditor();
+	    }
+
         // Gizmo는 최종적으로 렌더
         GEditor->GetEditorModule()->RenderGizmo(CurrentCamera);
     }
@@ -403,11 +404,11 @@ void URenderer::RenderEditorPrimitive(const FEditorPrimitive& InPrimitive, const
 		FMatrix::GetModelMatrix(InPrimitive.Location, InPrimitive.Rotation, InPrimitive.Scale));
 	Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
 	Pipeline->SetConstantBuffer(1, true, ConstantBufferViewProj);
-	
+
 	FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferColor, InPrimitive.Color);
 	Pipeline->SetConstantBuffer(2, false, ConstantBufferColor);
 	Pipeline->SetConstantBuffer(2, true, ConstantBufferColor);
-	
+
     Pipeline->SetVertexBuffer(InPrimitive.VertexBuffer, FinalStride);
 
     // The core logic: check for an index buffer

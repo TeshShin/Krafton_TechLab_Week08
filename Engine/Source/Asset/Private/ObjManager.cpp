@@ -153,6 +153,86 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FName& PathFileName, cons
 		}
 	}
 
+    // --- Compute per-vertex tangents on CPU ---
+    if (!StaticMesh->Vertices.empty() && !StaticMesh->Indices.empty())
+    {
+        const size_t vtxCount = StaticMesh->Vertices.size();
+        const size_t idxCount = StaticMesh->Indices.size();
+
+        TArray<FVector> tan1; tan1.resize(vtxCount); // accumulate tangent
+        TArray<FVector> tan2; tan2.resize(vtxCount); // accumulate bitangent
+
+        for (size_t i = 0; i + 2 < idxCount; i += 3)
+        {
+            uint32 i0 = StaticMesh->Indices[i + 0];
+            uint32 i1 = StaticMesh->Indices[i + 1];
+            uint32 i2 = StaticMesh->Indices[i + 2];
+            if (i0 >= vtxCount || i1 >= vtxCount || i2 >= vtxCount) { continue; }
+
+            const FVector& p0 = StaticMesh->Vertices[i0].Position;
+            const FVector& p1 = StaticMesh->Vertices[i1].Position;
+            const FVector& p2 = StaticMesh->Vertices[i2].Position;
+
+            const FVector2& w0 = StaticMesh->Vertices[i0].TexCoord;
+            const FVector2& w1 = StaticMesh->Vertices[i1].TexCoord;
+            const FVector2& w2 = StaticMesh->Vertices[i2].TexCoord;
+
+            float x1 = p1.X - p0.X;
+            float y1 = p1.Y - p0.Y;
+            float z1 = p1.Z - p0.Z;
+            float x2 = p2.X - p0.X;
+            float y2 = p2.Y - p0.Y;
+            float z2 = p2.Z - p0.Z;
+
+            float s1 = w1.X - w0.X;
+            float t1 = w1.Y - w0.Y;
+            float s2 = w2.X - w0.X;
+            float t2 = w2.Y - w0.Y;
+
+            float denom = (s1 * t2 - s2 * t1);
+            if (fabsf(denom) < 1e-8f)
+            {
+                // Degenerate UV mapping on this tri; skip accumulation
+                continue;
+            }
+            float r = 1.0f / denom;
+            FVector sdir{ (t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r };
+            FVector tdir{ (s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r };
+
+            tan1[i0] += sdir; tan1[i1] += sdir; tan1[i2] += sdir;
+            tan2[i0] += tdir; tan2[i1] += tdir; tan2[i2] += tdir;
+        }
+
+        for (size_t v = 0; v < vtxCount; ++v)
+        {
+            FVector n = StaticMesh->Vertices[v].Normal;
+            FVector t = tan1[v];
+
+            // Orthonormalize T to N
+            // t = normalize(t - n * dot(n, t))
+            float ndott = n.Dot(t);
+            FVector tOrtho = t - n * ndott;
+            float tLen = tOrtho.Length();
+            if (tLen > 1e-6f)
+            {
+                tOrtho = tOrtho * (1.0f / tLen);
+            }
+            else
+            {
+                // Fallback: build any valid tangent
+                FVector ref = fabsf(n.Z) < 0.999f ? FVector::UpVector() : FVector::RightVector();
+                tOrtho = n.Cross(ref);
+                tOrtho.Normalize();
+            }
+
+            // Compute handedness (w)
+            FVector b = n.Cross(tOrtho);
+            float w = (b.Dot(tan2[v]) < 0.0f) ? -1.0f : 1.0f;
+
+            StaticMesh->Vertices[v].Tangent = FVector4(tOrtho.X, tOrtho.Y, tOrtho.Z, w);
+        }
+    }
+
 	/** #3. 오브젝트가 사용하는 머티리얼의 목록을 저장 */
 	TSet<FName> UniqueMaterialNames;
 	for (const auto& MaterialName : ObjectInfo.MaterialNameList)

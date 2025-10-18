@@ -17,6 +17,7 @@ cbuffer PerFrameConstants : register(b0)
 // Textures and Sampler
 // ------------------------------------------------
 Texture2D NormalTexture : register(t0);
+Texture2D DepthTexture  : register(t1);
 SamplerState PointSampler : register(s0);
 
 // ------------------------------------------------
@@ -40,6 +41,13 @@ PS_INPUT mainVS(uint vertexID : SV_VertexID)
 float4 mainPS(PS_INPUT Input) : SV_TARGET
 {
     float2 uv = Input.Position.xy / RenderTargetSize;
+
+    // Discard where no geometry was rendered (depth cleared to 1.0)
+    float depth = DepthTexture.Sample(PointSampler, uv).r;
+    if (depth >= 0.9999f)
+    {
+        discard;
+    }
 
     // Stored normal is encoded to [0,1]. For visualization, we can show it directly.
     float3 encodedNormal = NormalTexture.Sample(PointSampler, uv).xyz;
