@@ -10,7 +10,7 @@ public:
     void Execute(FRenderingContext& Context) override;
     void Release() override;
 	
-	TArray<FUnifiedDynamicLight> ProcessLightsFromContext(FRenderingContext& Context);
+	TArray<FUnifiedDynamicLight> CollectLightsFromContext(FRenderingContext& Context);
 
 private:
     ID3D11VertexShader* VS = nullptr;

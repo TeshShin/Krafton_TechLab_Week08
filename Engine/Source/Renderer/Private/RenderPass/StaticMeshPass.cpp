@@ -24,8 +24,16 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstant
 
 void FStaticMeshPass::Execute(FRenderingContext& Context)
 {
-	// Get Lights from Context
-	TArray<FUnifiedDynamicLight> UnifiedLights = ProcessLightsFromContext(Context);
+	// Collect lights from context
+	TArray<FUnifiedDynamicLight> UnifiedLights = CollectLightsFromContext(Context);
+
+	// Ensure buffer capacity is sufficient
+	if (UnifiedLights.size() > UnifiedLightCapacity)
+	{
+		UnifiedLightCapacity = static_cast<uint32>(UnifiedLights.size() * 2);
+		FRenderResourceFactory::ReallocateStructuredBuffer<FUnifiedDynamicLight>(
+			UnifiedLightStructuredBuffer, UnifiedLightSRV, UnifiedLightCapacity);
+	}
 
 	// Upload Unified Lights to StructuredBuffer
 	FRenderResourceFactory::UpdateStructuredBufferData(
@@ -192,9 +200,9 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	// --- RTVs Reset End ---
 }
 
-TArray<FUnifiedDynamicLight> FStaticMeshPass::ProcessLightsFromContext(FRenderingContext& Context)
+TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderingContext& Context)
 {
-	// Step 1: Collect all dynamic lights into unified buffer
+	// Collect all dynamic lights into unified buffer
 	TArray<FUnifiedDynamicLight> UnifiedLights;
 
 	for (ULightComponentBase* Light : Context.Lights)
@@ -206,19 +214,6 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::ProcessLightsFromContext(FRenderin
 		UnifiedLights.push_back(UnifiedLight);
 	}
 
-	// Store actual light count before padding
-	uint32 ActualLightCount = static_cast<uint32>(UnifiedLights.size());
-
-	// Step 2: Reallocate buffer if capacity exceeded
-	// Always maintain minimum capacity of 1 to support empty updates
-	if (UnifiedLights.size() > UnifiedLightCapacity)
-	{
-		UnifiedLightCapacity = static_cast<uint32>(UnifiedLights.size() * 2);
-		FRenderResourceFactory::ReallocateStructuredBuffer<FUnifiedDynamicLight>(
-			UnifiedLightStructuredBuffer, UnifiedLightSRV, UnifiedLightCapacity);
-	}
-
-	// Step 3: Upload to GPU (always update, even if empty, to clear stale data)
 	// When empty, upload one dummy light with Intensity=0 to maintain buffer validity
 	if (UnifiedLights.empty())
 	{
