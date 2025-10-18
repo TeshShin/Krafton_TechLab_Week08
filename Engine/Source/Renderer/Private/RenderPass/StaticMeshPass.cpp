@@ -6,6 +6,7 @@
 #include "Renderer/Public/RenderResourceFactory.h"
 #include "Renderer/Public/LightData.h"
 #include "Asset/Public/Texture.h"
+#include "Editor/Public/Camera.h"
 
 FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferModel, ID3D11DepthStencilState* InDS)
 	: FRenderPass(InPipeline, InConstantBufferModel), DS(InDS)
@@ -50,6 +51,11 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstant
 	UnifiedLightCapacity = 128;  // Initial capacity for all dynamic lights
 	UnifiedLightStructuredBuffer = FRenderResourceFactory::CreateStructuredBuffer<FUnifiedDynamicLight>(UnifiedLightCapacity);
 	UnifiedLightSRV = FRenderResourceFactory::CreateBufferSRV(UnifiedLightStructuredBuffer, UnifiedLightCapacity);
+
+	LightTilesCS = FRenderResourceFactory::CreateComputeShader(L"Asset/Shader/LightTilesComputeShader.hlsl");
+
+	FP_CameraCB = FRenderResourceFactory::CreateConstantBuffer<FForwardPlusCameraConstants>();
+	FP_ParamsCB = FRenderResourceFactory::CreateConstantBuffer<FForwardPlusConstants>();
 }
 
 bool FStaticMeshPass::CanRender(const FRenderingContext& Context)
@@ -64,10 +70,108 @@ void FStaticMeshPass::SetRenderTargets(class UDeviceResources* DeviceResources)
 	Pipeline->SetRenderTargets(2, RTVs, DSV);
 }
 
+void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 NumLights)
+{
+	UDeviceResources* DR = URenderer::GetInstance().GetDeviceResources();
+	uint32 Width = DR->GetWidth();
+	uint32 Height = DR->GetHeight();
+
+	uint32 TileSize = 32;
+
+	// Ceil-div to cover the whole screen with tiles
+	uint32 NumTilesX = (Width  + TileSize - 1) / TileSize;
+	uint32 NumTilesY = (Height + TileSize - 1) / TileSize;
+	uint32 NumZSlices = 24;
+	uint32 TotalClusters = NumTilesX * NumTilesY * NumZSlices;
+	uint32 MaxLightsPerCluster = 64;
+
+	// Recreate Count/Index buffers every frame if dims changed (simple implementation)
+	// Release previous resources first
+	SafeRelease(ClusterCountSRV);
+	SafeRelease(ClusterCountUAV);
+	SafeRelease(ClusterCountBuffer);
+	SafeRelease(ClusterIndexSRV);
+	SafeRelease(ClusterIndexUAV);
+	SafeRelease(ClusterIndexBuffer);
+
+	// Create Count buffer (TotalClusters uints)
+	const uint32 CountElements = TotalClusters;
+	ClusterCountBuffer = FRenderResourceFactory::CreateStructuredBufferWithUAV(
+		sizeof(uint32),
+		CountElements,
+		&ClusterCountSRV,
+		&ClusterCountUAV);
+
+	// Create Index buffer (TotalClusters * MaxLightsPerCluster uints)
+	const uint32 IndexElements = TotalClusters * MaxLightsPerCluster;
+	ClusterIndexBuffer = FRenderResourceFactory::CreateStructuredBufferWithUAV(
+		sizeof(uint32),
+		IndexElements,
+		&ClusterIndexSRV,
+		&ClusterIndexUAV);
+
+	auto* CurrentCamera = Context.CurrentCamera;
+
+	FForwardPlusCameraConstants FPcam = {};
+	FPcam.View        = CurrentCamera->GetFViewProjConstants().View;                // row_major
+	FPcam.Proj        = CurrentCamera->GetFViewProjConstants().Projection;          // row_major
+	FPcam.InvProj     = CurrentCamera->GetFViewProjConstantsInverse().Projection;
+	FPcam.ScreenSize  = {Width, Height};
+	FPcam.NumTilesX   = NumTilesX;
+	FPcam.NumTilesY   = NumTilesY;
+	FPcam.NumZSlices  = NumZSlices;
+	FPcam.NearZ       = CurrentCamera->GetNearZ();
+	FPcam.FarZ        = CurrentCamera->GetFarZ();
+
+	FForwardPlusConstants FPparams = {};
+	FPparams.NumLights            = static_cast<uint32>(NumLights);
+	FPparams.MaxLightsPerCluster  = MaxLightsPerCluster;
+	FPparams.TotalClusters        = TotalClusters;
+
+	FRenderResourceFactory::UpdateConstantBufferData(FP_CameraCB, FPcam);
+	FRenderResourceFactory::UpdateConstantBufferData(FP_ParamsCB, FPparams);
+
+	ID3D11DeviceContext* ctx = URenderer::GetInstance().GetDeviceContext();
+
+	// CS constant buffers (slots b0,b1 to match LightTilesComputeShader.hlsl)
+	ID3D11Buffer* csCBs[2] = { FP_CameraCB, FP_ParamsCB };
+	ctx->CSSetConstantBuffers(0, 2, csCBs);
+
+	// CS SRV (t0 = unified dynamic lights; you already filled/grew this)
+	ID3D11ShaderResourceView* csSRVs[1] = { UnifiedLightSRV };
+	ctx->CSSetShaderResources(0, 1, csSRVs);
+
+	// CS UAVs (u0 = counts, u1 = indices)
+	ID3D11UnorderedAccessView* csUAVs[2] = { ClusterCountUAV, ClusterIndexUAV };
+	UINT initialCounts[2] = { 0, 0 }; // ignored for structured UAVs
+	ctx->CSSetUnorderedAccessViews(0, 2, csUAVs, initialCounts);
+
+	// Set compute shader
+	ctx->CSSetShader(LightTilesCS, nullptr, 0);
+
+	// IMPORTANT: clear counts either here or inside CS.
+	// Since your count buffer is a *structured* UAV, prefer zeroing at the top of the CS kernel:
+	//   ClusterCount[cid] = 0;
+	// If you already did that, no ClearUAVUint call is needed here.
+
+	// Dispatch one thread per cluster (per your CS)
+	ctx->Dispatch(NumTilesX, NumTilesY, NumZSlices);
+
+	// Unbind CS UAVs/SRVs to avoid hazards when we rebinding as PS SRVs later
+	ID3D11UnorderedAccessView* nullUAVs[2] = { nullptr, nullptr };
+	ctx->CSSetUnorderedAccessViews(0, 2, nullUAVs, initialCounts);
+
+	ID3D11ShaderResourceView* nullSRVs[1] = { nullptr };
+	ctx->CSSetShaderResources(0, 1, nullSRVs);
+
+	// (Optional) leave CS set or clear it:
+	ctx->CSSetShader(nullptr, nullptr, 0);
+}
+
 void FStaticMeshPass::Execute(FRenderingContext& Context)
 {
-	// Collect lights from context
-	TArray<FUnifiedDynamicLight> UnifiedLights = CollectLightsFromContext(Context);
+    // Collect lights from context
+    TArray<FUnifiedDynamicLight> UnifiedLights = CollectLightsFromContext(Context);
 
 	// Ensure buffer capacity is sufficient
 	if (UnifiedLights.size() > UnifiedLightCapacity)
@@ -77,9 +181,12 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 			UnifiedLightStructuredBuffer, UnifiedLightSRV, UnifiedLightCapacity);
 	}
 
-	// Upload Unified Lights to StructuredBuffer
-	FRenderResourceFactory::UpdateStructuredBufferData(
-		UnifiedLightStructuredBuffer, UnifiedLights);
+    // Upload Unified Lights to StructuredBuffer
+    FRenderResourceFactory::UpdateStructuredBufferData(
+        UnifiedLightStructuredBuffer, UnifiedLights);
+
+    // After uploading current lights, build clusters using the compute shader
+    CreateClusterBuffers(Context, UnifiedLights.size());
 
 	// Bind Unified Light SRV to the pipeline
 	if(Context.ViewMode == EViewModeIndex::VMI_Lit_Gouraud)
@@ -88,7 +195,15 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	}
 	else
 	{
-		Pipeline->SetSRV(6, false, UnifiedLightSRV);
+		// PS also needs the unified light buffer at t6 for clustering
+		Pipeline->SetSRV(6, false /*PS*/, UnifiedLightSRV);
+		// Bind Forward+ SRVs for PS
+		Pipeline->SetSRV(7, false /*PS*/, ClusterCountSRV);
+		Pipeline->SetSRV(8, false /*PS*/, ClusterIndexSRV);
+
+		// Bind Forward+ CBs for PS (slots b11, b12)
+		Pipeline->SetConstantBuffer(11, false /*PS*/, FP_CameraCB);
+		Pipeline->SetConstantBuffer(12, false /*PS*/, FP_ParamsCB);
 	}
 
 	FRenderState RenderState = UStaticMeshComponent::GetClassDefaultRenderState();
@@ -290,6 +405,17 @@ void FStaticMeshPass::Release()
 	SafeRelease(ConstantBufferLight);
 	SafeRelease(UnifiedLightStructuredBuffer);
 	SafeRelease(UnifiedLightSRV);
+	
+	// Forward+ resources
+	SafeRelease(ClusterCountSRV);
+	SafeRelease(ClusterCountUAV);
+	SafeRelease(ClusterCountBuffer);
+	SafeRelease(ClusterIndexSRV);
+	SafeRelease(ClusterIndexUAV);
+	SafeRelease(ClusterIndexBuffer);
+	SafeRelease(FP_CameraCB);
+	SafeRelease(FP_ParamsCB);
+	SafeRelease(LightTilesCS);
 	SafeRelease(VSPhong);
 	SafeRelease(PSPhong);
 	SafeRelease(VSLambert);

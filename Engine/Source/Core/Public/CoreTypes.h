@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include "Core/Public/Math/Vector.h"
 #include "Core/Public/Math/Matrix.h"
 #include "Core/Public/Types.h"
@@ -142,7 +143,28 @@ struct FAmbientLight
  *          All dynamic lights (Directional, Point, Spot) use StructuredBuffer (t6)
  */
 struct FLightConstants
-{ 
+{
 	uint32 UnifiedLightCount;       // 4 bytes  - Number of lights in unified StructuredBuffer
 	float Padding[3];               // 12 bytes - Padding for 16-byte alignment
+};
+
+struct FForwardPlusCameraConstants
+{
+	FMatrix View;
+	FMatrix Proj;
+	FMatrix InvProj;
+	std::array<uint32, 2>  ScreenSize;     // pixels (width, height)
+	uint32  NumTilesX;      // dispatch dim X
+	uint32  NumTilesY;      // dispatch dim Y
+	uint32  NumZSlices;     // dispatch dim Z
+	float   NearZ;          // view-space near (>= 0)
+	float   FarZ;           // view-space far  (>  NearZ)
+};
+
+struct FForwardPlusConstants
+{
+	uint32 NumLights;                // number of entries in DynamicLights
+	uint32 MaxLightsPerCluster;      // capacity per cluster
+	uint32 TotalClusters;            // NumTilesX*NumTilesY*NumZSlices
+	uint32 FP_Pad0;
 };

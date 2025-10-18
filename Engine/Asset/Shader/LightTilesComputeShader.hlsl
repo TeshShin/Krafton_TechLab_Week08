@@ -28,11 +28,11 @@ cbuffer ForwardPlusCB : register(b1)
     uint FP_Pad0;
 };
 
-// Light type enumeration (must match pixel shader)
+// Light type enumeration (must match pixel shader and LightingFunctions.hlsl)
 #define LIGHT_TYPE_DIRECTIONAL 0
 #define LIGHT_TYPE_POINT       1
 #define LIGHT_TYPE_SPOT        2
-#define LIGHT_TYPE_RECT        3
+#define LIGHT_TYPE_AMBIENT     3
 
 // Must match TexturePS.hlsl FUnifiedDynamicLight exactly
 struct FUnifiedDynamicLight
@@ -134,7 +134,7 @@ bool IntersectsUnifiedLightFrustum(FUnifiedDynamicLight L, Frustum f)
     float3 centerVS = mul(float4(L.Position, 1.0f), View).xyz;
     float3 dirVS    = normalize(mul(float4(L.Direction, 0.0f), View).xyz);
 
-    if (L.LightType == LIGHT_TYPE_DIRECTIONAL)
+    if (L.LightType == LIGHT_TYPE_DIRECTIONAL || L.LightType == LIGHT_TYPE_AMBIENT)
     {
         // Directional lights affect all clusters (optionally handle separately)
         return true;
@@ -149,6 +149,11 @@ bool IntersectsUnifiedLightFrustum(FUnifiedDynamicLight L, Frustum f)
 [numthreads(1, 1, 1)]
 void main(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
+	uint3 gid = dispatchThreadID;
+	uint cid = (gid.z * NumTilesY + gid.y) * NumTilesX + gid.x;
+	ClusterCount[cid] = 0;
+	GroupMemoryBarrierWithGroupSync();
+
     uint tileX = dispatchThreadID.x;
     uint tileY = dispatchThreadID.y;
     uint zSlice = dispatchThreadID.z;

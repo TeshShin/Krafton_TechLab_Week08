@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Renderer/Public/RenderPass/RenderPass.h"
 #include "Renderer/Public/LightData.h"
 
@@ -11,7 +11,7 @@ public:
 	void SetRenderTargets(class UDeviceResources* DeviceResources) override;
 	void Execute(FRenderingContext& Context) override;
     void Release() override;
-	
+
 	TArray<FUnifiedDynamicLight> CollectLightsFromContext(FRenderingContext& Context);
 
 private:
@@ -36,4 +36,19 @@ private:
     uint32 UnifiedLightCapacity;
 
 	TArray<FUnifiedDynamicLight> UnifiedLights;
+
+	ID3D11ComputeShader* LightTilesCS = nullptr;
+
+	ID3D11Buffer* ClusterCountBuffer = nullptr;
+	ID3D11UnorderedAccessView* ClusterCountUAV = nullptr;
+	ID3D11ShaderResourceView* ClusterCountSRV = nullptr;
+
+	ID3D11Buffer* ClusterIndexBuffer = nullptr;
+	ID3D11UnorderedAccessView* ClusterIndexUAV = nullptr;
+	ID3D11ShaderResourceView* ClusterIndexSRV = nullptr;
+
+	ID3D11Buffer* FP_CameraCB = nullptr;
+	ID3D11Buffer* FP_ParamsCB = nullptr;
+
+	void CreateClusterBuffers(FRenderingContext& Context, uint32 NumLights);
 };
