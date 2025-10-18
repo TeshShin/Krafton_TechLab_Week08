@@ -14,7 +14,6 @@ struct FAmbientLight
 // Light Constants (ConstantBuffer b10)
 cbuffer LightConstants : register(b10)
 {
-    FAmbientLight GlobalAmbient;        // 16 bytes - Scene-wide ambient illumination
     uint UnifiedLightCount;             // 4 bytes  - Number of lights in StructuredBuffer
     float3 Padding;                     // 12 bytes - Alignment padding
 };
@@ -46,7 +45,7 @@ Texture2D BumpTexture : register(t5);		// map_bump
 #define LIGHT_TYPE_DIRECTIONAL 0
 #define LIGHT_TYPE_POINT       1
 #define LIGHT_TYPE_SPOT        2
-#define LIGHT_TYPE_RECT        3
+#define LIGHT_TYPE_AMBIENT     3
 
 // [IMPORTANT] Must match C++ FUnifiedDynamicLight exactly (field names and order)
 struct FUnifiedDynamicLight
@@ -94,6 +93,7 @@ struct FLightingResult
 {
     float3 Diffuse;   // Diffuse contribution (to be multiplied by Kd)
     float3 Specular;  // Specular contribution (to be multiplied by Ks)
+	float3 Ambient; // Ambient contribution (to be multiplied by Ka)
 };
 
 //--------------------------------------------------------------------------------------
@@ -124,6 +124,9 @@ FLightingResult CalculateBlinnPhongLighting(float3 LightDir, float3 Normal, floa
     float SpecularFactor = pow(NdotH, SpecularPower);
     Result.Specular = LightColor * SpecularFactor;
 
+    // No ambient contribution
+    Result.Ambient = float3(0, 0, 0);
+
     return Result;
 }
 
@@ -141,6 +144,7 @@ FLightingResult CalculateLambertLighting(float3 LightDir, float3 Normal, float3 
     float NdotL = saturate(dot(Normal, LightDir));
     Result.Diffuse = LightColor * NdotL;
     Result.Specular = float3(0, 0, 0);
+    Result.Ambient = float3(0, 0, 0);
 
     return Result;
 }
@@ -158,6 +162,7 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
     FLightingResult Result;
     Result.Diffuse = float3(0, 0, 0);
     Result.Specular = float3(0, 0, 0);
+    Result.Ambient = float3(0, 0, 0);
 
     // Early exit for disabled/dummy lights
     if (Light.Intensity <= 0.0f)
@@ -166,8 +171,14 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
     float3 LightDir;
     float Attenuation = Light.Intensity;
 
+	// Ambient Light: no direction or attenuation
+	if (Light.LightType == LIGHT_TYPE_AMBIENT)
+    {
+		Result.Ambient = Light.Color * Light.Intensity;
+		return Result;
+	}
     // Directional Light: parallel rays, no distance attenuation
-    if (Light.LightType == LIGHT_TYPE_DIRECTIONAL)
+    else if (Light.LightType == LIGHT_TYPE_DIRECTIONAL)
     {
         LightDir = normalize(-Light.Direction);
     }
@@ -219,6 +230,30 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 
     float2 UV = Input.Tex;
 
+    // 1. Calculate world-space normal (with normal mapping if available)
+    // -----------------------
+	float3 wsNormal = Input.WorldNormal;
+	if (MaterialFlags & HAS_BUMP_MAP)
+	{
+        // Sample and unpack tangent-space normal (assumes XYZ in texture)
+		float3 nTS = BumpTexture.Sample(SamplerWrap, UV).xyz * 2.0f - 1.0f;
+		nTS = normalize(nTS);
+
+        float3 N = normalize(Input.WorldNormal);
+        float3 T = normalize(Input.WorldTangent);
+        // Recompute B using handedness (stored in TangentSign)
+        float3 B = normalize(cross(N, T)) * Input.TangentSign;
+
+        float3x3 TBN = float3x3(T, B, N);
+        wsNormal = normalize(mul(nTS, TBN));
+    }
+    else
+    {
+        wsNormal = normalize(Input.WorldNormal);
+    }
+
+    // 2. Sample material properties
+    // -----------------------
     // Base diffuse color
     float4 DiffuseColor = Kd;
     if (MaterialFlags & HAS_DIFFUSE_MAP)
@@ -244,74 +279,53 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
         SpecularColor *= SpecularTexture.Sample(SamplerWrap, UV);
     }
 
-    // [UNIFIED FORWARD RENDERING] Accumulate dynamic lights (single loop)
-    float3 Normal = normalize(Input.WorldNormal);
+    // 3. Calculate lighting using the computed normal
+    // -----------------------
     float3 ViewDir = normalize(ViewWorldLocation - Input.WorldPosition);
     float SpecularPower = max(Ns, 1.0f); // Prevent division by zero
 
-    // Accumulate separated diffuse and specular contributions
+    // Accumulate separated diffuse, specular, and ambient contributions
     float3 TotalDiffuse = float3(0, 0, 0);
-    float3 TotalSpecular = float3(0, 0, 0);
+	float3 TotalSpecular = float3(0, 0, 0);
+	float3 TotalAmbient = float3(0, 0, 0);
 
+    // [UNIFIED FORWARD RENDERING] All lights processed through StructuredBuffer
     for (uint i = 0; i < UnifiedLightCount; i++)
     {
         FLightingResult LightResult = CalculateDynamicLight(
-            DynamicLights[i], Input.WorldPosition, Normal, ViewDir, SpecularPower);
+            DynamicLights[i], Input.WorldPosition, wsNormal, ViewDir, SpecularPower);
 
         TotalDiffuse += LightResult.Diffuse;
-        TotalSpecular += LightResult.Specular;
-    }
+		TotalSpecular += LightResult.Specular;
+		TotalAmbient += LightResult.Ambient;
+	}
 
+    // 4. Combine lighting with material properties
+    // -----------------------
 	float4 FinalColor;
+	FinalColor.rgb = float3(0, 0, 0);
 
     // [PHYSICALLY CORRECT] Apply material properties separately
-    // Ambient term: Ka * GlobalAmbient
-    FinalColor.rgb = AmbientColor.rgb * GlobalAmbient.Color * GlobalAmbient.Intensity;
-
     // Diffuse term: Kd * Diffuse lighting
     FinalColor.rgb += DiffuseColor.rgb * TotalDiffuse;
 
     // Specular term: Ks * Specular lighting
-    FinalColor.rgb += SpecularColor.rgb * TotalSpecular;
+	FinalColor.rgb += SpecularColor.rgb * TotalSpecular;
 
-    // 3. 알파 값 처리 (기존 코드와 동일)
-    FinalColor.a = D; // 기본 알파값
-    if (MaterialFlags & HAS_ALPHA_MAP)
-    {
-        float alpha = AlphaTexture.Sample(SamplerWrap, UV).r;
-        FinalColor.a = D * alpha;
-    }
+    // Ambient term: Ka * Ambient lighting
+	FinalColor.rgb += AmbientColor.rgb * TotalAmbient;
 
-    // Normal mapping
+    // 5. Alpha value processing
     // -----------------------
-	float3 wsNormal = Input.WorldNormal;
-	if (MaterialFlags & HAS_BUMP_MAP)
-	{
-        // Sample and unpack tangent-space normal (assumes XYZ in texture)
-		float3 nTS = BumpTexture.Sample(SamplerWrap, UV).xyz * 2.0f - 1.0f;
-		nTS = normalize(nTS);
-
-        float3 N = normalize(Input.WorldNormal);
-        float3 T = normalize(Input.WorldTangent);
-        // Recompute B using handedness (stored in TangentSign)
-        float3 B = normalize(cross(N, T)) * Input.TangentSign;
-
-        float3x3 TBN = float3x3(T, B, N);
-        wsNormal = normalize(mul(nTS, TBN));
-    }
-    else
-    {
-        wsNormal = normalize(Input.WorldNormal);
-    }
-
-    // 3. 알파 값 처리 (기존 코드와 동일)
-    FinalColor.a = D; // 기본 알파값
+    FinalColor.a = D; // Base alpha value
     if (MaterialFlags & HAS_ALPHA_MAP)
     {
         float alpha = AlphaTexture.Sample(SamplerWrap, UV).r;
         FinalColor.a = D * alpha;
     }
 
+    // 6. Output to render targets
+    // -----------------------
     Output.SceneColor = FinalColor;
 
     float3 EncodedNormal = wsNormal * 0.5f + 0.5f;

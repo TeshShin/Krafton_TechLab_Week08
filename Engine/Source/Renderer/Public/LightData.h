@@ -51,7 +51,7 @@ enum class EDynamicLightType : uint32
     Directional = 0,  // Directional light (infinite distance, parallel rays)
     Point = 1,        // Point light (omnidirectional)
     Spot = 2,         // Spot light (cone-shaped)
-    Rect = 3,         // Rect light (area light) - Reserved for future use
+	Ambient = 3,         // Ambient light (global illumination)
     Max = 4
 };
 

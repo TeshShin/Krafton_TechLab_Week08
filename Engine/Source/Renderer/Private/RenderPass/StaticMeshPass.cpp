@@ -36,24 +36,11 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	FPipelineInfo PipelineInfo = { InputLayout, VS, RS, DS, PS, nullptr };
 	Pipeline->UpdatePipeline(PipelineInfo);
 
-	// [UNIFIED FORWARD RENDERING] Only Ambient light uses ConstantBuffer now
-	// All dynamic lights (Directional, Point, Spot) use unified StructuredBuffer
+	// [UNIFIED FORWARD RENDERING] All lights (Directional, Point, Spot, Ambient) use StructuredBuffer
 	FLightConstants LightConstants = {};
 
-	// Initialize with default ambient (very dark, almost black)
-	LightConstants.GlobalAmbient.Color = FVector(1.0f, 1.0f, 1.0f);
-	LightConstants.GlobalAmbient.Intensity = 0.0f;
+	// GlobalAmbient is deprecated - all lights now go through unified StructuredBuffer
 	LightConstants.UnifiedLightCount = LightCount;
-
-	for (ULightComponentBase* Light : Context.Lights)
-	{
-		if (Light->GetLightType() == ELightComponentType::LightType_Ambient)
-		{
-			LightConstants.GlobalAmbient.Color = Light->GetLightColor();
-			LightConstants.GlobalAmbient.Intensity = Light->GetIntensity();
-			break; // Only one ambient light is supported
-		}
-	}
 
 	Pipeline->SetConstantBuffer(10, false, ConstantBufferLight);
 	FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
@@ -207,11 +194,7 @@ uint32 FStaticMeshPass::UpdateLightsFromContext(FRenderingContext& Context)
 	{
 		if (!Light || !Light->IsVisible()) continue;
 
-		// Skip Ambient light - it's handled separately via ConstantBuffer
-		if (Light->GetLightType() == ELightComponentType::LightType_Ambient)
-			continue;
-
-		// Each component provides its own unified light data
+		// [UNIFIED FORWARD RENDERING] All light types (including Ambient) go through StructuredBuffer
 		FUnifiedDynamicLight UnifiedLight = Light->GetUnifiedLightData();
 		UnifiedLights.push_back(UnifiedLight);
 	}
