@@ -478,6 +478,9 @@
     <ClInclude Include="Source\Scene\Public\Component\SpotLightComponent.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Asset\Shader\LightTilesComputeShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\SpotLightComponentWidget.cpp" />
     <ClCompile Include="Source\Scene\Private\Component\SpotLightComponent.cpp" />
     <FxCompile Include="Asset\Shader\HeightFogShader.hlsl">
