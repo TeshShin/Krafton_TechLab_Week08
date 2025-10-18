@@ -81,10 +81,21 @@ Frustum BuildClusterFrustum(uint tileX, uint tileY, uint zSlice)
     Frustum f;
 
     // Tile bounds in NDC [-1,1]
-    float2 ndcMin = float2((tileX    / (float)NumTilesX) * 2.0f - 1.0f,
-                           (tileY    / (float)NumTilesY) * 2.0f - 1.0f);
-    float2 ndcMax = float2(((tileX+1)/ (float)NumTilesX) * 2.0f - 1.0f,
-                           ((tileY+1)/ (float)NumTilesY) * 2.0f - 1.0f);
+    // X: 0..NumTilesX-1 maps left(-1) -> right(+1)
+    float xFracMin = (tileX)     / (float)max(NumTilesX, 1);
+    float xFracMax = (tileX + 1) / (float)max(NumTilesX, 1);
+    float ndcMinX = xFracMin * 2.0f - 1.0f;
+    float ndcMaxX = xFracMax * 2.0f - 1.0f;
+
+    // Y: define tileY=0 at TOP to match screen coords (y down in pixels)
+    // Map to NDC with top=+1, bottom=-1
+    float yFracMin = (tileY)     / (float)max(NumTilesY, 1);
+    float yFracMax = (tileY + 1) / (float)max(NumTilesY, 1);
+    float ndcMaxY = 1.0f - 2.0f * yFracMin; // top edge of tile
+    float ndcMinY = 1.0f - 2.0f * yFracMax; // bottom edge of tile
+
+    float2 ndcMin = float2(ndcMinX, ndcMinY);
+    float2 ndcMax = float2(ndcMaxX, ndcMaxY);
 
     // Logarithmic partitioning in view-space depth (optional but common)
     float zNear = NearZ * pow(FarZ / NearZ, (float)zSlice / (float)max(NumZSlices, 1));
