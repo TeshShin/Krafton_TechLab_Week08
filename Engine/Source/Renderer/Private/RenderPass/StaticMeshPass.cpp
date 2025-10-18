@@ -50,8 +50,10 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 		VSToUse = VSPhong;
 		PSToUse = PSPhong;
 		break;
-	default:
-		assert(false && "Unsupported view mode is entered in StaticMeshPass."); // Unsupported view mode
+	default: // Normal View 모드에서는 Phong shading에서 normal mapping한 결과가 필요
+		VSToUse = VSPhong;
+		PSToUse = PSPhong;
+		break;
 	}
 
 	FPipelineInfo PipelineInfo = { InputLayout, VSToUse, RS, DS, PSToUse, nullptr };
