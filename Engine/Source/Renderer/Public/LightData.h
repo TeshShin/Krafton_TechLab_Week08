@@ -8,41 +8,6 @@
  */
 
 /**
- * @brief GPU StructuredBuffer용 PointLight 데이터
- * @note 16-byte alignment 보장 (총 48 bytes)
- * @details PointLightComponent의 데이터를 GPU로 전달하기 위한 구조체
- */
-struct FPointLightData
-{
-    FVector LightLocation;      // 12 bytes - World space light position
-    float LightIntensity;       // 4 bytes  - Light intensity (0.0 - 20.0)
-    FVector LightColor;         // 12 bytes - RGB color filter (0.0 - 1.0 per channel)
-    float SourceRadius;         // 4 bytes  - Physical radius of light source (for specular highlights)
-    float LightFalloffExtent;   // 4 bytes  - Falloff exponent (2.0 - 16.0, controls radial attenuation)
-    float Padding[3];           // 12 bytes - Padding for 16-byte alignment
-};
-static_assert(sizeof(FPointLightData) == 48, "FPointLightData must be 48 bytes for proper GPU alignment");
-
-/**
- * @brief GPU StructuredBuffer용 SpotLight 데이터
- * @note 16-byte alignment 보장 (총 64 bytes)
- * @details SpotLightComponent의 데이터를 GPU로 전달하기 위한 구조체
- */
-struct FSpotLightData
-{
-    FVector LightLocation;      // 12 bytes - World space light position
-    float LightIntensity;       // 4 bytes  - Light intensity (0.0 - 20.0)
-    FVector LightColor;         // 12 bytes - RGB color filter (0.0 - 1.0 per channel)
-    float SourceRadius;         // 4 bytes  - Physical radius of light source
-    FVector LightDirection;     // 12 bytes - World space normalized direction vector
-    float LightFalloffExtent;   // 4 bytes  - Falloff exponent (2.0 - 16.0)
-    float InnerConeAngle;       // 4 bytes  - Inner cone angle in radians (full brightness)
-    float OuterConeAngle;       // 4 bytes  - Outer cone angle in radians (falloff to zero)
-    float Padding[2];           // 8 bytes  - Padding for 16-byte alignment
-};
-static_assert(sizeof(FSpotLightData) == 64, "FSpotLightData must be 64 bytes for proper GPU alignment");
-
-/**
  * @brief Dynamic Light Type Enumeration
  * @note Used in FUnifiedDynamicLight for type identification in shaders
  */
@@ -51,7 +16,7 @@ enum class EDynamicLightType : uint32
     Directional = 0,  // Directional light (infinite distance, parallel rays)
     Point = 1,        // Point light (omnidirectional)
     Spot = 2,         // Spot light (cone-shaped)
-    Rect = 3,         // Rect light (area light) - Reserved for future use
+	Ambient = 3,         // Ambient light (global illumination)
     Max = 4
 };
 
@@ -63,7 +28,7 @@ enum class EDynamicLightType : uint32
  *
  * Usage:
  * - Directional Light: Uses Direction, Intensity, Color (Position unused, infinite distance)
- * - Point Light: Uses Position, Intensity, Color, SourceRadius, FalloffExponent
+ * - Point Light: Uses Position, Intensity, Color, AttenuationRadius, FalloffExponent
  * - Spot Light:  Uses all fields except Param2
  *   - Param0 = InnerConeAngle
  *   - Param1 = OuterConeAngle
@@ -74,11 +39,11 @@ struct FUnifiedDynamicLight
     FVector Position;           // 12 bytes - World space light position
     float Intensity;            // 4 bytes  - Light intensity (0.0 - 20.0)
     FVector Color;              // 12 bytes - RGB color filter (0.0 - 1.0 per channel)
-    float SourceRadius;         // 4 bytes  - Light influence radius / Physical size
-    FVector Direction;          // 12 bytes - Light direction (Spot/Rect only, unused for Point)
+    float AttenuationRadius;    // 4 bytes  - Light influence radius
+    FVector Direction;          // 12 bytes - Light direction (Spot only, unused for Point)
     float FalloffExponent;      // 4 bytes  - Radial falloff exponent (2.0 - 16.0)
-    float Param0;               // 4 bytes  - Spot: InnerConeAngle (radians), Rect: Width
-    float Param1;               // 4 bytes  - Spot: OuterConeAngle (radians), Rect: Height
+    float Param0;               // 4 bytes  - Spot: InnerConeAngle (radians)
+    float Param1;               // 4 bytes  - Spot: OuterConeAngle (radians)
     float Param2;               // 4 bytes  - Reserved for future use
     uint32 LightType;           // 4 bytes  - EDynamicLightType enum value
     float Padding[4];           // 16 bytes - Padding for 16-byte alignment

@@ -63,6 +63,7 @@ struct FNormalVertex
 	FVector Normal;
 	FVector4 Color;
 	FVector2 TexCoord;
+	FVector4 Tangent;
 };
 
 struct FRay
@@ -141,8 +142,7 @@ struct FAmbientLight
  *          All dynamic lights (Directional, Point, Spot) use StructuredBuffer (t6)
  */
 struct FLightConstants
-{
-	FAmbientLight GlobalAmbient;    // 16 bytes - Scene-wide ambient illumination
+{ 
 	uint32 UnifiedLightCount;       // 4 bytes  - Number of lights in unified StructuredBuffer
 	float Padding[3];               // 12 bytes - Padding for 16-byte alignment
 };

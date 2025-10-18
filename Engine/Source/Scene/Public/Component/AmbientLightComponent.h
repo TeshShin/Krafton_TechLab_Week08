@@ -18,8 +18,8 @@ public:
     virtual ELightComponentType GetLightType() const override { return ELightComponentType::LightType_Ambient; }
 
     /**
-     * @brief Ambient light doesn't use unified buffer, returns dummy data
-     * @note Ambient light is handled separately via ConstantBuffer
+     * @brief Returns unified light data for ambient light
+     * @note Ambient light is now handled through StructuredBuffer like all other lights
      */
     virtual struct FUnifiedDynamicLight GetUnifiedLightData() const override;
 };

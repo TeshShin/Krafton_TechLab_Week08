@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Renderer/Public/RenderPass/BillboardPass.h"
 #include "Asset/Public/Texture.h"
 #include "Editor/Public/Camera.h"

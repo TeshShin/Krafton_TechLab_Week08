@@ -202,13 +202,13 @@ void FDecalPass::Execute(FRenderingContext& Context)
         // --- Bind Decal Texture ---
         if (UTexture* DecalTexture = Decal->GetTexture())
         {
-            Pipeline->SetTexture(0, false, DecalTexture->GetTextureSRV());
+            Pipeline->SetSRV(0, false, DecalTexture->GetTextureSRV());
             Pipeline->SetSamplerState(0, false, DecalTexture->GetTextureSampler());
         }
 
         if (UTexture* FadeTexture = Decal->GetFadeTexture())
         {
-            Pipeline->SetTexture(1, false, FadeTexture->GetTextureSRV());
+            Pipeline->SetSRV(1, false, FadeTexture->GetTextureSRV());
             Pipeline->SetSamplerState(1, false, FadeTexture->GetTextureSampler());
         }
 

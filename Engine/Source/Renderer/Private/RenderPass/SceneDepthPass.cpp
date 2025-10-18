@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Renderer/Public/RenderPass/SceneDepthPass.h"
 #include "Editor/Public/Camera.h"
 #include "Renderer/Public/Renderer.h"

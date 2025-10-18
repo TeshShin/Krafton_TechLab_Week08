@@ -25,7 +25,7 @@ public:
 
 	void SetConstantBuffer(uint32 Slot, bool bIsVS, ID3D11Buffer* ConstantBuffer);
 
-	void SetTexture(uint32 Slot, bool bIsVS, ID3D11ShaderResourceView* Srv);
+	void SetSRV(uint32 Slot, bool bIsVS, ID3D11ShaderResourceView* Srv);
 
 	void SetSamplerState(uint32 Slot, bool bIsVS, ID3D11SamplerState* SamplerState);
 

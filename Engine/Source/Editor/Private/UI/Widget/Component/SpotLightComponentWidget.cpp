@@ -6,35 +6,39 @@
 #include "Scene/Public/Component/ActorComponent.h"
 #include "ImGui/imgui.h"
 
-IMPLEMENT_CLASS(USpotLightComponentWidget, UWidget)
+IMPLEMENT_CLASS(USpotLightComponentWidget, UPointLightComponentWidget)
 
 void USpotLightComponentWidget::Initialize()
 {
+	Super::Initialize();
 }
 
 void USpotLightComponentWidget::Update()
 {
-    ULevel* CurrentLevel = GWorld->GetLevel();
-    if (CurrentLevel)
-    {
-        UActorComponent* NewSelectedComponent = GEditor->GetEditorModule()->GetSelectedComponent();
-        if (SpotLightComponent != NewSelectedComponent)
-        {
-            SpotLightComponent = Cast<USpotLightComponent>(NewSelectedComponent);
-        }
-    }
+	Super::Update();
+	SpotLightComponent = Cast<USpotLightComponent>(PointLightComponent);
 }
 
 void USpotLightComponentWidget::RenderWidget()
 {
-    if (!SpotLightComponent)
-    {
-        return;
-    }
+	if (!SpotLightComponent)
+	{
+		return;
+	}
 
-    ImGui::Separator();
+	Super::RenderWidget();
 
-    // TODO: SpotLight properties will be added here
+	float InnerConeAngle = SpotLightComponent->GetInnerConeAngle();
+	if (ImGui::DragFloat("Inner Cone Angle", &InnerConeAngle, 0.1f, 0.0f, 90.0f))
+	{
+		SpotLightComponent->SetInnerConeAngle(InnerConeAngle);
+	}
+
+	float OuterConeAngle = SpotLightComponent->GetOuterConeAngle();
+	if (ImGui::DragFloat("Outer Cone Angle", &OuterConeAngle, 0.1f, 0.0f, 90.0f))
+	{
+		SpotLightComponent->SetOuterConeAngle(OuterConeAngle);
+	}
 
     ImGui::Separator();
 }

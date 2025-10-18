@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <FxCompile Include="Asset\Shader\AmbientDirectionalLighting.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </FxCompile>
     <FxCompile Include="Asset\Shader\HeightFogShader.hlsl">
       <Filter>Engine\Asset\Shader</Filter>
     </FxCompile>
@@ -17,9 +14,6 @@
       <Filter>Engine\Asset\Shader</Filter>
     </FxCompile>
     <FxCompile Include="Asset\Shader\DecalShader.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\TestBlinnPhongPS.hlsl">
       <Filter>Engine\Asset\Shader</Filter>
     </FxCompile>
     <FxCompile Include="Asset\Shader\TexturePS.hlsl">
@@ -464,9 +458,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Scene\Public\Component\LightComponent.h">
-      <Filter>Source\Scene\Public\Component</Filter>
-    </ClInclude>
     <ClInclude Include="pch.h">
       <Filter>Engine</Filter>
     </ClInclude>
@@ -938,6 +929,7 @@
     <ClInclude Include="Source\ImGui\imstb_truetype.h">
       <Filter>Engine\Source\ImGui</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Scene\Public\Component\LightComponent.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

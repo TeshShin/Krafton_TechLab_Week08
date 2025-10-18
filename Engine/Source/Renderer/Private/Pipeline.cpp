@@ -67,7 +67,7 @@ void UPipeline::SetConstantBuffer(uint32 Slot, bool bIsVS, ID3D11Buffer* Constan
 }
 
 /// @brief 텍스처를 설정
-void UPipeline::SetTexture(uint32 Slot, bool bIsVS, ID3D11ShaderResourceView* Srv)
+void UPipeline::SetSRV(uint32 Slot, bool bIsVS, ID3D11ShaderResourceView* Srv)
 {
 	if (bIsVS)
 		DeviceContext->VSSetShaderResources(Slot, 1, &Srv);

@@ -72,7 +72,7 @@ void FFXAAPass::Execute(FRenderingContext& Context)
     Pipeline->SetIndexBuffer(FullscreenIB, 0);
 
     Pipeline->SetConstantBuffer(0, false, FXAAConstantBuffer);
-    Pipeline->SetTexture(0, false, SceneSRV);
+    Pipeline->SetSRV(0, false, SceneSRV);
     Pipeline->SetSamplerState(0, false, SamplerState);
 
     Pipeline->DrawIndexed(FullscreenIndexCount, 0, 0);
