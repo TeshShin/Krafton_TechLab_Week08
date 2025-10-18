@@ -69,7 +69,9 @@ struct PS_INPUT
 	float3 WorldPosition : TEXCOORD0;
 	float3 WorldNormal : TEXCOORD1;
 	float2 Tex : TEXCOORD2;
-	float4 Color : COLOR;
+	float3 TotalAmbient : COLOR0;
+	float3 TotalDiffuse : COLOR1;
+	float3 TotalSpecular : COLOR2;
 };
 
 struct PS_OUTPUT
@@ -82,37 +84,48 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 {
     PS_OUTPUT Output;
 
-#if defined(LIGHTING_MODEL_GOURAUD)
-	Output.SceneColor = Input.Color;
-	float3 wsNormal = Input.WorldNormal;
-#else
-    float2 UV = Input.Tex;
+	float2 UV = Input.Tex;
 
     // Base diffuse color
-    float4 DiffuseColor = Kd;
-    if (MaterialFlags & HAS_DIFFUSE_MAP)
-    {
-        DiffuseColor *= DiffuseTexture.Sample(SamplerWrap, UV);
-    }
+	float4 DiffuseColor = Kd;
+	if (MaterialFlags & HAS_DIFFUSE_MAP)
+	{
+		DiffuseColor *= DiffuseTexture.Sample(SamplerWrap, UV);
+	}
 
     // Ambient color for material
-    float4 AmbientColor = Ka;
-    if (MaterialFlags & HAS_AMBIENT_MAP)
-    {
-        AmbientColor *= AmbientTexture.Sample(SamplerWrap, UV);
-    }
+	float4 AmbientColor = Ka;
+	if (MaterialFlags & HAS_AMBIENT_MAP)
+	{
+		AmbientColor *= AmbientTexture.Sample(SamplerWrap, UV);
+	}
 	else if (MaterialFlags & HAS_DIFFUSE_MAP)
 	{
 		AmbientColor *= DiffuseTexture.Sample(SamplerWrap, UV);
 	}
 
     // Specular color for material
-    float4 SpecularColor = Ks;
-    if (MaterialFlags & HAS_SPECULAR_MAP)
-    {
-        SpecularColor *= SpecularTexture.Sample(SamplerWrap, UV);
-    }
+	float4 SpecularColor = Ks;
+	if (MaterialFlags & HAS_SPECULAR_MAP)
+	{
+		SpecularColor *= SpecularTexture.Sample(SamplerWrap, UV);
+	}
 
+	float4 FinalColor = float4(0, 0, 0, 1);
+
+	// Accumulate separated diffuse and specular contributions
+	float3 TotalAmbient = float3(0, 0, 0);
+	float3 TotalDiffuse = float3(0, 0, 0);
+	float3 TotalSpecular = float3(0, 0, 0);
+
+	// #define LIGHTING_MODEL_GOURAUD
+#if defined(LIGHTING_MODEL_GOURAUD)
+	float3 wsNormal = Input.WorldNormal;
+	
+	TotalAmbient = Input.TotalAmbient;
+	TotalDiffuse = Input.TotalDiffuse;
+	TotalSpecular = Input.TotalSpecular;
+#else
 	// Normal mapping
     // -----------------------
 	float3 wsNormal = Input.WorldNormal;
@@ -147,10 +160,6 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 	
     float3 ViewDir = normalize(ViewWorldLocation - Input.WorldPosition);
     float SpecularPower = max(Ns, 1.0f); // Prevent division by zero
-	
-    // Accumulate separated diffuse and specular contributions
-    float3 TotalDiffuse = float3(0, 0, 0);
-    float3 TotalSpecular = float3(0, 0, 0);
 
     for (uint i = 0; i < UnifiedLightCount; i++)
     {
@@ -160,30 +169,29 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
         TotalDiffuse += LightResult.Diffuse;
         TotalSpecular += LightResult.Specular;
     }
-
-	float4 FinalColor;
-
-    // [PHYSICALLY CORRECT] Apply material properties separately
-    // Ambient term: Ka * GlobalAmbient
-    FinalColor.rgb = AmbientColor.rgb * GlobalAmbient.Color * GlobalAmbient.Intensity;
-
-    // Diffuse term: Kd * Diffuse lighting
-    FinalColor.rgb += DiffuseColor.rgb * TotalDiffuse;
-
-    // Specular term: Ks * Specular lighting
-    FinalColor.rgb += SpecularColor.rgb * TotalSpecular;
-
-    // 3. 알파 값 처리 (기존 코드와 동일)
-    FinalColor.a = D; // 기본 알파값
-    if (MaterialFlags & HAS_ALPHA_MAP)
-    {
-        float alpha = AlphaTexture.Sample(SamplerWrap, UV).r;
-        FinalColor.a = D * alpha;
-    }
-
-    Output.SceneColor = FinalColor;
+	TotalAmbient = GlobalAmbient.Color * GlobalAmbient.Intensity;
 #endif
 
+	// [PHYSICALLY CORRECT] Apply material properties separately
+    // Ambient term: Ka * GlobalAmbient
+	FinalColor.rgb = AmbientColor.rgb * TotalAmbient;
+
+    // Diffuse term: Kd * Diffuse lighting
+	FinalColor.rgb += DiffuseColor.rgb * TotalDiffuse;
+
+    // Specular term: Ks * Specular lighting
+	FinalColor.rgb += SpecularColor.rgb * TotalSpecular;
+
+	Output.SceneColor = FinalColor;
+	
+	// 알파 값 처리 (기존 코드와 동일)
+	FinalColor.a = D; // 기본 알파값
+	if (MaterialFlags & HAS_ALPHA_MAP)
+	{
+		float alpha = AlphaTexture.Sample(SamplerWrap, UV).r;
+		FinalColor.a = D * alpha;
+	}
+	
     float3 EncodedNormal = wsNormal * 0.5f + 0.5f;
     Output.NormalData = float4(EncodedNormal, 1.0f);
 

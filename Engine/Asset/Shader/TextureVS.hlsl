@@ -37,25 +37,7 @@ cbuffer MaterialConstants : register(b2)
 	float Time;
 };
 
-Texture2D DiffuseTexture : register(t0); // map_Kd
-Texture2D AmbientTexture : register(t1); // map_Ka
-Texture2D SpecularTexture : register(t2); // map_Ks
-Texture2D ShininessTexture : register(t3); // map_Ns
-Texture2D AlphaTexture : register(t4); // map_d
-Texture2D BumpTexture : register(t5); // map_bump
-
 StructuredBuffer<FUnifiedDynamicLight> DynamicLights : register(t6);
-
-SamplerState SamplerWrap : register(s0);
-
-// Material flags
-#define HAS_DIFFUSE_MAP	 (1 << 0)
-#define HAS_AMBIENT_MAP	 (1 << 1)
-#define HAS_SPECULAR_MAP (1 << 2)
-#define HAS_SHININESS_MAP (1 << 3)
-#define HAS_ALPHA_MAP	 (1 << 4)
-#define HAS_BUMP_MAP	 (1 << 5)
-
 //--------------------------------------------------------------------------------------
 
 cbuffer Model : register(b0)
@@ -87,7 +69,9 @@ struct PS_INPUT
 	float3 WorldPosition: TEXCOORD0;
 	float3 WorldNormal : TEXCOORD1;
 	float2 Tex : TEXCOORD2;
-	float4 Color : COLOR;
+	float3 TotalAmbient : COLOR0;
+	float3 TotalDiffuse : COLOR1;
+	float3 TotalSpecular : COLOR2;
 };
 
 
@@ -99,34 +83,8 @@ PS_INPUT mainVS(VS_INPUT Input)
 	Output.WorldNormal = normalize(mul(Input.Normal, (float3x3)WorldInverseTranspose));
 	Output.Tex = Input.Tex;
 
+	//#define LIGHTING_MODEL_GOURAUD // for coding
 #if defined(LIGHTING_MODEL_GOURAUD)
-    float2 UV = Input.Tex;
-
-    // Base diffuse color
-    float4 DiffuseColor = Kd;
-    if (MaterialFlags & HAS_DIFFUSE_MAP)
-    {
-        DiffuseColor *= DiffuseTexture.SampleLevel(SamplerWrap, UV, 0);
-    }
-
-    // Ambient color for material
-    float4 AmbientColor = Ka;
-    if (MaterialFlags & HAS_AMBIENT_MAP)
-    {
-        AmbientColor *= AmbientTexture.SampleLevel(SamplerWrap, UV, 0);
-    }
-	else if (MaterialFlags & HAS_DIFFUSE_MAP)
-	{
-		AmbientColor *= DiffuseTexture.SampleLevel(SamplerWrap, UV, 0);
-	}
-
-    // Specular color for material
-    float4 SpecularColor = Ks;
-    if (MaterialFlags & HAS_SPECULAR_MAP)
-    {
-        SpecularColor *= SpecularTexture.SampleLevel(SamplerWrap, UV, 0);
-    }
-
 	float3 wsNormal = Output.WorldNormal;
 	
 	float3 ViewDir = normalize(ViewWorldLocation - Output.WorldPosition);
@@ -145,29 +103,11 @@ PS_INPUT mainVS(VS_INPUT Input)
         TotalSpecular += LightResult.Specular;
     }
 
-	float4 FinalColor;
-
-    // [PHYSICALLY CORRECT] Apply material properties separately
-    // Ambient term: Ka * GlobalAmbient
-    FinalColor.rgb = AmbientColor.rgb * GlobalAmbient.Color * GlobalAmbient.Intensity;
-
-    // Diffuse term: Kd * Diffuse lighting
-    FinalColor.rgb += DiffuseColor.rgb * TotalDiffuse;
-
-    // Specular term: Ks * Specular lighting
-    FinalColor.rgb += SpecularColor.rgb * TotalSpecular;
-
-    // 3. 알파 값 처리 (기존 코드와 동일)
-    FinalColor.a = D; // 기본 알파값
-    if (MaterialFlags & HAS_ALPHA_MAP)
-    {
-        float alpha = AlphaTexture.SampleLevel(SamplerWrap, UV, 0).r;
-        FinalColor.a = D * alpha;
-    }
-
-    Output.Color = FinalColor;
+	Output.TotalAmbient = GlobalAmbient.Color * GlobalAmbient.Intensity;
+	Output.TotalDiffuse = TotalDiffuse;
+	Output.TotalSpecular = TotalSpecular;
 #else
-	Output.Color = Input.Color;
+	Output.TotalDiffuse = Input.Color;
 #endif
 	
 	return Output;

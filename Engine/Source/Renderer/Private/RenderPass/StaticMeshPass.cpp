@@ -81,16 +81,15 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 		Pipeline->SetConstantBuffer(10, true, ConstantBufferLight);
 		FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
 		// Set a default sampler to slot 0 to ensure one is always bound
-		Pipeline->SetSamplerState(0, true, URenderer::GetInstance().GetDefaultSampler());
 	}
 	else
 	{
 		Pipeline->SetConstantBuffer(10, false, ConstantBufferLight);
 		FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
 		// Set a default sampler to slot 0 to ensure one is always bound
-		Pipeline->SetSamplerState(0, false, URenderer::GetInstance().GetDefaultSampler());
 	}
 
+	Pipeline->SetSamplerState(0, false, URenderer::GetInstance().GetDefaultSampler());
 	Pipeline->SetConstantBuffer(0, true, ConstantBufferModel);
 
 	Pipeline->SetConstantBuffer(1, true, ConstantBufferCamera);
@@ -185,33 +184,36 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 				FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferMaterial, MaterialConstants);
 
 				// Gouraud 모드면, Vertex Shader에 Material, Texture들을 바인딩
-				bool bIsGouraud = (Context.ViewMode == EViewModeIndex::VMI_Lit_Gouraud);
+				Pipeline->SetConstantBuffer(2, false, ConstantBufferMaterial);
+				if(Context.ViewMode == EViewModeIndex::VMI_Lit_Gouraud)
+				{
+					Pipeline->SetConstantBuffer(2, true, ConstantBufferMaterial);
+				}
 
-				Pipeline->SetConstantBuffer(2, bIsGouraud, ConstantBufferMaterial);
 				if (UTexture* DiffuseTexture = Material->GetDiffuseTexture())
 				{
-					Pipeline->SetTexture(0, bIsGouraud, DiffuseTexture->GetTextureSRV());
-					Pipeline->SetSamplerState(0, bIsGouraud, DiffuseTexture->GetTextureSampler());
+					Pipeline->SetTexture(0, false, DiffuseTexture->GetTextureSRV());
+					Pipeline->SetSamplerState(0, false, DiffuseTexture->GetTextureSampler());
 				}
 				if (UTexture* AmbientTexture = Material->GetAmbientTexture())
 				{
-					Pipeline->SetTexture(1, bIsGouraud, AmbientTexture->GetTextureSRV());
+					Pipeline->SetTexture(1, false, AmbientTexture->GetTextureSRV());
 				}
 				if (UTexture* SpecularTexture = Material->GetSpecularTexture())
 				{
-					Pipeline->SetTexture(2, bIsGouraud, SpecularTexture->GetTextureSRV());
+					Pipeline->SetTexture(2, false, SpecularTexture->GetTextureSRV());
 				}
 				if (UTexture* NormalTexture = Material->GetShininessTexture())
 				{
-					Pipeline->SetTexture(3, bIsGouraud, NormalTexture->GetTextureSRV());
+					Pipeline->SetTexture(3, false, NormalTexture->GetTextureSRV());
 				}
 				if (UTexture* AlphaTexture = Material->GetAlphaTexture())
 				{
-					Pipeline->SetTexture(4, bIsGouraud, AlphaTexture->GetTextureSRV());
+					Pipeline->SetTexture(4, false, AlphaTexture->GetTextureSRV());
 				}
 				if (UTexture* BumpTexture = Material->GetBumpTexture())
 				{
-					Pipeline->SetTexture(5, bIsGouraud, BumpTexture->GetTextureSRV());
+					Pipeline->SetTexture(5, false, BumpTexture->GetTextureSRV());
 				}
 
 				CurrentMaterial = Material;
