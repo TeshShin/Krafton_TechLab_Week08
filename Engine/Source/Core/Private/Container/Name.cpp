@@ -11,6 +11,10 @@ FName::FName(const FString& Str)
     ComparisonIndex = Indices.first;
     DisplayIndex = Indices.second;
     Number = -1;
+
+#if defined(DEBUG) || defined(_DEBUG)
+	NameStr = Str;
+#endif
 }
 
 FName::FName(const char* Str) : FName(FString(Str)) { }

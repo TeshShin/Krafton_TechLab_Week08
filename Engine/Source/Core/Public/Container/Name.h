@@ -1,5 +1,10 @@
 #pragma once
 
+#if defined(DEBUG) || defined(_DEBUG)
+#include <string>
+#endif
+
+
 /**
  * @brief 오브젝트의 이름을 담당하는 구조체
  * 대소문자 관계 없는 비교 처리와 사용자가 직접 작성한 Display Name을 동시에 사용할 수 있음
@@ -29,6 +34,9 @@ private:
 	int32 ComparisonIndex;
 	int32 DisplayIndex;
 	int32 Number;
+#if defined(DEBUG) || defined(_DEBUG)
+	std::string NameStr; // 디버깅하기 위한 이름 문자열
+#endif
 
 public:
 	static FName GetNone();
