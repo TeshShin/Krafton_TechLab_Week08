@@ -16,10 +16,4 @@ UClass* ALightActor::GetDefaultRootComponent()
 void ALightActor::InitializeComponents()
 {
     Super::InitializeComponents();
-	
-    UBillBoardComponent* Billboard = CreateDefaultSubobject<UBillBoardComponent>();
-    Billboard->AttachToComponent(GetRootComponent());
-    Billboard->SetIsVisualizationComponent(true);
-    Billboard->SetSprite(GetLightBillboardTexture());
-    Billboard->SetScreenSizeScaled(true);
 }

@@ -9,8 +9,7 @@ public:
     ALightActor();
     virtual UClass* GetDefaultRootComponent() override;
     virtual void InitializeComponents() override;
-    
+
 protected:
     virtual UClass* GetLightClass() = 0;
-    virtual class UTexture* GetLightBillboardTexture() = 0;
 };
