@@ -444,6 +444,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Renderer\Public\RenderPass\RenderPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\SceneDepthPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\StaticMeshPass.h" />
+    <ClInclude Include="Source\Renderer\Public\RenderPass\StaticMeshUnlitPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\TextPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderResourceFactory.h" />
     <ClInclude Include="Source\Scene\Public\Actor\Actor.h" />
@@ -496,6 +497,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\SpotLightComponentWidget.cpp" />
     <ClCompile Include="Source\Renderer\Private\RenderPass\DefaultViewPass.cpp">
     </ClCompile>
+    <ClCompile Include="Source\Renderer\Private\RenderPass\StaticMeshUnlitPass.cpp" />
     <ClCompile Include="Source\Scene\Private\Component\SpotLightComponent.cpp" />
     <FxCompile Include="Asset\Shader\HeightFogShader.hlsl">
       <ExcludedFromBuild>true</ExcludedFromBuild>
