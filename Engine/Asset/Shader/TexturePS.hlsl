@@ -63,17 +63,6 @@ cbuffer Camera : register(b1)
 	float FarClip;
 };
 
-struct PS_INPUT
-{
-	float4 Position : SV_POSITION;
-	float3 WorldPosition : TEXCOORD0;
-	float3 WorldNormal : TEXCOORD1;
-	float2 Tex : TEXCOORD2;
-	float3 TotalAmbient : COLOR0;
-	float3 TotalDiffuse : COLOR1;
-	float3 TotalSpecular : COLOR2;
-};
-
 struct PS_OUTPUT
 {
     float4 SceneColor : SV_Target0;

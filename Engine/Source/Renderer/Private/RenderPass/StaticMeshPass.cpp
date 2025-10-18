@@ -82,13 +82,11 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	{
 		Pipeline->SetConstantBuffer(10, true, ConstantBufferLight);
 		FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
-		// Set a default sampler to slot 0 to ensure one is always bound
 	}
 	else
 	{
 		Pipeline->SetConstantBuffer(10, false, ConstantBufferLight);
 		FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
-		// Set a default sampler to slot 0 to ensure one is always bound
 	}
 
 	Pipeline->SetSamplerState(0, false, URenderer::GetInstance().GetDefaultSampler());
@@ -185,7 +183,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 
 				FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferMaterial, MaterialConstants);
 
-				// Gouraud 모드면, Vertex Shader에 Material, Texture들을 바인딩
+				// Gouraud 모드면, Vertex Shader에도 Material 바인딩
 				Pipeline->SetConstantBuffer(2, false, ConstantBufferMaterial);
 				if(Context.ViewMode == EViewModeIndex::VMI_Lit_Gouraud)
 				{
