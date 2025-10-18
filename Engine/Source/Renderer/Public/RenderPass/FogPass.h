@@ -32,7 +32,7 @@ class FFogPass : public FRenderPass
 public:
     FFogPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS, ID3D11BlendState* InBlendState);
 
-	bool CanRender(const FRenderingContext& Context);
+	bool CanRender(const FRenderingContext& Context) override;
 	void SetRenderTargets(class UDeviceResources* DeviceResources) override;
     void Execute(FRenderingContext& Context) override;
     void Release() override;

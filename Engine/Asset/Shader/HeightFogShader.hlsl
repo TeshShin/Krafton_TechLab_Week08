@@ -33,12 +33,24 @@ PS_INPUT mainVS(uint vertexID : SV_VertexID)
 {
 	PS_INPUT output;
 
-	// SV_VertexID를 사용하여 화면을 덮는 큰 삼각형의 클립 공간 좌표를 생성
-	// ID 0 -> (-1, 1), ID 1 -> (3, 1), ID 2 -> (-1, -3) -- 수정된 좌표계
-	// 이 좌표계는 UV가 (0,0)부터 시작하도록 조정합니다.
-	float2 pos = float2((vertexID << 1) & 2, vertexID & 2);
-	output.Position = float4(pos * 2.0f - 1.0f, 0.0f, 1.0f);
-	output.Position.y *= -1.0f;
+
+	switch (vertexID)
+	{
+	case 0:
+		output.NDC = float2(-1.f, -1.f);
+		break;
+	case 1:
+		output.NDC = float2(3.f, -1.f);
+		break;
+	case 2:
+		output.NDC = float2(-1.f, 3.f);
+		break;
+	default:
+		output.NDC = float2(0.f, 0.f);
+		break;
+	}
+	output.Position = float4(output.NDC, 0.0f, 1.0f);
+	return output;
 
 	return output;
 }

@@ -12,7 +12,7 @@ FFogPass::FFogPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS, ID3D11B
     ConstantBufferFog = FRenderResourceFactory::CreateConstantBuffer<FFogConstants>();
     ConstantBufferCameraInverse = FRenderResourceFactory::CreateConstantBuffer<FCameraInverseConstants>();
     ConstantBufferViewportInfo = FRenderResourceFactory::CreateConstantBuffer<FViewportConstants>();
-	Sampler = FRenderResourceFactory::CreateSamplerState(D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP);
+	Sampler = FRenderResourceFactory::CreateSamplerState(D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP);
 }
 
 bool FFogPass::CanRender(const FRenderingContext& Context)
@@ -22,7 +22,8 @@ bool FFogPass::CanRender(const FRenderingContext& Context)
 
 void FFogPass::SetRenderTargets(class UDeviceResources* DeviceResources)
 {
-	//DeviceResources->SwapFrameBuffers();
+	// Fog는 원래 그려진 것에 Alpha Blend를 하는 방식이라 Frame Swap 필요 X
+	// DeviceResources->SwapFrameBuffers();
 
 	ID3D11RenderTargetView* RTVs[] = { DeviceResources->GetDestinationRTV() };
 	DepthSRV = DeviceResources->GetDepthBufferSRV();
