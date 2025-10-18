@@ -7,8 +7,8 @@
 FFogPass::FFogPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS, ID3D11BlendState* InBlendState)
         : FRenderPass(InPipeline, nullptr), DS(InDS), BS(InBlendState)
 {
-    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/HeightFogShader.hlsl", {}, nullptr, &VS, nullptr);
-    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/HeightFogShader.hlsl", nullptr, &PS);
+    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/HeightFogShader.hlsl", {}, &VS, nullptr);
+    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/HeightFogShader.hlsl", &PS);
     ConstantBufferFog = FRenderResourceFactory::CreateConstantBuffer<FFogConstants>();
     ConstantBufferCameraInverse = FRenderResourceFactory::CreateConstantBuffer<FCameraInverseConstants>();
     ConstantBufferViewportInfo = FRenderResourceFactory::CreateConstantBuffer<FViewportConstants>();

@@ -18,8 +18,30 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstant
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FNormalVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0	},
 		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Tangent), D3D11_INPUT_PER_VERTEX_DATA, 0 }
 	};
-	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/TextureVS.hlsl", TextureLayout, &VS, &InputLayout);
-	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/TexturePS.hlsl", &PS);
+
+	D3D_SHADER_MACRO TexturePhongDefines[] =
+	{
+		"LIGHTING_MODEL_PHONG", "1",
+		nullptr, nullptr
+	};
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/TextureVS.hlsl", TextureLayout, &VSPhong, &InputLayout, TexturePhongDefines);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/TexturePS.hlsl", &PSPhong, TexturePhongDefines);
+
+	D3D_SHADER_MACRO TextureGouraudDefines[] =
+	{
+		"LIGHTING_MODEL_GOURAUD", "1",
+		nullptr, nullptr
+	};
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/TextureVS.hlsl", TextureLayout, &VSGouraud, &InputLayout, TextureGouraudDefines);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/TexturePS.hlsl", &PSGouraud, TextureGouraudDefines);
+
+	D3D_SHADER_MACRO TextureLambertDefines[] =
+	{
+		"LIGHTING_MODEL_LAMBERT", "1",
+		nullptr, nullptr
+	};
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/TextureVS.hlsl", TextureLayout, &VSLambert, &InputLayout, TextureLambertDefines);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/TexturePS.hlsl", &PSLambert, TextureLambertDefines);
 
 	ConstantBufferMaterial = FRenderResourceFactory::CreateConstantBuffer<FMaterialConstants>();
 	ConstantBufferLight = FRenderResourceFactory::CreateConstantBuffer<FLightConstants>();
@@ -129,11 +151,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 		FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
 	}
 
-	Pipeline->SetSamplerState(0, false, URenderer::GetInstance().GetDefaultSampler());
 	Pipeline->SetConstantBuffer(0, true, ConstantBufferModel);
-
-	Pipeline->SetConstantBuffer(1, true, ConstantBufferCamera);
-	Pipeline->SetConstantBuffer(1, false, ConstantBufferCamera);
 
 	//Pipeline->SetSamplerState(0, false, URenderer::GetInstance().GetDefaultSampler());
 
@@ -272,4 +290,11 @@ void FStaticMeshPass::Release()
 	SafeRelease(ConstantBufferLight);
 	SafeRelease(UnifiedLightStructuredBuffer);
 	SafeRelease(UnifiedLightSRV);
+	SafeRelease(VSPhong);
+	SafeRelease(PSPhong);
+	SafeRelease(VSLambert);
+	SafeRelease(PSLambert);
+	SafeRelease(VSGouraud);
+	SafeRelease(PSGouraud);
+	SafeRelease(InputLayout);
 }

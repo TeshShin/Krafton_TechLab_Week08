@@ -22,9 +22,9 @@ UBatchLines::UBatchLines() : Grid(), BoundingBoxLines()
 	ID3D11VertexShader* VertexShader;
 	ID3D11InputLayout* InputLayout;
 	TArray<D3D11_INPUT_ELEMENT_DESC> Layout = { {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0} };
-	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/BatchLineShader.hlsl", Layout, nullptr, &VertexShader, &InputLayout);
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/BatchLineShader.hlsl", Layout, &VertexShader, &InputLayout);
 	ID3D11PixelShader* PixelShader;
-	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/BatchLineShader.hlsl", nullptr, &PixelShader);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/BatchLineShader.hlsl", &PixelShader);
 	
 	Primitive.VertexShader = VertexShader;
 	Primitive.InputLayout = InputLayout;

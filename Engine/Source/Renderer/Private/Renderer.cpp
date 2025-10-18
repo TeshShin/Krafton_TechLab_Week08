@@ -45,28 +45,6 @@ void URenderer::Init(HWND InWindowHandle)
 	CreateBlendState();
 	CreateDefaultShader();
 
-	// defines 설정에 따른 Texture 셰이더 생성
-	D3D_SHADER_MACRO TexturePhongDefines[] =
-	{
-		"LIGHTING_MODEL_PHONG", "1",
-		nullptr, nullptr
-	};
-	CreateTextureShader(TexturePhongDefines, &TexturePhongVertexShader, &TexturePhongPixelShader);
-
-	D3D_SHADER_MACRO TextureGouraudDefines[] =
-	{
-		"LIGHTING_MODEL_GOURAUD", "1",
-		nullptr, nullptr
-	};
-	CreateTextureShader(TextureGouraudDefines, &TextureGouraudVertexShader, &TextureGouraudPixelShader);
-
-	D3D_SHADER_MACRO TextureLambertDefines[] =
-	{
-		"LIGHTING_MODEL_LAMBERT", "1",
-		nullptr, nullptr
-	};
-	CreateTextureShader(TextureLambertDefines, &TextureLambertVertexShader, &TextureLambertPixelShader);
-
 	// 상수 버퍼 생성
 	CreateConstantBuffers();
 
@@ -90,7 +68,9 @@ void URenderer::Init(HWND InWindowHandle)
 	FFXAAPass* FXAAPass = new FFXAAPass(Pipeline, DeviceResources);
 	PostProcessPasses.push_back(FXAAPass);
 
-	ViewModePasses[EViewModeIndex::VMI_Lit] = new FDefaultViewPass(Pipeline, DisabledDS);
+	ViewModePasses[EViewModeIndex::VMI_Lit_Phong] = new FDefaultViewPass(Pipeline, DisabledDS);
+	ViewModePasses[EViewModeIndex::VMI_Lit_Lambert] = new FDefaultViewPass(Pipeline, DisabledDS);
+	ViewModePasses[EViewModeIndex::VMI_Lit_Gouraud] = new FDefaultViewPass(Pipeline, DisabledDS);
 	ViewModePasses[EViewModeIndex::VMI_Unlit] = new FDefaultViewPass(Pipeline, DisabledDS);
 	ViewModePasses[EViewModeIndex::VMI_Wireframe] = new FDefaultViewPass(Pipeline, DisabledDS);
 	ViewModePasses[EViewModeIndex::VMI_SceneDepth] = new FSceneDepthPass(Pipeline, DisabledDS);

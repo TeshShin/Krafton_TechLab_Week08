@@ -3,7 +3,7 @@
 #include "Renderer/Public/Renderer.h"
 
 void FRenderResourceFactory::CreateVertexShaderAndInputLayout(const wstring& InFilePath,
-                                                              const TArray<D3D11_INPUT_ELEMENT_DESC>& InInputLayoutDescs, const D3D_SHADER_MACRO* InDefines, ID3D11VertexShader** OutVertexShader, ID3D11InputLayout** OutInputLayout)
+                                                              const TArray<D3D11_INPUT_ELEMENT_DESC>& InInputLayoutDescs, ID3D11VertexShader** OutVertexShader, ID3D11InputLayout** OutInputLayout, const D3D_SHADER_MACRO* InDefines)
 {
 	ID3DBlob* VertexShaderBlob = nullptr;
 	ID3DBlob* ErrorBlob = nullptr;
@@ -60,7 +60,7 @@ ID3D11Buffer* FRenderResourceFactory::CreateIndexBuffer(const void* InIndices, u
 	return IndexBuffer;
 }
 
-void FRenderResourceFactory::CreatePixelShader(const wstring& InFilePath, const D3D_SHADER_MACRO* InDefines, ID3D11PixelShader** OutPixelShader)
+void FRenderResourceFactory::CreatePixelShader(const wstring& InFilePath, ID3D11PixelShader** OutPixelShader, const D3D_SHADER_MACRO* InDefines)
 {
 	ID3DBlob* PixelShaderBlob = nullptr;
 	ID3DBlob* ErrorBlob = nullptr;
