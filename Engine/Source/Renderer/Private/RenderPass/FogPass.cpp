@@ -37,7 +37,7 @@ void FFogPass::Execute(FRenderingContext& Context)
     FPipelineInfo PipelineInfo = { nullptr, VS, FRenderResourceFactory::GetRasterizerState({ ECullMode::Back, EFillMode::Solid }),DS, PS, BS };
     Pipeline->UpdatePipeline(PipelineInfo);
 
-	Pipeline->SetTexture(0, false, DepthSRV);
+	Pipeline->SetSRV(0, false, DepthSRV);
 	Pipeline->SetSamplerState(0, false, Sampler);
 
 	// Update CameraInverse Constant Buffer (Slot 1)
@@ -72,7 +72,7 @@ void FFogPass::Execute(FRenderingContext& Context)
 
         Pipeline->Draw(3,0);
     }
-    Pipeline->SetTexture(0, false, nullptr);
+    Pipeline->SetSRV(0, false, nullptr);
 }
 
 void FFogPass::Release()

@@ -67,8 +67,8 @@ void URenderer::Init(HWND InWindowHandle)
 	PostProcessPasses.push_back(FXAAPass);
 
 	ViewModePasses[EViewModeIndex::VMI_Lit] = new FDefaultViewPass(Pipeline, DisabledDS);
-	ViewModePasses[EViewModeIndex::VMI_Unlit] = ViewModePasses[EViewModeIndex::VMI_Lit];
-	ViewModePasses[EViewModeIndex::VMI_Wireframe] = ViewModePasses[EViewModeIndex::VMI_Lit];
+	ViewModePasses[EViewModeIndex::VMI_Unlit] = new FDefaultViewPass(Pipeline, DisabledDS);
+	ViewModePasses[EViewModeIndex::VMI_Wireframe] = new FDefaultViewPass(Pipeline, DisabledDS);
 	ViewModePasses[EViewModeIndex::VMI_SceneDepth] = new FSceneDepthPass(Pipeline, DisabledDS);
 	ViewModePasses[EViewModeIndex::VMI_NormalMap] = new FNormalMapPass(Pipeline, DefaultDS);
 }
@@ -90,6 +90,11 @@ void URenderer::Release()
 	{
 		RenderPass->Release();
 		SafeDelete(RenderPass);
+	}
+	for (auto& RenderPassPair : ViewModePasses)
+	{
+		RenderPassPair.second->Release();
+		SafeDelete(RenderPassPair.second);
 	}
 
 	SafeDelete(ViewportClient);

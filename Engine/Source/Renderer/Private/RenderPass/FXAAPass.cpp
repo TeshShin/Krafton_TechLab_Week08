@@ -76,7 +76,7 @@ void FFXAAPass::Execute(FRenderingContext& Context)
     Pipeline->SetSamplerState(0, false, SamplerState);
 
     Pipeline->DrawIndexed(FullscreenIndexCount, 0, 0);
-    Pipeline->SetTexture(0, false, nullptr);
+    Pipeline->SetSRV(0, false, nullptr);
 }
 
 void FFXAAPass::Release()

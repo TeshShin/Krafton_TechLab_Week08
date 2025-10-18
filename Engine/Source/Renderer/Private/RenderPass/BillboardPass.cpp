@@ -66,7 +66,7 @@ void FBillboardPass::Execute(FRenderingContext& Context)
 
     	if (Context.ViewMode != EViewModeIndex::VMI_Wireframe)
     	{
-    		Pipeline->SetTexture(0, false, BillBoardComp->GetSprite()->GetTextureSRV());
+    		Pipeline->SetSRV(0, false, BillBoardComp->GetSprite()->GetTextureSRV());
     		Pipeline->SetSamplerState(0, false, BillBoardComp->GetSprite()->GetTextureSampler());
     	}
 

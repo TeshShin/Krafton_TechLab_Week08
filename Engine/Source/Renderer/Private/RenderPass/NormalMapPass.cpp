@@ -42,12 +42,12 @@ void FNormalMapPass::Execute(FRenderingContext& Context)
     FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferPerFrame, NormalMapConstants);
 
     Pipeline->SetConstantBuffer(0, false, ConstantBufferPerFrame);
-    Pipeline->SetTexture(0, false, NormalSRV);
+    Pipeline->SetSRV(0, false, NormalSRV);
     Pipeline->SetSamplerState(0, false, SamplerState);
 
     // Fullscreen triangle
     Pipeline->Draw(3, 0);
-    Pipeline->SetTexture(0, false, nullptr);
+    Pipeline->SetSRV(0, false, nullptr);
 }
 
 void FNormalMapPass::Release()

@@ -43,11 +43,11 @@ void FSceneDepthPass::Execute(FRenderingContext& Context)
     SceneDepthConstants.IsOrthographic = Context.CurrentCamera->GetCameraType() == ECameraType::ECT_Orthographic;
     FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferPerFrame, SceneDepthConstants);
     Pipeline->SetConstantBuffer(0, false, ConstantBufferPerFrame);
-    Pipeline->SetTexture(0, false, DepthSRV);
+    Pipeline->SetSRV(0, false, DepthSRV);
     Pipeline->SetSamplerState(0, false, SamplerState);
 
     Pipeline->Draw(3, 0);
-    Pipeline->SetTexture(0, false, nullptr);
+    Pipeline->SetSRV(0, false, nullptr);
 }
 
 void FSceneDepthPass::Release()
