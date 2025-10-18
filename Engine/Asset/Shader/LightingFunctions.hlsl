@@ -181,7 +181,7 @@ struct PS_INPUT
 {
 	float4 Position : SV_POSITION;
 	float3 WorldPosition : TEXCOORD0;
-	float3 WorldNormal : TEXCOORD1;
+	float3 WorldNormal : NORMAL;
 	float2 Tex : TEXCOORD2;
 	float3 WorldTangent : TEXCOORD3;
 	float TangentSign : TEXCOORD4;
