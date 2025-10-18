@@ -5,6 +5,7 @@
 #include "Editor/Public/Camera.h"
 #include "Editor/Public/Editor.h"
 #include "Scene/Public/Component/PrimitiveComponent.h"
+#include "Scene/Public/Component/LightComponentBase.h"
 #include "Renderer/Public/Renderer.h"
 #include "Editor/Public/Viewport.h"
 
@@ -151,42 +152,47 @@ void USceneHierarchyWidget::RenderActorInfo(AActor* InActor, int32 InIndex)
 	FName ActorName = InActor->GetName();
 	FString ActorDisplayName = ActorName.ToString();
 
-	// Actor의 PrimitiveComponent들의 Visibility 체크
-	bool bHasPrimitive = false;
+	// Actor의 PrimitiveComponent와 LightComponent의 Visibility 체크
+	bool bHasVisibleComponent = false;
 	bool bAllVisible = true;
-	UPrimitiveComponent* FirstPrimitive = nullptr;
 
-	// Actor의 모든 Component 중에서 PrimitiveComponent 찾기
+	// Actor의 모든 Component 중에서 PrimitiveComponent와 LightComponent 찾기
 	for (auto& Component : InActor->GetOwnedComponents())
 	{
 		if (UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(Component))
 		{
-			bHasPrimitive = true;
-
-			if (!FirstPrimitive)
-			{
-				FirstPrimitive = PrimitiveComponent;
-			}
-
+			bHasVisibleComponent = true;
 			if (!PrimitiveComponent->IsVisible())
+			{
+				bAllVisible = false;
+			}
+		}
+		else if (ULightComponentBase* LightComponent = Cast<ULightComponentBase>(Component))
+		{
+			bHasVisibleComponent = true;
+			if (!LightComponent->IsVisible())
 			{
 				bAllVisible = false;
 			}
 		}
 	}
 
-	// PrimitiveComponent가 있는 경우에만 Visibility 버튼 표시
-	if (bHasPrimitive)
+	// PrimitiveComponent 또는 LightComponent가 있는 경우에만 Visibility 버튼 표시
+	if (bHasVisibleComponent)
 	{
 		if (ImGui::SmallButton(bAllVisible ? "[O]" : "[X]"))
 		{
-			// 모든 PrimitiveComponent의 Visibility 토글
+			// 모든 PrimitiveComponent와 LightComponent의 Visibility 토글
 			bool bNewVisibility = !bAllVisible;
 			for (auto& Component : InActor->GetOwnedComponents())
 			{
 				if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(Component))
 				{
 					PrimComp->SetVisibility(bNewVisibility);
+				}
+				else if (ULightComponentBase* LightComp = Cast<ULightComponentBase>(Component))
+				{
+					LightComp->SetVisible(bNewVisibility);
 				}
 			}
 			UE_LOG_INFO("SceneHierarchy: %s의 가시성이 %s로 변경되었습니다",
@@ -196,7 +202,7 @@ void USceneHierarchyWidget::RenderActorInfo(AActor* InActor, int32 InIndex)
 	}
 	else
 	{
-		// PrimitiveComponent가 없는 경우 비활성화된 버튼 표시
+		// Visible Component가 없는 경우 비활성화된 버튼 표시
 		ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f);
 		ImGui::SmallButton("[-]");
 		ImGui::PopStyleVar();
