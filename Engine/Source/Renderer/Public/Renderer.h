@@ -65,6 +65,10 @@ public:
 	UPipeline* GetPipeline() const { return Pipeline; }
 	bool GetIsResizing() const { return bIsResizing; }
 
+	// Blend state accessors for passes that need explicit blending
+	ID3D11BlendState* GetAlphaBlendState() const { return AlphaBlendState; }
+	ID3D11BlendState* GetAdditiveBlendState() const { return AdditiveBlendState; }
+
 	void SetIsResizing(bool isResizing) { bIsResizing = isResizing; }
 
 private:

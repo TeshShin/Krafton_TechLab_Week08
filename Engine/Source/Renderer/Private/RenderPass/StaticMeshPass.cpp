@@ -96,30 +96,40 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 	uint32 TotalClusters = NumTilesX * NumTilesY * NumZSlices;
 	uint32 MaxLightsPerCluster = 64;
 
-	// Recreate Count/Index buffers every frame if dims changed (simple implementation)
-	// Release previous resources first
-	SafeRelease(ClusterCountSRV);
-	SafeRelease(ClusterCountUAV);
-	SafeRelease(ClusterCountBuffer);
-	SafeRelease(ClusterIndexSRV);
-	SafeRelease(ClusterIndexUAV);
-	SafeRelease(ClusterIndexBuffer);
+	// (Re)create buffers only when dimensions or capacities change
+	bool bDimsChanged = (CachedNumTilesX != NumTilesX) || (CachedNumTilesY != NumTilesY) || (CachedNumZSlices != NumZSlices);
+	bool bMaxChanged  = (CachedMaxLightsPerCluster != MaxLightsPerCluster);
+	if (bDimsChanged || bMaxChanged || !ClusterCountBuffer || !ClusterIndexBuffer)
+	{
+		SafeRelease(ClusterCountSRV);
+		SafeRelease(ClusterCountUAV);
+		SafeRelease(ClusterCountBuffer);
+		SafeRelease(ClusterIndexSRV);
+		SafeRelease(ClusterIndexUAV);
+		SafeRelease(ClusterIndexBuffer);
 
-	// Create Count buffer (TotalClusters uints)
-	const uint32 CountElements = TotalClusters;
-	ClusterCountBuffer = FRenderResourceFactory::CreateStructuredBufferWithUAV(
-		sizeof(uint32),
-		CountElements,
-		&ClusterCountSRV,
-		&ClusterCountUAV);
+		// Create Count buffer (TotalClusters uints)
+		const uint32 CountElements = TotalClusters;
+		ClusterCountBuffer = FRenderResourceFactory::CreateStructuredBufferWithUAV(
+			sizeof(uint32),
+			CountElements,
+			&ClusterCountSRV,
+			&ClusterCountUAV);
 
-	// Create Index buffer (TotalClusters * MaxLightsPerCluster uints)
-	const uint32 IndexElements = TotalClusters * MaxLightsPerCluster;
-	ClusterIndexBuffer = FRenderResourceFactory::CreateStructuredBufferWithUAV(
-		sizeof(uint32),
-		IndexElements,
-		&ClusterIndexSRV,
-		&ClusterIndexUAV);
+		// Create Index buffer (TotalClusters * MaxLightsPerCluster uints)
+		const uint32 IndexElements = TotalClusters * MaxLightsPerCluster;
+		ClusterIndexBuffer = FRenderResourceFactory::CreateStructuredBufferWithUAV(
+			sizeof(uint32),
+			IndexElements,
+			&ClusterIndexSRV,
+			&ClusterIndexUAV);
+
+	        // Cache
+	        CachedNumTilesX = NumTilesX;
+	        CachedNumTilesY = NumTilesY;
+	        CachedNumZSlices = NumZSlices;
+	        CachedMaxLightsPerCluster = MaxLightsPerCluster;
+    }
 
 	auto* CurrentCamera = Context.CurrentCamera;
 
@@ -392,8 +402,9 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	{
 		// Reuse already-bound FP cbuffers (b11,b12) and FP_ClusterCount (t7)
 		// Setup fullscreen pipeline with disabled depth
-		auto RS = FRenderResourceFactory::GetRasterizerState({ ECullMode::None, EFillMode::Solid });
-		FPipelineInfo HeatPipe = { nullptr, HeatVS, RS, DS_Disabled ? DS_Disabled : DS, HeatPS, nullptr };
+		auto RS = FRenderResourceFactory::GetRasterizerState({ ECullMode::None, EFillMode::Solid });        // Use alpha blending for a proper overlay regardless of previous passes
+		ID3D11BlendState* BS = URenderer::GetInstance().GetAlphaBlendState();
+		FPipelineInfo HeatPipe = { nullptr, HeatVS, RS, DS_Disabled ? DS_Disabled : DS, HeatPS, BS };
 		Pipeline->UpdatePipeline(HeatPipe);
 		// Ensure SRV t7 and CBs b11,b12 are bound to PS
 		Pipeline->SetSRV(7, false /*PS*/, ClusterCountSRV);

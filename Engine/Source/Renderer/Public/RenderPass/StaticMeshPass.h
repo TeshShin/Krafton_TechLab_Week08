@@ -57,4 +57,10 @@ private:
     ID3D11PixelShader* HeatPS = nullptr;
     ID3D11DepthStencilState* DS_Disabled = nullptr;
     bool bShowClusterHeat = true; // simple always-on toggle for now
+
+    // Cached cluster dimensions to avoid reallocating every frame
+    uint32 CachedNumTilesX = 0;
+    uint32 CachedNumTilesY = 0;
+    uint32 CachedNumZSlices = 0;
+    uint32 CachedMaxLightsPerCluster = 0;
 };
