@@ -87,14 +87,10 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
     uint32 Width = static_cast<uint32>(Context.Viewport.Width);
     uint32 Height = static_cast<uint32>(Context.Viewport.Height);
 
-	uint32 TileSize = 32;
-
 	// Ceil-div to cover the whole screen with tiles
 	uint32 NumTilesX = (Width  + TileSize - 1) / TileSize;
 	uint32 NumTilesY = (Height + TileSize - 1) / TileSize;
-	uint32 NumZSlices = 24;
 	uint32 TotalClusters = NumTilesX * NumTilesY * NumZSlices;
-	uint32 MaxLightsPerCluster = 64;
 
 	// (Re)create buffers only when dimensions or capacities change
 	bool bDimsChanged = (CachedNumTilesX != NumTilesX) || (CachedNumTilesY != NumTilesY) || (CachedNumZSlices != NumZSlices);
@@ -171,11 +167,6 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 	// Set compute shader
 	ctx->CSSetShader(LightTilesCS, nullptr, 0);
 
-	// IMPORTANT: clear counts either here or inside CS.
-	// Since your count buffer is a *structured* UAV, prefer zeroing at the top of the CS kernel:
-	//   ClusterCount[cid] = 0;
-	// If you already did that, no ClearUAVUint call is needed here.
-
 	// Dispatch one thread per cluster (per your CS)
 	ctx->Dispatch(NumTilesX, NumTilesY, NumZSlices);
 
@@ -185,9 +176,6 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 
 	ID3D11ShaderResourceView* nullSRVs[1] = { nullptr };
 	ctx->CSSetShaderResources(0, 1, nullSRVs);
-
-	// (Optional) leave CS set or clear it:
-	ctx->CSSetShader(nullptr, nullptr, 0);
 }
 
 void FStaticMeshPass::Execute(FRenderingContext& Context)

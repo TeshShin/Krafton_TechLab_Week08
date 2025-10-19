@@ -125,7 +125,6 @@ Frustum BuildClusterFrustum(uint tileX, uint tileY, uint zSlice)
 bool IntersectsSphereFrustum(float3 centerVS, float radius, Frustum f)
 {
     // Side planes (planes pass through origin => d = 0)
-    [unroll]
     for (int i = 0; i < 4; ++i)
     {
         float dist = dot(f.Sides[i].n, centerVS) + f.Sides[i].d; // d==0
@@ -142,7 +141,6 @@ bool IntersectsUnifiedLightFrustum(FUnifiedDynamicLight L, Frustum f)
 {
     // Transform center/direction to view space
     float3 centerVS = mul(float4(L.Position, 1.0f), View).xyz;
-    float3 dirVS    = normalize(mul(float4(L.Direction, 0.0f), View).xyz);
 
     if (L.LightType == LIGHT_TYPE_DIRECTIONAL || L.LightType == LIGHT_TYPE_AMBIENT)
     {
@@ -162,7 +160,6 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
 	uint3 gid = dispatchThreadID;
 	uint cid = (gid.z * NumTilesY + gid.y) * NumTilesX + gid.x;
 	ClusterCount[cid] = 0;
-	GroupMemoryBarrierWithGroupSync();
 
     uint tileX = dispatchThreadID.x;
     uint tileY = dispatchThreadID.y;
@@ -173,9 +170,6 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
 
     uint clusterID = (zSlice * NumTilesY + tileY) * NumTilesX + tileX;
     if (clusterID >= TotalClusters) return;
-
-    // Reset count (safe: exactly one thread writes per cluster)
-    ClusterCount[clusterID] = 0u;
 
     Frustum clusterFrustum = BuildClusterFrustum(tileX, tileY, zSlice);
     uint base = clusterID * MaxLightsPerCluster;

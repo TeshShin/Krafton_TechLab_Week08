@@ -58,6 +58,10 @@ private:
     ID3D11DepthStencilState* DS_Disabled = nullptr;
     bool bShowClusterHeat = true; // simple always-on toggle for now
 
+	uint32 TileSize = 16;
+	uint32 NumZSlices = 24;
+	uint32 MaxLightsPerCluster = 64;
+
     // Cached cluster dimensions to avoid reallocating every frame
     uint32 CachedNumTilesX = 0;
     uint32 CachedNumTilesY = 0;
