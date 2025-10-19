@@ -6,8 +6,11 @@ using std::wstring;
 template <typename T>
 static void SafeDelete(T& InDynamicObject)
 {
-	delete InDynamicObject;
-	InDynamicObject = nullptr;
+	if (InDynamicObject != nullptr)
+	{
+		delete InDynamicObject;
+		InDynamicObject = nullptr;
+	}
 }
 
 template <typename T>

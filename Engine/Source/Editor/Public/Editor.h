@@ -1,10 +1,8 @@
 #pragma once
 #include "Core/Public/Object/Object.h"
 #include "Editor/Public/Gizmo.h"
-#include "Editor/Public/Grid.h"
 #include "Editor/public/Axis.h"
 #include "Editor/Public/ObjectPicker.h"
-#include "Editor/Public/BatchLines.h"
 #include "Editor/Public/SplitterWindow.h"
 
 class UPrimitiveComponent;
@@ -13,6 +11,7 @@ class FViewportClient;
 class UCamera;
 class ULevel;
 class USplitterWidget;
+class UBatchLineManager;
 struct FRay;
 
 enum class EViewportLayoutState
@@ -46,9 +45,10 @@ public:
 	void SelectComponent(UActorComponent* InComponent);
 	UActorComponent* GetSelectedComponent() const { return SelectedComponent; }
 
+
 // Getter
 public:
-	UBatchLines* GetBatchLines() { return &BatchLines; }
+	UBatchLineManager* GetBatchLines();
 	UAxis* GetAxis() { return &Axis; }
 	UGizmo* GetGizmo() { return &Gizmo; }
 	SSplitter* GetRootSplitter() { return &RootSplitter; }
@@ -81,7 +81,7 @@ private:
 	float SavedRightRatio = 0.5f;
 	UGizmo Gizmo;
 	UAxis Axis;
-	UBatchLines BatchLines;
+
 
 	SSplitterV RootSplitter;
 	SSplitterH LeftSplitter;

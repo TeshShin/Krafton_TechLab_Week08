@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Editor/Public/Editor.h"
+#include "Editor/Public/Editor.h"
 #include "Editor/Public/Camera.h"
 #include "Editor/Public/Viewport.h"
 #include "Renderer/Public/Renderer.h"
@@ -10,8 +11,8 @@
 #include "Scene/Public/Component/PrimitiveComponent.h"
 #include "Scene/Public/Level/Level.h"
 #include "Core/Public/Misc/ScopeCycleCounter.h"
+#include "Editor/Public/BatchLineManager.h"
 #include "Editor/Public/UI/StatOverlay.h"
-#include "Scene/Public/Component/DecalSpotLightComponent.h"
 
 UEditor::UEditor()
 {
@@ -50,7 +51,6 @@ void UEditor::Update()
 	}
 
 	UpdateBatchLines();
-	BatchLines.UpdateVertexBuffer();
 
 	ProcessMouseInput();
 
@@ -60,7 +60,6 @@ void UEditor::Update()
 void UEditor::RenderEditor()
 {
 	if (GEditor->IsPIESessionActive()) { return; }
-	BatchLines.Render();
 	Axis.Render();
 }
 
@@ -157,15 +156,15 @@ void UEditor::InitializeLayout()
 
 void UEditor::UpdateBatchLines()
 {
-	if (ShowFlags & EEngineShowFlags::SF_Octree)
-	{
-		BatchLines.UpdateOctreeVertices(GWorld->GetLevel()->GetStaticOctree());
-	}
-	else
-	{
-		// If we are not showing the octree, clear the lines, so they don't persist
-		BatchLines.ClearOctreeLines();
-	}
+	// if (ShowFlags & EEngineShowFlags::SF_Octree)
+	// {
+	// 	UBatchLineManager::GetInstance().UpdateOctreeVertices(GWorld->GetLevel()->GetStaticOctree());
+	// }
+	// else
+	// {
+	// 	// If we are not showing the octree, clear the lines, so they don't persist
+	// 	UBatchLineManager::GetInstance().ClearOctreeLines();
+	// }
 
 	if (UActorComponent* Component = GetSelectedComponent())
 	{
@@ -177,24 +176,23 @@ void UEditor::UpdateBatchLines()
 				{
 					FVector WorldMin, WorldMax; PrimitiveComponent->GetWorldAABB(WorldMin, WorldMax);
 					FAABB AABB(WorldMin, WorldMax);
-					BatchLines.UpdateBoundingBoxVertices(&AABB);
+					UBatchLineManager::GetInstance().UpdateBoundingBox(&AABB);
 				}
 				else
 				{
-					BatchLines.UpdateBoundingBoxVertices(PrimitiveComponent->GetBoundingBox());
-
+					UBatchLineManager::GetInstance().UpdateBoundingBox(PrimitiveComponent->GetBoundingBox());
 					// 만약 선택된 타입이 decalspotlightcomponent라면
-					if (Component->IsA(UDecalSpotLightComponent::StaticClass()))
-					{
-						BatchLines.UpdateSpotLightVertices(Cast<UDecalSpotLightComponent>(Component));
-					}
+					// if (Component->IsA(UDecalSpotLightComponent::StaticClass()))
+					// {
+					// 	UBatchLineManager::GetInstance().UpdateSpotLightVertices(Cast<UDecalSpotLightComponent>(Component));
+					// }
 				}
 				return;
 			}
 		}
 	}
 
-	BatchLines.DisableRenderBoundingBox();
+	UBatchLineManager::GetInstance().UpdateBoundingBox(nullptr);
 }
 
 void UEditor::UpdateLayout()
@@ -580,4 +578,9 @@ void UEditor::SelectComponent(UActorComponent* InComponent)
 		SelectedComponent->OnSelected();
 	}
 	UUIManager::GetInstance().OnSelectedComponentChanged(SelectedComponent);
+}
+
+UBatchLineManager* UEditor::GetBatchLines()
+{
+	return &UBatchLineManager::GetInstance();
 }

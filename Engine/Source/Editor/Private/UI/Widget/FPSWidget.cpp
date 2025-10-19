@@ -2,13 +2,14 @@
 #include "Editor/Public/UI/Widget/FPSWidget.h"
 #include "Editor/Public/Editor.h"
 #include "Manager/Public/TimeManager.h"
+#include "Editor/Public/BatchLineManager.h"
 
 IMPLEMENT_CLASS(UFPSWidget, UWidget)
 constexpr float REFRESH_INTERVAL = 0.1f;
 
 void UFPSWidget::Initialize()
 {
-	BatchLine = GEditor->GetEditorModule()->GetBatchLines();
+	BatchLine = &UBatchLineManager::GetInstance();
 	// 히스토리 초기화
 	for (int i = 0; i < 60; ++i)
 	{
@@ -97,10 +98,10 @@ void UFPSWidget::RenderWidget()
 	}
 
 	// test용: CellSize 값을 실시간으로 조정
-	CellSize = BatchLine->GetCellSize();
+	CellSize = BatchLine->GetGridCellSize();
 	if (ImGui::SliderFloat("Grid Spacing", &CellSize, 0.0f, 10.0f, "%.1f"))
 	{
-		BatchLine->UpdateUGridVertices(CellSize);
+		BatchLine->UpdateGrid(CellSize);
 	}
 
 	ImGui::Separator();

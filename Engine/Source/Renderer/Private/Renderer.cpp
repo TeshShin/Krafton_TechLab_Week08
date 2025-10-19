@@ -27,6 +27,7 @@
 #include "Renderer/Public/RenderPass/DefaultViewPass.h"
 #include "Renderer/Public/RenderPass/SceneDepthPass.h"
 #include "Renderer/Public/RenderPass/RenderingContext.h"
+#include "Editor/Public/BatchLineManager.h"
 
 IMPLEMENT_SINGLETON_CLASS(URenderer, UObject)
 
@@ -79,10 +80,14 @@ void URenderer::Init(HWND InWindowHandle)
 	ViewModePasses[EViewModeIndex::VMI_Wireframe] = new FDefaultViewPass(Pipeline, DisabledDS);
 	ViewModePasses[EViewModeIndex::VMI_SceneDepth] = new FSceneDepthPass(Pipeline, DisabledDS);
 	ViewModePasses[EViewModeIndex::VMI_NormalMap] = new FNormalMapPass(Pipeline, DefaultDS);
+
+	UBatchLineManager::GetInstance().Init();
 }
 
 void URenderer::Release()
 {
+	UBatchLineManager::GetInstance().Release();
+
 	ReleaseConstantBuffers();
 	ReleaseDefaultShader();
 	ReleaseDepthStencilState();
@@ -236,6 +241,9 @@ void URenderer::Render()
         	Pipeline->SetRenderTargets(1, RenderTargetView, GetDepthBufferDSV());
         	GEditor->GetEditorModule()->RenderEditor();
         	GEditor->GetEditorModule()->RenderGizmo(RenderingContext.CurrentCamera);
+
+			UBatchLineManager::GetInstance().Update();
+			UBatchLineManager::GetInstance().Render();
 
 			RenderEditorDepth(RenderingContext);
         }

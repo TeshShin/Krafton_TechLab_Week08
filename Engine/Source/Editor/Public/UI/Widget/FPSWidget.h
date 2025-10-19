@@ -1,7 +1,7 @@
 #pragma once
 #include "Widget.h"
 
-class UBatchLines;
+class UBatchLineManager;
 /**
  * @brief Frame과 관련된 내용을 제공하는 UI Widget
  */
@@ -20,7 +20,7 @@ public:
 	~UFPSWidget() override = default;
 
 private:
-	UBatchLines* BatchLine;
+	UBatchLineManager* BatchLine;
 
 	float FrameTimeHistory[60] = {};
 	int32 FrameTimeIndex = 0;
