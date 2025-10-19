@@ -1,4 +1,4 @@
-# Week7 Team5(이준용, 국동희, 정찬호, 정석영) 기술문서
+# Week7 Team5 기술문서
 
 ## 1. 개요
 
@@ -29,6 +29,7 @@ RWStructuredBuffer<uint2> LightGrid; // x: offset, y: count
 ```
 
 **주요 기능:**
+
 - Frustum의 near/far plane을 고려한 타일 AABB 계산
 - Left-Handed 좌표계에 맞춘 Y축 반전 처리
 - Sphere-AABB intersection 검사 (`BoundingSphere::Intersects(AABB)`)
@@ -85,16 +86,19 @@ ULightComponentBase (Abstract)
 ### 3.2. 라이트 타입별 구현
 
 #### 3.2.1. Ambient Light (환경광)
+
 - 전역 조명으로 모든 물체에 균일하게 적용
 - Intensity와 Color 지원
 - 씬당 하나의 Ambient Light 권장
 
 #### 3.2.2. Directional Light (평행광)
+
 - 태양광 시뮬레이션에 적합
 - Direction, Intensity, Color 속성
 - 거리 감쇠 없음
 
 #### 3.2.3. Point Light (점광원)
+
 - 모든 방향으로 균일하게 빛을 발산
 - 역제곱 감쇠 (Inverse Square Law) 적용
 - Radius 파라미터로 영향 범위 제어
@@ -104,6 +108,7 @@ float attenuation = 1.0 / (distance * distance + 1.0);
 ```
 
 #### 3.2.4. Spot Light (스포트라이트)
+
 - 원뿔 형태로 빛을 투사
 - Inner/Outer Cone Angle 지원
 - 부드러운 가장자리 (Smooth Falloff) 구현
@@ -132,6 +137,7 @@ Uber Shader는 여러 셰이더의 기능을 하나로 통합하여, 런타임�
 ### 4.2. 핵심 구조
 
 #### 4.2.1. LightingFunctions.hlsl
+
 공통 조명 계산 함수들을 분리한 라이브러리:
 
 ```hlsl
@@ -155,11 +161,13 @@ float3 ApplyNormalMap(float3 sampledNormal, float3 normal,
 ```
 
 #### 4.2.2. 통합된 Vertex Shader (`TextureVS.hlsl`)
+
 - World/WorldInverseTranspose 행렬 적용
 - View Space Normal 계산
 - Tangent 공간 벡터 전달
 
 #### 4.2.3. 통합된 Pixel Shader (`TexturePS.hlsl`)
+
 View Mode에 따라 출력 변경:
 
 ```hlsl
@@ -188,6 +196,7 @@ if (ViewMode == VIEW_MODE_LIT) {
 ### 5.1. 구현 과정
 
 #### 5.1.1. Tangent Space 계산
+
 OBJ 파일 로딩 시 CPU에서 Tangent 벡터를 계산합니다 (`ObjManager.cpp`):
 
 ```cpp
@@ -203,6 +212,7 @@ tangent = f * (deltaUV2.y * edge1 - deltaUV1.y * edge2);
 ```
 
 #### 5.1.2. Normal Map 로딩
+
 - 자동 탐지: `filename_normal.jpg/png` 패턴 검색
 - 없을 경우: 평면 Normal Map (RGB=128,128,255) 생성
 - 텍스처 파일 경로를 Scene 파일에 직렬화
@@ -225,6 +235,7 @@ float3 worldNormal = mul(normalMapSample, TBN);
 ### 5.2. Normal View Mode
 
 Normal Map이 올바르게 적용되었는지 확인하기 위한 시각화 모드:
+
 - RGB 값으로 Normal 방향 표시
 - 배경은 검은색으로 유지 (깊이 테스트 실패 시 discard)
 
