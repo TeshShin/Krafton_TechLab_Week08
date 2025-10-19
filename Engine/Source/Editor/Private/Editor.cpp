@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "Editor/Public/Editor.h"
-#include "Editor/Public/Editor.h"
 #include "Editor/Public/Camera.h"
 #include "Editor/Public/Viewport.h"
 #include "Renderer/Public/Renderer.h"
@@ -11,7 +10,7 @@
 #include "Scene/Public/Component/PrimitiveComponent.h"
 #include "Scene/Public/Level/Level.h"
 #include "Core/Public/Misc/ScopeCycleCounter.h"
-#include "Editor/Public/BatchLineManager.h"
+#include "Editor/Public/Line/BatchLineManager.h"
 #include "Editor/Public/UI/StatOverlay.h"
 
 UEditor::UEditor()

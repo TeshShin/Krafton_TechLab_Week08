@@ -1,14 +1,14 @@
 #include "pch.h"
-#include "Editor/Public/GridLineSource.h"
+#include "Editor/Public/Line/GridLineSource.h"
 
-GridLineSource::GridLineSource(float InCellSize, int InNumLines)
+FGridLineSource::FGridLineSource(float InCellSize, int InNumLines)
     : m_CellSize(InCellSize)
     , m_NumLines(InNumLines)
 {
     GenerateGrid();
 }
 
-void GridLineSource::SetCellSize(float InCellSize)
+void FGridLineSource::SetCellSize(float InCellSize)
 {
     if (m_CellSize != InCellSize)
     {
@@ -18,7 +18,7 @@ void GridLineSource::SetCellSize(float InCellSize)
     }
 }
 
-void GridLineSource::GenerateGrid()
+void FGridLineSource::GenerateGrid()
 {
     m_Vertices.clear();
     m_Indices.clear();

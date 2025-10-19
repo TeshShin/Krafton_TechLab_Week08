@@ -1,19 +1,19 @@
 #include "pch.h"
-#include "Editor/Public/BatchLineManager.h"
-#include "Editor/Public/ILineSource.h"
+#include "Editor/Public/Line/BatchLineManager.h"
 #include "Renderer/Public/Renderer.h"
 #include "Renderer/Public/RenderResourceFactory.h"
 #include "Editor/Public/EditorPrimitive.h"
-#include "Editor/Public/GridLineSource.h"
-#include "Editor/Public/BoundingBoxLineSource.h"
-#include "Editor/Public/DebugLineSource.h"
+#include "Editor/Public/Line/GridLineSource.h"
+#include "Editor/Public/Line/BoundingBoxLineSource.h"
+#include "Editor/Public/Line/DebugLineSource.h"
+#include "Editor/Public/Line/ILineSource.h"
 
 struct FBatchLineManagerData
 {
     TArray<ILineSource*> Sources;
-    GridLineSource* GridSource = nullptr;
-    BoundingBoxLineSource* BoundingBoxSource = nullptr;
-    DebugLineSource* DebugSource = nullptr;
+    FGridLineSource* GridSource = nullptr;
+    FBoundingBoxLineSource* BoundingBoxSource = nullptr;
+    FDebugLineSource* DebugSource = nullptr;
 
     FEditorPrimitive Primitive;
     bool bIsDirty = true;
@@ -33,13 +33,13 @@ void UBatchLineManager::Init()
 {
     Data = new FBatchLineManagerData();
 
-    Data->GridSource = new GridLineSource();
+    Data->GridSource = new FGridLineSource();
     Data->Sources.push_back(Data->GridSource);
 
-    Data->BoundingBoxSource = new BoundingBoxLineSource();
+    Data->BoundingBoxSource = new FBoundingBoxLineSource();
     Data->Sources.push_back(Data->BoundingBoxSource);
 
-    Data->DebugSource = new DebugLineSource();
+    Data->DebugSource = new FDebugLineSource();
     Data->Sources.push_back(Data->DebugSource);
 
     // Create shaders and other resources here

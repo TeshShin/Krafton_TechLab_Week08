@@ -27,7 +27,7 @@
 #include "Renderer/Public/RenderPass/DefaultViewPass.h"
 #include "Renderer/Public/RenderPass/SceneDepthPass.h"
 #include "Renderer/Public/RenderPass/RenderingContext.h"
-#include "Editor/Public/BatchLineManager.h"
+#include "Editor/Public/Line/BatchLineManager.h"
 
 IMPLEMENT_SINGLETON_CLASS(URenderer, UObject)
 

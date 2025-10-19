@@ -1,20 +1,20 @@
 #include "pch.h"
-#include "Editor/Public/BoundingBoxLineSource.h"
+#include "Editor/Public/Line/BoundingBoxLineSource.h"
 #include "Physics/Public/AABB.h"
 #include "Physics/Public/OBB.h"
 
-BoundingBoxLineSource::BoundingBoxLineSource()
+FBoundingBoxLineSource::FBoundingBoxLineSource()
 {
 }
 
-void BoundingBoxLineSource::SetBoundingVolume(const IBoundingVolume* InBoundingVolume)
+void FBoundingBoxLineSource::SetBoundingVolume(const IBoundingVolume* InBoundingVolume)
 {
     BoundingVolume = InBoundingVolume;
     GenerateLines();
     bIsDirty = true;
 }
 
-void BoundingBoxLineSource::GenerateLines()
+void FBoundingBoxLineSource::GenerateLines()
 {
     Vertices.clear();
     Indices.clear();
@@ -42,7 +42,7 @@ void BoundingBoxLineSource::GenerateLines()
     }
 }
 
-void BoundingBoxLineSource::GenerateAABB(const FAABB* InAABB)
+void FBoundingBoxLineSource::GenerateAABB(const FAABB* InAABB)
 {
     if (!InAABB) { return; }
 
@@ -78,7 +78,7 @@ void BoundingBoxLineSource::GenerateAABB(const FAABB* InAABB)
     Vertices.push_back(Corners[3]); Vertices.push_back(Corners[7]);
 }
 
-void BoundingBoxLineSource::GenerateOBB(const FOBB* InOBB)
+void FBoundingBoxLineSource::GenerateOBB(const FOBB* InOBB)
 {
     if (!InOBB) { return; }
 
@@ -121,7 +121,7 @@ void BoundingBoxLineSource::GenerateOBB(const FOBB* InOBB)
     Vertices.push_back(Corners[3]); Vertices.push_back(Corners[7]);
 }
 
-void BoundingBoxLineSource::GenerateSpotLight(const FSpotLightOBB* InSpotLight)
+void FBoundingBoxLineSource::GenerateSpotLight(const FSpotLightOBB* InSpotLight)
 {
     if (!InSpotLight) { return; }
 

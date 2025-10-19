@@ -1,11 +1,10 @@
 #pragma once
+#include "ILineSource.h"
 
-#include "Editor/Public/ILineSource.h"
-
-class GridLineSource : public ILineSource
+class FGridLineSource : public ILineSource
 {
 public:
-    GridLineSource(float InCellSize = 1.0f, int InNumLines = 250);
+    FGridLineSource(float InCellSize = 1.0f, int InNumLines = 250);
 
     virtual const TArray<FVector>& GetVertices() const override { return m_Vertices; }
     virtual const TArray<uint32>& GetIndices() const override { return m_Indices; }

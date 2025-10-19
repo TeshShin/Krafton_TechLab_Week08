@@ -1,11 +1,11 @@
 #include "pch.h"
-#include "Editor/Public/DebugLineSource.h"
+#include "Editor/Public/Line/DebugLineSource.h"
 
-DebugLineSource::DebugLineSource()
+FDebugLineSource::FDebugLineSource()
 {
 }
 
-void DebugLineSource::AddLine(const FVector& InStart, const FVector& InEnd, const FVector4& InColor)
+void FDebugLineSource::AddLine(const FVector& InStart, const FVector& InEnd, const FVector4& InColor)
 {
     Vertices.push_back(InStart);
     Vertices.push_back(InEnd);
@@ -15,7 +15,7 @@ void DebugLineSource::AddLine(const FVector& InStart, const FVector& InEnd, cons
     bIsDirty = true;
 }
 
-void DebugLineSource::ClearLines()
+void FDebugLineSource::ClearLines()
 {
     Vertices.clear();
     Indices.clear();

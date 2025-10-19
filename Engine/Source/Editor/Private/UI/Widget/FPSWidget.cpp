@@ -2,7 +2,7 @@
 #include "Editor/Public/UI/Widget/FPSWidget.h"
 #include "Editor/Public/Editor.h"
 #include "Manager/Public/TimeManager.h"
-#include "Editor/Public/BatchLineManager.h"
+#include "Editor/Public/Line/BatchLineManager.h"
 
 IMPLEMENT_CLASS(UFPSWidget, UWidget)
 constexpr float REFRESH_INTERVAL = 0.1f;

@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Editor/Public/ILineSource.h"
+#include "ILineSource.h"
 #include "Physics/Public/BoundingVolume.h"
 
-class BoundingBoxLineSource : public ILineSource
+class FBoundingBoxLineSource : public ILineSource
 {
 public:
-    BoundingBoxLineSource();
+    FBoundingBoxLineSource();
 
     virtual const TArray<FVector>& GetVertices() const override { return Vertices; }
     virtual const TArray<uint32>& GetIndices() const override { return Indices; }
