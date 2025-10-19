@@ -45,7 +45,17 @@ public:
 
     virtual void TickComponent(float DeltaTime) override { Super::TickComponent(DeltaTime); }
 
-    virtual void EndPlay() override { Super::EndPlay(); }
+	virtual void EndPlay() override { Super::EndPlay(); }
+
+	virtual void OnSelected() override;
+
+	virtual void OnDeselected() override;
+
+	/*-----------------------------------------------------------------------------
+		USceneComponent Features
+	 -----------------------------------------------------------------------------*/
+protected:
+	virtual void MarkAsDirty() override;
 
     /*-----------------------------------------------------------------------------
         ULightComponentBase Features
@@ -97,8 +107,15 @@ private:
 	/*-----------------------------------------------------------------------------
 		Visualization Features
 	 -----------------------------------------------------------------------------*/
+public:
+	virtual void DrawDebugArrow(TArray<FName>& InOutLabels) {}
+
 protected:
+	virtual void DrawDebugLines() {}
+	virtual void ClearDebugLines();
 	virtual class UTexture* GetLightBillboardTexture() = 0;
+
+	TArray<FName> DebugLineLabels;
 
 private:
 	void CreateIconChild();

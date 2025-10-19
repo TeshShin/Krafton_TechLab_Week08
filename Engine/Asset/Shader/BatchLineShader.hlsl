@@ -7,11 +7,13 @@ cbuffer PerFrame : register(b1)
 struct VS_INPUT
 {
 	float4 position : POSITION; // Input position from vertex buffer
+	float4 color : COLOR;
 };
 
 struct PS_INPUT
 {
 	float4 position : SV_POSITION; // Transformed position to pass to the pixel shader
+	float4 color : COLOR;
 };
 
 PS_INPUT mainVS(VS_INPUT input)
@@ -22,11 +24,12 @@ PS_INPUT mainVS(VS_INPUT input)
 	tmp = mul(tmp, Projection);
 	
 	output.position = tmp;
+	output.color = input.color;
 
 	return output;
 }
 
 float4 mainPS(PS_INPUT input) : SV_TARGET
 {
-	return float4(0.5f, 0.5f, 0.5f, 1.0f);
+	return input.color;
 }

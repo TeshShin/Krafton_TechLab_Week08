@@ -42,7 +42,7 @@ protected:
 
 private:
 	AActor* Owner;
-	
+
 public:
 	virtual UObject* Duplicate() override;
 
@@ -55,7 +55,10 @@ public:
 	bool IsVisualizationComponent() const { return bIsVisualizationComponent; }
 	void SetIsEditorOnly(bool bInIsEditorOnly);
 	void SetIsVisualizationComponent(bool bIsInVisualizationComponent);
-	
+
+protected:
+	bool bIsSelected = false;
+
 private:
 	/**
 	 * @brief 이 컴포넌트가 에디터 전용인지 여부를 나타냄

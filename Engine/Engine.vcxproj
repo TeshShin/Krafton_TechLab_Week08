@@ -360,6 +360,11 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Core\Public\Object\ObjectIterator.h" />
     <ClInclude Include="Source\Core\Public\Types.h" />
     <ClInclude Include="Source\Editor\Public\EditorEngine.h" />
+    <ClInclude Include="Source\Editor\Public\Line\BatchLineManager.h" />
+    <ClInclude Include="Source\Editor\Public\Line\BoundingBoxLineSource.h" />
+    <ClInclude Include="Source\Editor\Public\Line\DebugLineSource.h" />
+    <ClInclude Include="Source\Editor\Public\Line\GridLineSource.h" />
+    <ClInclude Include="Source\Editor\Public\Line\ILineSource.h" />
     <ClInclude Include="Source\Editor\Public\SplitterWindow.h" />
     <ClInclude Include="Source\Editor\Public\UI\ImGuiHelper.h" />
     <ClInclude Include="Source\Editor\Public\UI\StatOverlay.h" />
@@ -419,13 +424,10 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Core\Public\ClientApp.h" />
     <ClInclude Include="Source\Core\Public\resource.h" />
     <ClInclude Include="Source\Editor\Public\Axis.h" />
-    <ClInclude Include="Source\Editor\Public\BatchLines.h" />
-    <ClInclude Include="Source\Editor\Public\BoundingBoxLines.h" />
     <ClInclude Include="Source\Editor\Public\Camera.h" />
     <ClInclude Include="Source\Editor\Public\Editor.h" />
     <ClInclude Include="Source\Editor\Public\EditorPrimitive.h" />
     <ClInclude Include="Source\Editor\Public\Gizmo.h" />
-    <ClInclude Include="Source\Editor\Public\Grid.h" />
     <ClInclude Include="Source\Editor\Public\ObjectPicker.h" />
     <ClInclude Include="Source\Physics\Public\OBB.h" />
     <ClInclude Include="Source\Renderer\Public\DeviceResources.h" />
@@ -497,6 +499,14 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
   <ItemGroup>
     <ClCompile Include="Asset\Shader\LightTilesComputeShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Private\Line\BatchLineManager.cpp">
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Private\Line\BoundingBoxLineSource.cpp">
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Private\Line\DebugLineSource.cpp">
+    </ClCompile>
+    <ClCompile Include="Source\Editor\Private\Line\GridLineSource.cpp">
     </ClCompile>
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\SpotLightComponentWidget.cpp" />
     <ClCompile Include="Source\Renderer\Private\RenderPass\StaticMeshUnlitPass.cpp" />
@@ -632,12 +642,9 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClCompile Include="Source\Core\Private\AppWindow.cpp" />
     <ClCompile Include="Source\Core\Private\ClientApp.cpp" />
     <ClCompile Include="Source\Editor\Private\Axis.cpp" />
-    <ClCompile Include="Source\Editor\Private\BatchLines.cpp" />
-    <ClCompile Include="Source\Editor\Private\BoundingBoxLines.cpp" />
     <ClCompile Include="Source\Editor\Private\Camera.cpp" />
     <ClCompile Include="Source\Editor\Private\Editor.cpp" />
     <ClCompile Include="Source\Editor\Private\Gizmo.cpp" />
-    <ClCompile Include="Source\Editor\Private\Grid.cpp" />
     <ClCompile Include="Source\Editor\Private\ObjectPicker.cpp" />
     <ClCompile Include="Source\Physics\Private\OBB.cpp" />
     <ClCompile Include="Source\Renderer\Private\DeviceResources.cpp">

@@ -10,7 +10,7 @@ class USpotLightComponent : public UPointLightComponent
     DECLARE_CLASS(USpotLightComponent, UPointLightComponent)
 
 public:
-    USpotLightComponent() = default;
+    USpotLightComponent();
 
     virtual ~USpotLightComponent() = default;
 
@@ -30,8 +30,6 @@ public:
 public:
     virtual void BeginPlay() override { Super::BeginPlay(); }
 
-    virtual void TickComponent(float DeltaTime) override { Super::TickComponent(DeltaTime); }
-
     virtual void EndPlay() override { Super::EndPlay(); }
 
     virtual UClass* GetSpecificWidgetClass() const override;
@@ -44,6 +42,12 @@ public:
 
     virtual struct FUnifiedDynamicLight GetUnifiedLightData() const override;
 
+public:
+	virtual void DrawDebugArrow(TArray<FName>& InOutLabels) override;
+
+protected:
+	virtual void DrawDebugLines() override;
+
     /*-----------------------------------------------------------------------------
         USpotLightComponent Features
      -----------------------------------------------------------------------------*/
@@ -51,12 +55,8 @@ public:
     // --- Getters & Setters ---
 	float GetInnerConeAngle() const { return InnerConeAngle; }
 	float GetOuterConeAngle() const { return OuterConeAngle; }
-	void SetInnerConeAngle(float InInnerConeAngle) {
-		InnerConeAngle = std::clamp(InInnerConeAngle, 0.0f, OuterConeAngle - 1.0f);
-	}
-	void SetOuterConeAngle(float InOuterConeAngle) {
-		OuterConeAngle = std::clamp(InOuterConeAngle, InnerConeAngle + 1.0f, 90.0f);
-	}
+	void SetInnerConeAngle(float InInnerConeAngle);
+	void SetOuterConeAngle(float InOuterConeAngle);
 
 protected:
 	UTexture* GetLightBillboardTexture() override;

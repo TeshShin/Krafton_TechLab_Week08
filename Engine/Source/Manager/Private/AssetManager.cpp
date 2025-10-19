@@ -34,20 +34,14 @@ void UAssetManager::Initialize()
 		FRenderResourceFactory::CreateIndexBuffer(IndicesVerticalSquare.data(), static_cast<int>(IndicesVerticalSquare.size()) * sizeof(uint32)));
 
 	NumIndices.emplace(EPrimitiveType::Sprite, static_cast<uint32>(IndicesVerticalSquare.size()));
-	
+
 	// TArray.GetData(), TArray.Num()*sizeof(FVertexSimple), TArray.GetTypeSize()
-	VertexBuffers.emplace(EPrimitiveType::Torus, FRenderResourceFactory::CreateVertexBuffer(
-		VerticesTorus.data(), static_cast<int>(VerticesTorus.size() * sizeof(FNormalVertex))));
-	VertexBuffers.emplace(EPrimitiveType::Arrow, FRenderResourceFactory::CreateVertexBuffer(
-		VerticesArrow.data(), static_cast<int>(VerticesArrow.size() * sizeof(FNormalVertex))));
-	VertexBuffers.emplace(EPrimitiveType::CubeArrow, FRenderResourceFactory::CreateVertexBuffer(
-		VerticesCubeArrow.data(), static_cast<int>(VerticesCubeArrow.size() * sizeof(FNormalVertex))));
-	VertexBuffers.emplace(EPrimitiveType::Ring, FRenderResourceFactory::CreateVertexBuffer(
-		VerticesRing.data(), static_cast<int>(VerticesRing.size() * sizeof(FNormalVertex))));
-	VertexBuffers.emplace(EPrimitiveType::Line, FRenderResourceFactory::CreateVertexBuffer(
-		VerticesLine.data(), static_cast<int>(VerticesLine.size() * sizeof(FNormalVertex))));
-	VertexBuffers.emplace(EPrimitiveType::Sprite, FRenderResourceFactory::CreateVertexBuffer(
-		VerticesVerticalSquare.data(), static_cast<int>(VerticesVerticalSquare.size() * sizeof(FNormalVertex))));
+	VertexBuffers.emplace(EPrimitiveType::Torus, FRenderResourceFactory::CreateVertexBuffer(VerticesTorus));
+	VertexBuffers.emplace(EPrimitiveType::Arrow, FRenderResourceFactory::CreateVertexBuffer(VerticesArrow));
+	VertexBuffers.emplace(EPrimitiveType::CubeArrow, FRenderResourceFactory::CreateVertexBuffer(VerticesCubeArrow));
+	VertexBuffers.emplace(EPrimitiveType::Ring, FRenderResourceFactory::CreateVertexBuffer(VerticesRing));
+	VertexBuffers.emplace(EPrimitiveType::Line, FRenderResourceFactory::CreateVertexBuffer(VerticesLine));
+	VertexBuffers.emplace(EPrimitiveType::Sprite, FRenderResourceFactory::CreateVertexBuffer(VerticesVerticalSquare));
 
 	NumVertices.emplace(EPrimitiveType::Torus, static_cast<uint32>(VerticesTorus.size()));
 	NumVertices.emplace(EPrimitiveType::Arrow, static_cast<uint32>(VerticesArrow.size()));
@@ -55,7 +49,7 @@ void UAssetManager::Initialize()
 	NumVertices.emplace(EPrimitiveType::Ring, static_cast<uint32>(VerticesRing.size()));
 	NumVertices.emplace(EPrimitiveType::Line, static_cast<uint32>(VerticesLine.size()));
 	NumVertices.emplace(EPrimitiveType::Sprite, static_cast<uint32>(VerticesVerticalSquare.size()));
-	
+
 	// Calculate AABB for all primitive types (excluding StaticMesh)
 	for (const auto& Pair : VertexDatas)
 	{
@@ -111,7 +105,7 @@ void UAssetManager::Release()
 	// TMap.Empty()
 	VertexBuffers.clear();
 	IndexBuffers.clear();
-	
+
 	SafeDelete(TextureManager);
 }
 
@@ -159,8 +153,8 @@ void UAssetManager::LoadAllObjStaticMesh()
 		{
 			StaticMeshCache.emplace(ObjPath, LoadedMesh);
 
-			StaticMeshVertexBuffers.emplace(ObjPath, this->CreateVertexBuffer(LoadedMesh->GetVertices()));
-			StaticMeshIndexBuffers.emplace(ObjPath, this->CreateIndexBuffer(LoadedMesh->GetIndices()));
+			StaticMeshVertexBuffers.emplace(ObjPath, FRenderResourceFactory::CreateVertexBuffer(LoadedMesh->GetVertices()));
+			StaticMeshIndexBuffers.emplace(ObjPath, FRenderResourceFactory::CreateIndexBuffer(LoadedMesh->GetIndices().data(), static_cast<int>(LoadedMesh->GetIndices().size()) * sizeof(uint32)));
 		}
 	}
 }
@@ -181,16 +175,6 @@ ID3D11Buffer* UAssetManager::GetIndexBuffer(FName InObjPath)
 		return StaticMeshIndexBuffers[InObjPath];
 	}
 	return nullptr;
-}
-
-ID3D11Buffer* UAssetManager::CreateVertexBuffer(TArray<FNormalVertex> InVertices)
-{
-	return FRenderResourceFactory::CreateVertexBuffer(InVertices.data(), static_cast<int>(InVertices.size()) * sizeof(FNormalVertex));
-}
-
-ID3D11Buffer* UAssetManager::CreateIndexBuffer(TArray<uint32> InIndices)
-{
-	return FRenderResourceFactory::CreateIndexBuffer(InIndices.data(), static_cast<int>(InIndices.size()) * sizeof(uint32));
 }
 
 TArray<FNormalVertex>* UAssetManager::GetVertexData(EPrimitiveType InType)

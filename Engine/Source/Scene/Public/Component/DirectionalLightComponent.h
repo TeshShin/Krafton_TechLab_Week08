@@ -19,6 +19,9 @@ public:
 
     virtual struct FUnifiedDynamicLight GetUnifiedLightData() const override;
 
+public:
+	virtual void DrawDebugArrow(TArray<FName>& InOutLabels) override;
+
 protected:
 	virtual class UTexture* GetLightBillboardTexture() override;
 };

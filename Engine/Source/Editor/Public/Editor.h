@@ -1,10 +1,8 @@
 #pragma once
 #include "Core/Public/Object/Object.h"
 #include "Editor/Public/Gizmo.h"
-#include "Editor/Public/Grid.h"
 #include "Editor/public/Axis.h"
 #include "Editor/Public/ObjectPicker.h"
-#include "Editor/Public/BatchLines.h"
 #include "Editor/Public/SplitterWindow.h"
 
 class UPrimitiveComponent;
@@ -13,6 +11,7 @@ class FViewportClient;
 class UCamera;
 class ULevel;
 class USplitterWidget;
+class UBatchLineManager;
 struct FRay;
 
 enum class EViewportLayoutState
@@ -46,9 +45,10 @@ public:
 	void SelectComponent(UActorComponent* InComponent);
 	UActorComponent* GetSelectedComponent() const { return SelectedComponent; }
 
+
 // Getter
 public:
-	UBatchLines* GetBatchLines() { return &BatchLines; }
+	UBatchLineManager* GetBatchLines();
 	UAxis* GetAxis() { return &Axis; }
 	UGizmo* GetGizmo() { return &Gizmo; }
 	SSplitter* GetRootSplitter() { return &RootSplitter; }
@@ -58,6 +58,7 @@ public:
 private:
 	void InitializeLayout();
 	void UpdateBatchLines();
+	void UpdateLightDebugInfo();
 	void ProcessMouseInput();
 	void UpdateLayout();
 
@@ -81,7 +82,7 @@ private:
 	float SavedRightRatio = 0.5f;
 	UGizmo Gizmo;
 	UAxis Axis;
-	UBatchLines BatchLines;
+
 
 	SSplitterV RootSplitter;
 	SSplitterH LeftSplitter;
@@ -98,6 +99,9 @@ private:
 		static_cast<uint64>(EEngineShowFlags::SF_Text) |
 		static_cast<uint64>(EEngineShowFlags::SF_Decal) |
 		static_cast<uint64>(EEngineShowFlags::SF_Fog);
+
+	TArray<FName> DebugArrowLabels;
+	bool bWasInPIE = false;
 
 	// Animation
 	EViewportLayoutState ViewportLayoutState = EViewportLayoutState::Multi;

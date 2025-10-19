@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Scene/Public/Component/PointLightComponent.h"
 #include "Asset/Public/JsonSerializer.h"
+#include "Editor/Public/Line/BatchLineManager.h"
 #include "Editor/Public/UI/Widget/Component/PointLightComponentWidget.h"
 #include "Manager/Public/AssetManager.h"
 #include "Renderer/Public/LightData.h"
@@ -41,6 +42,16 @@ UClass* UPointLightComponent::GetSpecificWidgetClass() const
     return UPointLightComponentWidget::StaticClass();
 }
 
+void UPointLightComponent::DrawDebugLines()
+{
+	auto& LineManager = UBatchLineManager::GetInstance();
+	const FVector Center = GetWorldLocation();
+	const FVector4 Color(1.0f, 1.0f, 0.0f, 1.0f);
+	const FName BaseLabel(GetName());
+
+	LineManager.AddDebugCircle(BaseLabel, Center, AttenuationRadius, Color, DebugLineLabels);
+}
+
 FUnifiedDynamicLight UPointLightComponent::GetUnifiedLightData() const
 {
     FUnifiedDynamicLight LightData = {};
@@ -53,6 +64,17 @@ FUnifiedDynamicLight UPointLightComponent::GetUnifiedLightData() const
     LightData.LightType = static_cast<uint32>(EDynamicLightType::Point);
 
     return LightData;
+}
+
+void UPointLightComponent::SetAttenuationRadius(float InAttenuationRadius)
+{
+	AttenuationRadius = InAttenuationRadius;
+
+	if (bIsSelected)
+	{
+		ClearDebugLines();
+		DrawDebugLines();
+	}
 }
 
 UTexture* UPointLightComponent::GetLightBillboardTexture()

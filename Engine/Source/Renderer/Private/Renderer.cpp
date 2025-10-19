@@ -27,6 +27,7 @@
 #include "Renderer/Public/RenderPass/DefaultViewPass.h"
 #include "Renderer/Public/RenderPass/SceneDepthPass.h"
 #include "Renderer/Public/RenderPass/RenderingContext.h"
+#include "Editor/Public/Line/BatchLineManager.h"
 
 IMPLEMENT_SINGLETON_CLASS(URenderer, UObject)
 
@@ -79,10 +80,14 @@ void URenderer::Init(HWND InWindowHandle)
 	ViewModePasses[EViewModeIndex::VMI_Wireframe] = new FDefaultViewPass(Pipeline, DisabledDS);
 	ViewModePasses[EViewModeIndex::VMI_SceneDepth] = new FSceneDepthPass(Pipeline, DisabledDS);
 	ViewModePasses[EViewModeIndex::VMI_NormalMap] = new FNormalMapPass(Pipeline, DefaultDS);
+
+	UBatchLineManager::GetInstance().Init();
 }
 
 void URenderer::Release()
 {
+	UBatchLineManager::GetInstance().Release();
+
 	ReleaseConstantBuffers();
 	ReleaseDefaultShader();
 	ReleaseDepthStencilState();
@@ -233,9 +238,12 @@ void URenderer::Render()
         	TIME_PROFILE(RenderEditorDepth)
         	// @TODO Editor한테 Render를 요청하는 것이 아닌 Renderer 안에서 하도록 처리
         	ID3D11RenderTargetView* RenderTargetView[] = {GetBackBufferRTV()};
-        	Pipeline->SetRenderTargets(1, RenderTargetView, GetDepthBufferDSV());
+	    	Pipeline->SetRenderTargets(1, RenderTargetView, GetDepthBufferDSV());
+	    	UBatchLineManager::GetInstance().Update();
+	    	UBatchLineManager::GetInstance().Render();
         	GEditor->GetEditorModule()->RenderEditor();
         	GEditor->GetEditorModule()->RenderGizmo(RenderingContext.CurrentCamera);
+
 
 			RenderEditorDepth(RenderingContext);
         }
