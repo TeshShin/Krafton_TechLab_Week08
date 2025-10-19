@@ -73,9 +73,51 @@ void UBatchLineManager::Release()
     Data = nullptr;
 }
 
-void UBatchLineManager::AddLine(const FVector& InStart, const FVector& InEnd, const FVector4& InColor)
+void UBatchLineManager::AddDebugLine(const FName& InLabel, const FVector& InStart, const FVector& InEnd, const FVector4& InColor)
 {
-    Data->DebugSource->AddLine(InStart, InEnd, InColor);
+    Data->DebugSource->AddLine(InLabel, InStart, InEnd, InColor);
+}
+
+void UBatchLineManager::RemoveDebugLine(const FName& InLabel)
+{
+	Data->DebugSource->RemoveLine(InLabel);
+}
+
+void UBatchLineManager::AddDebugCircle(const FName& BaseLabel, const FVector& Center, float Radius, const FVector4& Color, TArray<FName>& OutLabels)
+{
+	constexpr int32 Segments = 32; // 원의 부드러움 정도
+
+	for (int32 i = 0; i < Segments; ++i)
+	{
+		const float Angle1 = static_cast<float>(i) / Segments * 2.0f * PI;
+		const float Angle2 = static_cast<float>(i + 1) / Segments * 2.0f * PI;
+
+		FVector P1, P2;
+		for (uint32 Axis = 0; Axis < 3; ++Axis)
+		{
+			if (Axis == 0) // XY 평면
+			{
+				P1 = FVector(cos(Angle1) * Radius, sin(Angle1) * Radius, 0.f);
+				P2 = FVector(cos(Angle2) * Radius, sin(Angle2) * Radius, 0.f);
+			}
+			else if (Axis == 1) // XZ 평면
+			{
+				P1 = FVector(cos(Angle1) * Radius, 0.f, sin(Angle1) * Radius);
+				P2 = FVector(cos(Angle2) * Radius, 0.f, sin(Angle2) * Radius);
+			}
+			else // YZ 평면
+			{
+				P1 = FVector(0.f, cos(Angle1) * Radius, sin(Angle1) * Radius);
+				P2 = FVector(0.f, cos(Angle2) * Radius, sin(Angle2) * Radius);
+			}
+
+			const FName Label = FName(std::format("{}_Circle_{}_{}", BaseLabel.ToString(), Axis, i));
+
+			// 라인 추가 및 라벨 저장
+			Data->DebugSource->AddLine(Label, Center + P1, Center + P2, Color);
+			OutLabels.emplace_back(Label);
+		}
+	}
 }
 
 void UBatchLineManager::UpdateGrid(float InCellSize)

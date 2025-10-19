@@ -2,49 +2,49 @@
 #include "Editor/Public/Line/GridLineSource.h"
 
 FGridLineSource::FGridLineSource(float InCellSize, int InNumLines)
-    : m_CellSize(InCellSize)
-    , m_NumLines(InNumLines)
+    : CellSize(InCellSize)
+    , NumLines(InNumLines)
 {
     GenerateGrid();
 }
 
 void FGridLineSource::SetCellSize(float InCellSize)
 {
-    if (m_CellSize != InCellSize)
+    if (CellSize != InCellSize)
     {
-        m_CellSize = InCellSize;
+        CellSize = InCellSize;
         GenerateGrid();
-        m_bIsDirty = true;
+        bIsDirty = true;
     }
 }
 
 void FGridLineSource::GenerateGrid()
 {
-    m_Vertices.clear();
-    m_Indices.clear();
+    Vertices.clear();
+    Indices.clear();
 
-    const float LineLength = m_CellSize * static_cast<float>(m_NumLines) / 2.f;
+    const float LineLength = CellSize * static_cast<float>(NumLines) / 2.f;
 
     // Z-axis lines
-    for (int32 LineCount = -m_NumLines / 2; LineCount < m_NumLines / 2; ++LineCount)
+    for (int32 LineCount = -NumLines / 2; LineCount < NumLines / 2; ++LineCount)
     {
-        FVector Start = { static_cast<float>(LineCount) * m_CellSize, -LineLength, 0.0f };
-        FVector End = { static_cast<float>(LineCount) * m_CellSize, LineLength, 0.0f };
-        m_Vertices.push_back(Start);
-        m_Vertices.push_back(End);
+        FVector Start = { static_cast<float>(LineCount) * CellSize, -LineLength, 0.0f };
+        FVector End = { static_cast<float>(LineCount) * CellSize, LineLength, 0.0f };
+        Vertices.push_back(Start);
+        Vertices.push_back(End);
     }
 
     // X-axis lines
-    for (int32 LineCount = -m_NumLines / 2; LineCount < m_NumLines / 2; ++LineCount)
+    for (int32 LineCount = -NumLines / 2; LineCount < NumLines / 2; ++LineCount)
     {
-        FVector Start = { -LineLength, static_cast<float>(LineCount) * m_CellSize, 0.0f };
-        FVector End = { LineLength, static_cast<float>(LineCount) * m_CellSize, 0.0f };
-        m_Vertices.push_back(Start);
-        m_Vertices.push_back(End);
+        FVector Start = { -LineLength, static_cast<float>(LineCount) * CellSize, 0.0f };
+        FVector End = { LineLength, static_cast<float>(LineCount) * CellSize, 0.0f };
+        Vertices.push_back(Start);
+        Vertices.push_back(End);
     }
 
-    for (uint32 i = 0; i < m_Vertices.size(); ++i)
+    for (uint32 i = 0; i < Vertices.size(); ++i)
     {
-        m_Indices.push_back(i);
+        Indices.push_back(i);
     }
 }

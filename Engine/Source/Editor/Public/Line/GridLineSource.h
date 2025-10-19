@@ -6,21 +6,21 @@ class FGridLineSource : public ILineSource
 public:
     FGridLineSource(float InCellSize = 1.0f, int InNumLines = 250);
 
-    virtual const TArray<FVector>& GetVertices() const override { return m_Vertices; }
-    virtual const TArray<uint32>& GetIndices() const override { return m_Indices; }
-    virtual bool IsDirty() const override { return m_bIsDirty; }
-    virtual void ClearDirtyFlag() override { m_bIsDirty = false; }
+    virtual const TArray<FVector>& GetVertices() const override { return Vertices; }
+    virtual const TArray<uint32>& GetIndices() const override { return Indices; }
+    virtual bool IsDirty() const override { return bIsDirty; }
+    virtual void ClearDirtyFlag() const override { bIsDirty = false; }
 
     void SetCellSize(float InCellSize);
-    float GetCellSize() const { return m_CellSize; }
+    float GetCellSize() const { return CellSize; }
 
 private:
     void GenerateGrid();
 
-    TArray<FVector> m_Vertices;
-    TArray<uint32> m_Indices;
-    bool m_bIsDirty = true;
+    TArray<FVector> Vertices;
+    TArray<uint32> Indices;
+    mutable bool bIsDirty = true;
 
-    float m_CellSize;
-    int m_NumLines;
+    float CellSize;
+    int NumLines;
 };

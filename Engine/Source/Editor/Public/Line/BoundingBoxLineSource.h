@@ -11,7 +11,7 @@ public:
     virtual const TArray<FVector>& GetVertices() const override { return Vertices; }
     virtual const TArray<uint32>& GetIndices() const override { return Indices; }
     virtual bool IsDirty() const override { return bIsDirty; }
-    virtual void ClearDirtyFlag() override { bIsDirty = false; }
+    virtual void ClearDirtyFlag() const override { bIsDirty = false; }
 
     void SetBoundingVolume(const IBoundingVolume* InBoundingVolume);
 
@@ -23,7 +23,7 @@ private:
 
     TArray<FVector> Vertices;
     TArray<uint32> Indices;
-    bool bIsDirty = true;
+    mutable bool bIsDirty = true;
 
     const IBoundingVolume* BoundingVolume = nullptr;
 };

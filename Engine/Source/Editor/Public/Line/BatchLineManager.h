@@ -12,7 +12,9 @@ public:
     void Init();
     void Release();
 
-    void AddLine(const FVector& InStart, const FVector& InEnd, const FVector4& InColor);
+    void AddDebugLine(const FName& InLabel, const FVector& InStart, const FVector& InEnd, const FVector4& InColor);
+	void RemoveDebugLine(const FName& InLabel);
+	void AddDebugCircle(const FName& BaseLabel, const FVector& Center, float Radius, const FVector4& Color, TArray<FName>& OutLabels);
     void UpdateGrid(float InCellSize);
     void UpdateBoundingBox(const class IBoundingVolume* InBoundingVolume);
     float GetGridCellSize() const;

@@ -238,12 +238,12 @@ void URenderer::Render()
         	TIME_PROFILE(RenderEditorDepth)
         	// @TODO Editor한테 Render를 요청하는 것이 아닌 Renderer 안에서 하도록 처리
         	ID3D11RenderTargetView* RenderTargetView[] = {GetBackBufferRTV()};
-        	Pipeline->SetRenderTargets(1, RenderTargetView, GetDepthBufferDSV());
+	    	Pipeline->SetRenderTargets(1, RenderTargetView, GetDepthBufferDSV());
+	    	UBatchLineManager::GetInstance().Update();
+	    	UBatchLineManager::GetInstance().Render();
         	GEditor->GetEditorModule()->RenderEditor();
         	GEditor->GetEditorModule()->RenderGizmo(RenderingContext.CurrentCamera);
 
-			UBatchLineManager::GetInstance().Update();
-			UBatchLineManager::GetInstance().Render();
 
 			RenderEditorDepth(RenderingContext);
         }

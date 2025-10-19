@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "Scene/Public/Component/LightComponentBase.h"
 #include "Asset/Public/JsonSerializer.h"
+#include "Editor/Public/Line/BatchLineManager.h"
 #include "Editor/Public/UI/Widget/Component/LightComponentWidget.h"
 #include "Scene/Public/Actor/Actor.h"
 #include "Scene/Public/Component/BillBoardComponent.h"
@@ -55,12 +56,48 @@ void ULightComponentBase::BeginPlay()
 	}
 }
 
+void ULightComponentBase::OnSelected()
+{
+	Super::OnSelected();
+	ClearDebugLines();
+	DrawDebugLines();
+}
+
+void ULightComponentBase::OnDeselected()
+{
+	Super::OnDeselected();
+	ClearDebugLines();
+}
+
+void ULightComponentBase::MarkAsDirty()
+{
+	USceneComponent::MarkAsDirty();
+	if (bIsSelected)
+	{
+		ClearDebugLines();
+		DrawDebugLines();
+	}
+}
+
 void ULightComponentBase::SetLightColor(const FVector& InLightColor)
 {
 	LightColor = InLightColor;
 	if (IconBillboard)
 	{
 		IconBillboard->SetColor(FVector4(InLightColor.X, InLightColor.Y, InLightColor.Z, 1.0f));
+	}
+}
+
+void ULightComponentBase::ClearDebugLines()
+{
+	if (!DebugLineLabels.empty())
+	{
+		auto& LineManager = UBatchLineManager::GetInstance();
+		for (const FName& Label : DebugLineLabels)
+		{
+			LineManager.RemoveDebugLine(Label);
+		}
+		DebugLineLabels.clear();
 	}
 }
 

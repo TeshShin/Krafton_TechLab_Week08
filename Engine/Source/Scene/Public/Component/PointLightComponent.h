@@ -35,6 +35,9 @@ public:
 
     virtual UClass* GetSpecificWidgetClass() const override;
 
+protected:
+	virtual void DrawDebugLines() override;
+
     /*-----------------------------------------------------------------------------
         ULightComponentBase Features
      -----------------------------------------------------------------------------*/
@@ -56,7 +59,7 @@ public:
     /** @note Sets the light falloff exponent and clamps it to the same range as Unreal Engine (2.0 - 16.0). */
     void SetLightFalloffExponent(float InLightFalloffExponent) { LightFalloffExponent = std::clamp(InLightFalloffExponent, 2.0f, 16.0f); }
 
-    void SetAttenuationRadius(float InAttenuationRadius) { AttenuationRadius = InAttenuationRadius; }
+    void SetAttenuationRadius(float InAttenuationRadius);
 
 protected:
     UTexture* GetLightBillboardTexture() override;
