@@ -187,11 +187,14 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
     float3 ViewDir = normalize(ViewWorldLocation - Input.WorldPosition);
     float SpecularPower = max(Ns, 1.0f); // Prevent division by zero
 
-	uint cid   = FP_ComputeClusterID(Input.Position, Input.WorldPosition);
-	uint count = FP_ClusterCount[cid];
-	uint base  = cid * FP_MaxLightsPerCluster;
+    uint cid   = FP_ComputeClusterID(Input.Position, Input.WorldPosition);
+    uint count = FP_ClusterCount[cid];
+    // Clamp to avoid reading past FP_ClusterIndex allocation when clusters overflow
+    uint maxCount = FP_MaxLightsPerCluster;
+    uint safeCount = (count < maxCount) ? count : maxCount;
+    uint base  = cid * FP_MaxLightsPerCluster;
 
-	for (uint i = 0; i < count; ++i)
+	for (uint i = 0; i < safeCount; ++i)
 	{
 		uint li = FP_ClusterIndex[base + i];
 		FLightingResult LightResult = CalculateDynamicLight(

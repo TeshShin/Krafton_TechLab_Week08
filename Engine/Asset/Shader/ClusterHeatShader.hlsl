@@ -2,8 +2,6 @@
 // ClusterHeatShader.hlsl
 // - Debug fullscreen overlay visualizing Forward+ cluster light counts
 // - Reads FP_ClusterCount (t7) and FP cbuffers (b11,b12)
-// - Draws a heat map in the bottom-right quadrant of the screen
-//   without affecting the rest of the frame (uses clip() outside region)
 // ================================================================
 
 // Camera and tiling parameters (must match TexturePS / LightTilesComputeShader)
@@ -90,5 +88,6 @@ float4 mainPS(VS_OUT input) : SV_TARGET
     if (FP_NumLights == 0)
         rgb = float3(0.0, 0.0, 0.25);
 
-    return float4(rgb, 1.0);
+    // Slight transparency for overlay blending
+    return float4(rgb, 0.65);
 }
