@@ -5,7 +5,7 @@ FDebugLineSource::FDebugLineSource()
 {
 }
 
-const TArray<FVector>& FDebugLineSource::GetVertices() const
+const TArray<FLineVertex>& FDebugLineSource::GetVertices() const
 {
 	if (IsDirty())
 	{
@@ -42,7 +42,6 @@ void FDebugLineSource::ClearLines()
 	LabeledLines.clear();
     Vertices.clear();
     Indices.clear();
-    Colors.clear();
     bIsDirty = true;
 }
 
@@ -50,18 +49,14 @@ void FDebugLineSource::RebuildRenderData() const
 {
 	Vertices.clear();
 	Indices.clear();
-	Colors.clear();
 
 	uint32 CurrentIndex = 0;
 	for (const auto& Pair : LabeledLines)
 	{
 		const FDebugLine& Line = Pair.second;
 
-		Vertices.emplace_back(Line.Start);
-		Vertices.emplace_back(Line.End);
-
-		Colors.emplace_back(Line.Color);
-		Colors.emplace_back(Line.Color);
+		Vertices.emplace_back(FLineVertex{ Line.Start, Line.Color });
+		Vertices.emplace_back(FLineVertex{ Line.End, Line.Color });
 
 		Indices.emplace_back(CurrentIndex++);
 		Indices.emplace_back(CurrentIndex++);

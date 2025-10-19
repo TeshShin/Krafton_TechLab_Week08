@@ -48,6 +48,7 @@ void FBoundingBoxLineSource::GenerateAABB(const FAABB* InAABB)
 
     FVector Min = InAABB->Min;
     FVector Max = InAABB->Max;
+    const FVector4 Color(1.0f, 1.0f, 1.0f, 1.0f);
 
     FVector Corners[8];
     Corners[0] = FVector(Min.X, Min.Y, Min.Z);
@@ -60,22 +61,22 @@ void FBoundingBoxLineSource::GenerateAABB(const FAABB* InAABB)
     Corners[7] = FVector(Min.X, Max.Y, Max.Z);
 
     // Bottom
-    Vertices.push_back(Corners[0]); Vertices.push_back(Corners[1]);
-    Vertices.push_back(Corners[1]); Vertices.push_back(Corners[2]);
-    Vertices.push_back(Corners[2]); Vertices.push_back(Corners[3]);
-    Vertices.push_back(Corners[3]); Vertices.push_back(Corners[0]);
+    Vertices.push_back({Corners[0], Color}); Vertices.push_back({Corners[1], Color});
+    Vertices.push_back({Corners[1], Color}); Vertices.push_back({Corners[2], Color});
+    Vertices.push_back({Corners[2], Color}); Vertices.push_back({Corners[3], Color});
+    Vertices.push_back({Corners[3], Color}); Vertices.push_back({Corners[0], Color});
 
     // Top
-    Vertices.push_back(Corners[4]); Vertices.push_back(Corners[5]);
-    Vertices.push_back(Corners[5]); Vertices.push_back(Corners[6]);
-    Vertices.push_back(Corners[6]); Vertices.push_back(Corners[7]);
-    Vertices.push_back(Corners[7]); Vertices.push_back(Corners[4]);
+    Vertices.push_back({Corners[4], Color}); Vertices.push_back({Corners[5], Color});
+    Vertices.push_back({Corners[5], Color}); Vertices.push_back({Corners[6], Color});
+    Vertices.push_back({Corners[6], Color}); Vertices.push_back({Corners[7], Color});
+    Vertices.push_back({Corners[7], Color}); Vertices.push_back({Corners[4], Color});
 
     // Sides
-    Vertices.push_back(Corners[0]); Vertices.push_back(Corners[4]);
-    Vertices.push_back(Corners[1]); Vertices.push_back(Corners[5]);
-    Vertices.push_back(Corners[2]); Vertices.push_back(Corners[6]);
-    Vertices.push_back(Corners[3]); Vertices.push_back(Corners[7]);
+    Vertices.push_back({Corners[0], Color}); Vertices.push_back({Corners[4], Color});
+    Vertices.push_back({Corners[1], Color}); Vertices.push_back({Corners[5], Color});
+    Vertices.push_back({Corners[2], Color}); Vertices.push_back({Corners[6], Color});
+    Vertices.push_back({Corners[3], Color}); Vertices.push_back({Corners[7], Color});
 }
 
 void FBoundingBoxLineSource::GenerateOBB(const FOBB* InOBB)
@@ -84,6 +85,7 @@ void FBoundingBoxLineSource::GenerateOBB(const FOBB* InOBB)
 
     FVector Corners[8];
     const FVector& Extents = InOBB->Extents;
+    const FVector4 Color(1.0f, 1.0f, 1.0f, 1.0f);
 
     // Define the 8 local corners
     FVector LocalCorners[8];
@@ -103,22 +105,22 @@ void FBoundingBoxLineSource::GenerateOBB(const FOBB* InOBB)
     }
 
     // Bottom
-    Vertices.push_back(Corners[0]); Vertices.push_back(Corners[1]);
-    Vertices.push_back(Corners[1]); Vertices.push_back(Corners[2]);
-    Vertices.push_back(Corners[2]); Vertices.push_back(Corners[3]);
-    Vertices.push_back(Corners[3]); Vertices.push_back(Corners[0]);
+    Vertices.push_back({Corners[0], Color}); Vertices.push_back({Corners[1], Color});
+    Vertices.push_back({Corners[1], Color}); Vertices.push_back({Corners[2], Color});
+    Vertices.push_back({Corners[2], Color}); Vertices.push_back({Corners[3], Color});
+    Vertices.push_back({Corners[3], Color}); Vertices.push_back({Corners[0], Color});
 
     // Top
-    Vertices.push_back(Corners[4]); Vertices.push_back(Corners[5]);
-    Vertices.push_back(Corners[5]); Vertices.push_back(Corners[6]);
-    Vertices.push_back(Corners[6]); Vertices.push_back(Corners[7]);
-    Vertices.push_back(Corners[7]); Vertices.push_back(Corners[4]);
+    Vertices.push_back({Corners[4], Color}); Vertices.push_back({Corners[5], Color});
+    Vertices.push_back({Corners[5], Color}); Vertices.push_back({Corners[6], Color});
+    Vertices.push_back({Corners[6], Color}); Vertices.push_back({Corners[7], Color});
+    Vertices.push_back({Corners[7], Color}); Vertices.push_back({Corners[4], Color});
 
     // Sides
-    Vertices.push_back(Corners[0]); Vertices.push_back(Corners[4]);
-    Vertices.push_back(Corners[1]); Vertices.push_back(Corners[5]);
-    Vertices.push_back(Corners[2]); Vertices.push_back(Corners[6]);
-    Vertices.push_back(Corners[3]); Vertices.push_back(Corners[7]);
+    Vertices.push_back({Corners[0], Color}); Vertices.push_back({Corners[4], Color});
+    Vertices.push_back({Corners[1], Color}); Vertices.push_back({Corners[5], Color});
+    Vertices.push_back({Corners[2], Color}); Vertices.push_back({Corners[6], Color});
+    Vertices.push_back({Corners[3], Color}); Vertices.push_back({Corners[7], Color});
 }
 
 void FBoundingBoxLineSource::GenerateSpotLight(const FSpotLightOBB* InSpotLight)

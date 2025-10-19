@@ -1,5 +1,6 @@
 #pragma once
 #include "ILineSource.h"
+#include "LineVertex.h"
 
 class FDebugLineSource : public ILineSource
 {
@@ -15,7 +16,7 @@ public:
 	FDebugLineSource();
 
 	// ILineSource Interface
-	virtual const TArray<FVector>& GetVertices() const override;
+	virtual const TArray<FLineVertex>& GetVertices() const override;
 	virtual const TArray<uint32>& GetIndices() const override;
 	virtual bool IsDirty() const override { return bIsDirty; }
 	virtual void ClearDirtyFlag() const override { bIsDirty = false; }
@@ -28,9 +29,8 @@ private:
 	// FName을 키로 라인 정보를 저장
 	TMap<FName, FDebugLine> LabeledLines;
 
-	mutable TArray<FVector> Vertices;
+	mutable TArray<FLineVertex> Vertices;
 	mutable TArray<uint32> Indices;
-	mutable TArray<FVector4> Colors;
 	mutable bool bIsDirty = true;
 
 	void RebuildRenderData() const;

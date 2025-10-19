@@ -7,6 +7,7 @@
 #include "Editor/Public/Line/BoundingBoxLineSource.h"
 #include "Editor/Public/Line/DebugLineSource.h"
 #include "Editor/Public/Line/ILineSource.h"
+#include "Editor/Public/Line/LineVertex.h"
 
 struct FBatchLineManagerData
 {
@@ -45,7 +46,11 @@ void UBatchLineManager::Init()
     // Create shaders and other resources here
     ID3D11VertexShader* VertexShader;
     ID3D11InputLayout* InputLayout;
-    TArray<D3D11_INPUT_ELEMENT_DESC> Layout = { {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0} };
+    TArray<D3D11_INPUT_ELEMENT_DESC> Layout =
+    {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FLineVertex, Position), D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FLineVertex, Color), D3D11_INPUT_PER_VERTEX_DATA, 0}
+    };
     FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/BatchLineShader.hlsl", Layout, &VertexShader, &InputLayout);
 
     ID3D11PixelShader* PixelShader;
@@ -151,13 +156,13 @@ void UBatchLineManager::Update()
 
     if (Data->bIsDirty)
     {
-        TArray<FVector> AllVertices;
+        TArray<FLineVertex> AllVertices;
         TArray<uint32> AllIndices;
 
         uint32 VertexOffset = 0;
         for (ILineSource* Source : Data->Sources)
         {
-            const TArray<FVector>& Vertices = Source->GetVertices();
+            const TArray<FLineVertex>& Vertices = Source->GetVertices();
             const TArray<uint32>& Indices = Source->GetIndices();
 
             AllVertices.insert(AllVertices.end(), Vertices.begin(), Vertices.end());
@@ -179,7 +184,7 @@ void UBatchLineManager::Update()
 
         if (Data->Primitive.NumVertices > 0)
         {
-            Data->Primitive.VertexBuffer = FRenderResourceFactory::CreateVertexBuffer(AllVertices.data(), Data->Primitive.NumVertices * sizeof(FVector), true);
+            Data->Primitive.VertexBuffer = FRenderResourceFactory::CreateVertexBuffer(AllVertices, true);
         }
         if (Data->Primitive.NumIndices > 0)
         {
@@ -194,6 +199,6 @@ void UBatchLineManager::Render()
 {
     if (Data->Primitive.VertexBuffer && Data->Primitive.IndexBuffer)
     {
-        URenderer::GetInstance().RenderEditorPrimitive(Data->Primitive, Data->Primitive.RenderState, sizeof(FVector), sizeof(uint32));
+        URenderer::GetInstance().RenderEditorPrimitive(Data->Primitive, Data->Primitive.RenderState, sizeof(FLineVertex), sizeof(uint32));
     }
 }

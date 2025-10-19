@@ -6,8 +6,37 @@ class FRenderResourceFactory
 public:
 	static void CreateVertexShaderAndInputLayout(const wstring& InFilePath,
 		const TArray<D3D11_INPUT_ELEMENT_DESC>& InInputLayoutDescs, ID3D11VertexShader** OutVertexShader, ID3D11InputLayout** OutInputLayout, const D3D_SHADER_MACRO* InDefines = nullptr);
-	static ID3D11Buffer* CreateVertexBuffer(FNormalVertex* InVertices, uint32 InByteWidth);
-	static ID3D11Buffer* CreateVertexBuffer(FVector* InVertices, uint32 InByteWidth, bool bCpuAccess);
+
+
+	template<typename T>
+	static ID3D11Buffer* CreateVertexBuffer(const TArray<T>& InVertices, bool bCpuAccess = false)
+	{
+		if (InVertices.empty())
+		{
+			return nullptr;
+		}
+
+		D3D11_BUFFER_DESC Desc = {};
+		Desc.ByteWidth = static_cast<uint32>(InVertices.size() * sizeof(T));
+		Desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+		if (bCpuAccess)
+		{
+			Desc.Usage = D3D11_USAGE_DYNAMIC;
+			Desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		}
+		else
+		{
+			Desc.Usage = D3D11_USAGE_IMMUTABLE;
+			Desc.CPUAccessFlags = 0;
+		}
+
+		D3D11_SUBRESOURCE_DATA InitData = { InVertices.data(), 0, 0 };
+		ID3D11Buffer* VertexBuffer = nullptr;
+		URenderer::GetInstance().GetDevice()->CreateBuffer(&Desc, &InitData, &VertexBuffer);
+		return VertexBuffer;
+	}
+
 	static ID3D11Buffer* CreateIndexBuffer(const void* InIndices, uint32 InByteWidth);
 	static void CreatePixelShader(const wstring& InFilePath, ID3D11PixelShader** OutPixelShader, const D3D_SHADER_MACRO* InDefines = nullptr);
 	static ID3D11SamplerState* CreateSamplerState(D3D11_FILTER InFilter, D3D11_TEXTURE_ADDRESS_MODE InAddressMode);

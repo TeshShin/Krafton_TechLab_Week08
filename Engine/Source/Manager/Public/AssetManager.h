@@ -61,8 +61,6 @@ private:
 	TMap<FName, ID3D11Buffer*> StaticMeshIndexBuffers;
 
 	// Helper Functions
-	ID3D11Buffer* CreateVertexBuffer(TArray<FNormalVertex> InVertices);
-	ID3D11Buffer* CreateIndexBuffer(TArray<uint32> InIndices);
 	FAABB CalculateAABB(const TArray<FNormalVertex>& Vertices);
 
 	// AABB Resource
