@@ -497,9 +497,6 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Scene\Public\Component\SpotLightComponent.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Asset\Shader\LightTilesComputeShader.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="Source\Editor\Private\Line\BatchLineManager.cpp">
     </ClCompile>
     <ClCompile Include="Source\Editor\Private\Line\BoundingBoxLineSource.cpp">

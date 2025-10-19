@@ -140,7 +140,7 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
 
         // Distance Attenuation (radial falloff)
         float NormalizedDist = Distance / Light.SourceRadius;
-        Attenuation = saturate(1.0f - pow(NormalizedDist, Light.FalloffExponent));
+		Attenuation = pow(saturate(1.0f - NormalizedDist), Light.FalloffExponent);
         Attenuation *= Light.Intensity;
 
         // Spot-specific attenuation (if applicable)
