@@ -125,6 +125,52 @@ void UBatchLineManager::AddDebugCircle(const FName& BaseLabel, const FVector& Ce
 	}
 }
 
+void UBatchLineManager::AddDebugCone(const FName& BaseLabel, const FVector& TipLocation, const FVector& Direction,
+	float Radius, float ConeAngleDegrees, const FVector4& Color, TArray<FName>& OutLabels)
+{
+	FVector UpVector;
+	const FVector WorldUp = FVector(0.0f, 0.0f, 1.0f);
+	if (abs(Direction.Dot(WorldUp)) > 0.999f)
+	{
+		UpVector = FVector(0.0f, 1.0f, 0.0f);
+	}
+	else
+	{
+		UpVector = WorldUp;
+	}
+	const FVector RightVector = Direction.Cross(UpVector).GetNormalized();
+	const FVector ConeUpVector = RightVector.Cross(Direction);
+
+	const float AngleRad = ConeAngleDegrees * ToRad;
+	const float BottomCircleRadius = Radius * tan(AngleRad);
+	const FVector BaseCenter = TipLocation + Direction * Radius;
+	// 밑면 원 그리기
+	constexpr int32 CircleSegments = 32;
+	for (int32 i = 0; i < CircleSegments; ++i)
+	{
+		const float Angle1 = static_cast<float>(i) / CircleSegments * 2.0f * PI;
+		const float Angle2 = static_cast<float>(i + 1) / CircleSegments * 2.0f * PI;
+		const FVector P1_Offset = (RightVector * cos(Angle1) + ConeUpVector * sin(Angle1));
+		const FVector P2_Offset = (RightVector * cos(Angle2) + ConeUpVector * sin(Angle2));
+
+		const FName Label = FName(std::format("{}_Circle_{}", BaseLabel.ToString(), i));
+		Data->DebugSource->AddLine(Label, BaseCenter + P1_Offset * BottomCircleRadius, BaseCenter + P2_Offset * BottomCircleRadius, Color);
+		OutLabels.emplace_back(Label);
+	}
+
+	// 원뿔 꼭짓점과 밑면을 잇는 선 그리기
+	constexpr int32 EdgeLines = 32;
+	for (int32 i = 0; i < EdgeLines; ++i)
+	{
+		const float Angle = static_cast<float>(i) / EdgeLines * 2.0f * PI;
+		const FVector EdgePointOffset = (RightVector * cos(Angle) + ConeUpVector * sin(Angle));
+
+		const FName EdgeLabel(std::format("{}_EdgeLine_{}", BaseLabel.ToString(), i));
+		Data->DebugSource->AddLine(EdgeLabel, TipLocation, BaseCenter + EdgePointOffset * BottomCircleRadius, Color);
+		OutLabels.emplace_back(EdgeLabel);
+	}
+}
+
 void UBatchLineManager::UpdateGrid(float InCellSize)
 {
     Data->GridSource->SetCellSize(InCellSize);

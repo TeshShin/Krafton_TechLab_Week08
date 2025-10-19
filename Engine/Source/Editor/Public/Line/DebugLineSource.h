@@ -26,12 +26,12 @@ public:
 	void ClearLines();
 
 private:
+	void RebuildRenderData() const;
+
 	// FName을 키로 라인 정보를 저장
 	TMap<FName, FDebugLine> LabeledLines;
 
 	mutable TArray<FLineVertex> Vertices;
 	mutable TArray<uint32> Indices;
 	mutable bool bIsDirty = true;
-
-	void RebuildRenderData() const;
 };
