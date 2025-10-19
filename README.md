@@ -2,127 +2,384 @@
 
 ## 1. 개요
 
-본 문서는 KTL 엔진에 구현된 데칼 렌더링 시스템의 기술적 사양과 아키텍처를 설명합니다.
+본 문서는 KTL 엔진에 7주차(2025.10.16 ~ 2025.10.19)에 구현된 주요 렌더링 시스템의 기술적 사양과 아키텍처를 설명합니다.
 
-데칼 시스템은 씬(Scene) 내의 물체 표면에 텍스처를 투영(Projection)하여 총알 자국, 혈흔, 특정 문양 등 다양한 시각 효과를 표현하는 기능입니다. 본 엔진의 데칼 시스템은 포워드 렌더링(Forward Rendering) 파이프라인 내의 커스텀 렌더링 패스(Custom Rendering Pass)를 통해 구현되었습니다.
+7주차에는 **Clustered Forward Shading (Forward+)** 렌더링 파이프라인 구축, **완전한 조명 시스템** (4종 라이트 타입), **Uber Shader 아키텍처**, **Normal Map 시스템**, **Render Pass 구조 재정립** 등 대규모 렌더링 인프라 개선 작업이 진행되었습니다.
 
----
-## 2. 핵심 아키텍처
-
-데칼 시스템은 아래의 주요 클래스들 간의 상호작용을 통해 동작합니다.
-
--   **`ADecalActor`**: 레벨에 배치할 수 있는 액터(Actor)입니다. 데칼의 위치, 회전, 크기를 나타내는 컨테이너 역할을 합니다.
--   **`UDecalComponent`**: `ADecalActor`의 루트 컴포넌트(Root Component)로, 데칼의 모든 핵심 데이터와 로직을 포함합니다. 투영할 텍스처, 페이드 효과, 프로젝션 설정 등을 관리합니다.
--   **`FDecalPass`**: 렌더링 파이프라인의 한 단계로, 매 프레임 씬에 있는 모든 `UDecalComponent`를 찾아 대상 물체에 데칼을 그리는 모든 실제 작업을 수행합니다.
+총 **97개의 커밋**으로 구성되며, 대규모 조명 처리와 유지보수성을 크게 향상시켰습니다.
 
 ---
-## 3. 컴포넌트 및 액터 구현
 
-### 3.1. `UDecalComponent`
+## 2. Clustered Forward Shading (Forward+) 구현
 
--   데칼의 모든 속성을 정의하는 핵심 컴포넌트입니다.
--   멤버 변수로 `DecalTexture`와 `FadeTexture`를 가져 텍스처 정보를 관리합니다.
--   직렬화(Serialization) 로직을 오버라이드하여, 텍스처 파일의 경로를 레벨 파일에 저장하고 로드합니다.
+### 2.1. 개요
 
-### 3.2. `ADecalActor`
+Forward+ 렌더링은 화면을 타일로 나누어 각 타일에 영향을 미치는 라이트만 처리함으로써, 수백~수천 개의 동적 광원을 효율적으로 렌더링할 수 있는 기법입니다. 기존 Forward Rendering의 단순함을 유지하면서도 Deferred Rendering 수준의 조명 성능을 달성합니다.
 
--   `UDecalComponent`를 루트 컴포넌트로 사용하는 간단한 액터입니다.
--   에디터에서 사용자가 데칼을 시각적으로 확인하고 배치할 수 있도록, 식별용 아이콘을 표시하는 `UBillboardComponent`를 자식으로 가집니다. (`InitializeComponents` 함수에서 생성)
--   별도의 `Serialize` 함수 없이 부모인 `AActor`의 직렬화 로직을 상속받아, `OwnedComponents` 배열에 있는 모든 컴포넌트(데칼, 빌보드)의 정보를 재귀적으로 저장하고 로드합니다.
+### 2.2. 핵심 아키텍처
 
----
-## 4. 렌더링 파이프라인 (`FDecalPass`)
+#### 2.2.1. Light Tiles Compute Shader (`LightTilesComputeShader.hlsl`)
 
-`FDecalPass`는 포워드 렌더링 루프에서 데칼을 그리는 책임을 가집니다.
-
-### 4.1. Show Flag 검사
-`RenderingContext`에 포함된 `ShowFlags`를 확인하여, `EEngineShowFlags::SF_Decal` 플래그가 켜져 있을 때만 렌더링을 수행합니다. 이를 통해 에디터에서 데칼 표시 여부를 토글할 수 있습니다.
-
-### 4.2. 대상 객체 선정 (Culling)
--   모든 데칼 컴포넌트를 순회하며, 씬의 모든 물체를 대상으로 데칼을 그리는 것은 매우 비효율적입니다.
--   따라서, **Octree**를 사용하여 데칼의 바운딩 박스(OBB)와 겹칠 가능성이 있는 물체들만 1차적으로 선별합니다.
--   선별된 물체들에 한해, **분리 축 이론(SAT)**을 구현한 `Intersects(OBB, AABB)` 함수로 더욱 정밀한 충돌 검사를 수행하여, 데칼을 다시 그려야 할 최종 대상 목록을 확정합니다.
-
-### 4.3. 재-렌더링 (Re-Rendering) 및 Z-파이팅 해결
--   `FDecalPass`는 선별된 대상 객체들을 **`DecalShader.hlsl`이라는 전용 셰이더를 사용해서 한 번 더 그립니다.**
--   이때 동일한 위치에 지오메트리를 다시 그리면서 발생하는 Z-파이팅(표면이 겹쳐 지지직거리는 현상)을 방지하기 위해, 데칼 전용으로 생성된 **`DepthStencilState`**를 사용합니다.
--   이 상태는 뎁스 테스트는 정상적으로 수행(`DepthEnable = TRUE`, `DepthFunc = D3D11_COMPARISON_LESS_EQUAL`)하되, 뎁스 버퍼에 새로운 값을 쓰지는 않도록(`DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO`) 설정되어 있습니다. 이를 통해 데칼이 기존 지오메트리 위에 올바르게 그려지면서도 뎁스 값의 충돌을 회피합니다.
-    ```cpp
-    // Decal Depth Stencil (Depth Read, Stencil X)
-    D3D11_DEPTH_STENCIL_DESC DecalDescription = {};
-    DecalDescription.DepthEnable = TRUE;
-    DecalDescription.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-    DecalDescription.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-    
-    Device->CreateDepthStencilState(&DecalDescription, &DecalDepthStencilState);
-    ```
--   알파 블렌딩(Alpha Blending)을 활성화하여, 기존에 그려진 물체 표면 위에 데칼 텍스처가 자연스럽게 덧입혀지도록 합니다.
-
-### 4.4. 통계(Stat) 수집
--   패스 실행 시 렌더링된 데칼의 총 개수, 충돌 검사를 수행한 컴포넌트의 수 등을 카운트합니다.
--   수집된 정보는 `UStatOverlay::GetInstance().RecordDecalStats()`를 통해 에디터의 통계 오버레이에 전달되어 렌더링 성능을 모니터링하는 데 사용됩니다.
-
----
-## 5. 데칼 투영 및 셰이더 (`DecalShader.hlsl`)
-
-### 5.1. 투영 방향 및 행렬 계산
-
--   **투영 방향**: 데칼은 `UDecalComponent`의 **로컬 X축을 Forward Vector**로 간주하고, 이 방향으로 텍스처를 투영합니다.
--   **행렬 계산**:
-    -   **`DecalViewProjection`**: `FDecalPass`에서 계산되며, 월드 좌표계의 점을 데칼의 로컬 직육면체 공간으로 변환하는 행렬입니다. (`데칼의 World 역행렬 * 데칼의 Projection 행렬`)
-    -   **`ConstantBufferViewProj`**: 렌더링 대상 물체를 화면에 올바르게 그리기 위해 필요한 **메인 카메라**의 View/Projection 행렬입니다.
-
-### 5.2. 버텍스 셰이더 (`mainVS`)
-
-버텍스 셰이더는 대상 물체의 정점을 최종 화면 위치로 변환하는 표준적인 역할을 수행합니다. 메인 카메라의 `View`와 `Projection` 행렬을 사용하여 MVP(Model-View-Projection) 변환을 계산하고, 픽셀 셰이더에 필요한 월드 좌표 등의 정보를 전달합니다.
+화면을 16x16 픽셀 타일로 분할하고, 각 타일의 AABB를 View Space에서 계산한 뒤, Sphere-AABB 충돌 검사로 해당 타일에 영향을 주는 라이트 인덱스를 기록합니다.
 
 ```hlsl
-PS_INPUT mainVS(VS_INPUT Input)
-{
-    PS_INPUT Output;
+// 타일별 라이트 인덱스 저장 (최대 1024개 라이트)
+RWStructuredBuffer<uint> LightIndexList;
+RWStructuredBuffer<uint2> LightGrid; // x: offset, y: count
+```
 
-    float4 Pos = mul(float4(Input.Position, 1.0f), World);
-    Output.Position = mul(mul(Pos, View), Projection);
-    Output.WorldPos = Pos;
-    Output.Normal = normalize(mul(float4(Input.Normal, 0.0f), WorldInverseTranspose));
-    Output.Tex = Input.Tex;
+**주요 기능:**
+- Frustum의 near/far plane을 고려한 타일 AABB 계산
+- Left-Handed 좌표계에 맞춘 Y축 반전 처리
+- Sphere-AABB intersection 검사 (`BoundingSphere::Intersects(AABB)`)
+- Thread Group 내 동기화 (`GroupMemoryBarrierWithGroupSync`)
 
-    return Output;
+#### 2.2.2. 타일 기반 라이팅 (`TexturePS.hlsl`)
+
+픽셀 셰이더에서 현재 픽셀이 속한 타일의 라이트 리스트만 순회하여 조명을 계산합니다.
+
+```hlsl
+// 픽셀이 속한 타일 계산
+uint2 tileIdx = uint2(Input.Position.xy) / TILE_SIZE;
+uint lightOffset = LightGrid[tileIdx].x;
+uint lightCount = LightGrid[tileIdx].y;
+
+// 해당 타일의 라이트만 순회
+for (uint i = 0; i < lightCount; ++i) {
+    uint lightIndex = LightIndexList[lightOffset + i];
+    // 조명 계산...
 }
 ```
 
-### 5.3. 픽셀 셰이더 (`mainPS`)
+#### 2.2.3. Heat Map 시각화 (`ClusterHeatShader.hlsl`)
 
-픽셀 셰이더는 실제 데칼 텍스처를 픽셀에 적용하는 핵심 로직을 담고 있습니다.
+디버깅을 위해 타일당 라이트 개수를 색상으로 표시하는 Heat Map View Mode를 구현했습니다.
 
-1.  **수동 클리핑 (Manual Clipping)**:
-    -   버텍스 셰이더에서 전달받은 픽셀의 월드 좌표를 `DecalViewProjection` 행렬로 변환하여 데칼의 로컬 좌표를 얻습니다.
-    -   이 좌표가 데칼의 직육면체 볼륨(예: x, y, z가 모두 -1.01 ~ 1.01 사이)을 벗어나는 경우, `discard` 명령으로 해당 픽셀의 렌더링을 즉시 중단합니다.
-    -   경계 값에 `0.01f`와 같은 허용 오차(Tolerance)를 두어, 가장자리에서 발생하는 아티팩트를 방지합니다.
+- **파란색**: 라이트 적음 (0~5개)
+- **초록색**: 중간 (5~15개)
+- **노란색**: 많음 (15~30개)
+- **빨간색**: 매우 많음 (30개 이상)
 
-2.  **UV 좌표 계산**: 픽셀이 볼륨 안에 있다면, 로컬 좌표의 Y, Z 값을 변환하여 데칼 텍스처를 샘플링할 UV 좌표로 사용합니다.
+### 2.3. 성능 최적화
 
-3.  **페이드 효과 적용**: `FadeProgress` 값과 노이즈 텍스처인 `FadeTexture`를 사용하여 픽셀의 최종 알파(투명도) 값을 계산합니다. 이를 통해 텍스처의 어두운 부분부터 먼저 사라지는 등 유기적인 페이드 아웃 효과를 구현합니다.
-    ```hlsl
-    DecalColor.a *= 1.0f - saturate(FadeProgress / (FadeValue + 1e-6));
-    ```
+- **Compute Shader 기반 Culling**: CPU 부하 없이 GPU에서 타일-라이트 매핑
+- **메모리 효율**: 타일당 가변 길이 인덱스 리스트 사용
+- **조기 종료**: 라이트 개수가 0인 타일은 조명 계산 스킵
 
 ---
-## 6. 응용: 가짜 스포트라이트 구현 (Application: Fake Spot Light)
 
-본 엔진에 구현된 `UDecalComponent`와 `UBillboardComponent`를 조합하여, 동적 조명 계산 없이 효율적으로 스포트라이트 효과를 모방할 수 있습니다.
+## 3. 조명 시스템 구현
 
-### 6.1. 개요
+### 3.1. Light Component 계층 구조
 
-가짜 스포트라이트는 실제 광원을 계산하는 대신, 빛이 비치는 부분과 광원 자체를 각각 데칼과 빌보드로 그려서 표현하는 기법입니다. 저렴한 비용으로 준수한 퀄리티의 스포트라이트 효과를 낼 수 있어 씬의 분위기를 연출하는 데 효과적입니다.
+```
+ULightComponentBase (Abstract)
+├── UAmbientLightComponent      // 환경광
+├── UDirectionalLightComponent  // 방향광
+├── UPointLightComponent        // 점광원
+└── USpotLightComponent         // 스포트라이트
+```
 
-### 6.2. 구성 요소
+모든 라이트 컴포넌트는 `GetLightData()` 가상 함수를 통해 셰이더에 필요한 데이터를 제공합니다.
 
--   **광원 표현 (`UBillboardComponent`):**
-    -   스포트라이트의 램프나 빛이 시작되는 지점의 '광원(light source)' 자체를 표현하는 데 사용됩니다.
-    -   항상 카메라를 바라보는 빌보드의 특성을 이용하여, 렌즈 플레어나 빛 번짐(Glow) 텍스처를 렌더링하면 어느 각도에서나 광원이 자연스럽게 보이도록 할 수 있습니다.
+### 3.2. 라이트 타입별 구현
 
--   **빛 투사 (`UDecalComponent`):**
-    -   스포트라이트의 핵심인 '빛이 표면에 닿아 밝혀지는 효과'를 구현합니다.
-    -   **텍스처:** 중앙은 밝고 가장자리로 갈수록 부드럽게 어두워지는 원형 그라데이션(gradient) 텍스처를 사용합니다.
-    -   **투영:** 데칼의 투영 볼륨(Projection Volume)이 스포트라이트의 원뿔(Cone) 역할을 합니다. 원근 투영(Perspective Projection)을 사용하는 것이 원뿔 형태를 표현하는 데 더 적합합니다.
+#### 3.2.1. Ambient Light (환경광)
+- 전역 조명으로 모든 물체에 균일하게 적용
+- Intensity와 Color 지원
+- 씬당 하나의 Ambient Light 권장
+
+#### 3.2.2. Directional Light (평행광)
+- 태양광 시뮬레이션에 적합
+- Direction, Intensity, Color 속성
+- 거리 감쇠 없음
+
+#### 3.2.3. Point Light (점광원)
+- 모든 방향으로 균일하게 빛을 발산
+- 역제곱 감쇠 (Inverse Square Law) 적용
+- Radius 파라미터로 영향 범위 제어
+
+```hlsl
+float attenuation = 1.0 / (distance * distance + 1.0);
+```
+
+#### 3.2.4. Spot Light (스포트라이트)
+- 원뿔 형태로 빛을 투사
+- Inner/Outer Cone Angle 지원
+- 부드러운 가장자리 (Smooth Falloff) 구현
+
+```hlsl
+float theta = dot(lightDir, -spotDirection);
+float epsilon = innerCos - outerCos;
+float intensity = saturate((theta - outerCos) / epsilon);
+```
+
+### 3.3. Light Actor 및 에디터 통합
+
+- **Billboard Component**: 씬 뷰에서 라이트 위치 시각화
+- **Color-coded Icon**: 라이트 색상에 따라 아이콘 색상 변경
+- **Abstract Actor 필터링**: Light Component Base는 생성 메뉴에서 제외
+- **Detail Panel**: 라이트별 속성 편집 UI 제공
+
+---
+
+## 4. Uber Shader 시스템
+
+### 4.1. 개요
+
+Uber Shader는 여러 셰이더의 기능을 하나로 통합하여, 런타임에 조건부 분기로 원하는 렌더링 모드를 선택하는 아키텍처입니다. 코드 중복을 제거하고 유지보수성을 향상시킵니다.
+
+### 4.2. 핵심 구조
+
+#### 4.2.1. LightingFunctions.hlsl
+공통 조명 계산 함수들을 분리한 라이브러리:
+
+```hlsl
+// PS_INPUT 구조체 (모든 셰이더 공통)
+struct PS_INPUT {
+    float4 Position : SV_POSITION;
+    float4 WorldPos : POSITION;
+    float3 Normal : NORMAL;
+    float2 Tex : TEXCOORD0;
+    float3 Tangent : TANGENT;
+};
+
+// Blinn-Phong 조명 계산
+float3 CalculateBlinnPhong(float3 normal, float3 viewDir,
+                           float3 lightDir, float3 lightColor,
+                           float3 diffuseColor, float specularPower);
+
+// Normal Map 처리
+float3 ApplyNormalMap(float3 sampledNormal, float3 normal,
+                      float3 tangent);
+```
+
+#### 4.2.2. 통합된 Vertex Shader (`TextureVS.hlsl`)
+- World/WorldInverseTranspose 행렬 적용
+- View Space Normal 계산
+- Tangent 공간 벡터 전달
+
+#### 4.2.3. 통합된 Pixel Shader (`TexturePS.hlsl`)
+View Mode에 따라 출력 변경:
+
+```hlsl
+if (ViewMode == VIEW_MODE_LIT) {
+    // Forward+ 조명 계산
+} else if (ViewMode == VIEW_MODE_UNLIT) {
+    return BaseColor;
+} else if (ViewMode == VIEW_MODE_NORMAL) {
+    return float4(Normal * 0.5 + 0.5, 1.0);
+} else if (ViewMode == VIEW_MODE_HEAT_MAP) {
+    // Cluster 시각화
+}
+```
+
+### 4.3. 장점
+
+- **코드 재사용**: 조명 함수 공유로 중복 제거
+- **일관성**: 모든 렌더 패스에서 동일한 조명 결과
+- **유지보수**: 한 곳만 수정하면 모든 패스에 반영
+- **디버깅**: View Mode 전환으로 실시간 검증
+
+---
+
+## 5. Normal Map 시스템
+
+### 5.1. 구현 과정
+
+#### 5.1.1. Tangent Space 계산
+OBJ 파일 로딩 시 CPU에서 Tangent 벡터를 계산합니다 (`ObjManager.cpp`):
+
+```cpp
+// 삼각형의 두 엣지와 UV 델타 계산
+XMVECTOR edge1 = pos[1] - pos[0];
+XMVECTOR edge2 = pos[2] - pos[0];
+XMVECTOR deltaUV1 = uv[1] - uv[0];
+XMVECTOR deltaUV2 = uv[2] - uv[0];
+
+// Tangent 계산
+float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+tangent = f * (deltaUV2.y * edge1 - deltaUV1.y * edge2);
+```
+
+#### 5.1.2. Normal Map 로딩
+- 자동 탐지: `filename_normal.jpg/png` 패턴 검색
+- 없을 경우: 평면 Normal Map (RGB=128,128,255) 생성
+- 텍스처 파일 경로를 Scene 파일에 직렬화
+
+#### 5.1.3. Shader에서의 적용
+
+```hlsl
+// Normal Map 샘플링 (Tangent Space)
+float3 normalMapSample = NormalTexture.Sample(Sampler, Input.Tex).rgb;
+normalMapSample = normalMapSample * 2.0 - 1.0; // [0,1] -> [-1,1]
+
+// Tangent Space -> World Space 변환
+float3 N = normalize(Input.Normal);
+float3 T = normalize(Input.Tangent - dot(Input.Tangent, N) * N);
+float3 B = cross(N, T);
+float3x3 TBN = float3x3(T, B, N);
+float3 worldNormal = mul(normalMapSample, TBN);
+```
+
+### 5.2. Normal View Mode
+
+Normal Map이 올바르게 적용되었는지 확인하기 위한 시각화 모드:
+- RGB 값으로 Normal 방향 표시
+- 배경은 검은색으로 유지 (깊이 테스트 실패 시 discard)
+
+---
+
+## 6. Render Pass 구조 재정립
+
+### 6.1. Ping-Pong 버퍼 시스템
+
+두 개의 Render Target을 번갈아 사용하여 여러 Post-Process 효과를 순차 적용:
+
+```
+Scene -> RT0 (StaticMeshPass)
+      -> RT1 (FogPass, input: RT0)
+      -> RT0 (FXAAPass, input: RT1)
+      -> BackBuffer (BlitPass, input: RT0)
+```
+
+### 6.2. Render Pass 순서
+
+1. **SceneDepthPass**: Depth Pre-pass
+2. **StaticMeshPass**: Forward+ 조명 계산
+3. **DefaultViewPass**: 특수 View Mode 처리
+4. **BillboardPass**: 라이트 아이콘 렌더링
+5. **FogPass**: Height Fog 적용
+6. **FXAAPass**: Anti-Aliasing
+7. **BlitPass**: 최종 출력
+
+### 6.3. Rendering Context
+
+모든 Pass가 공유하는 렌더링 상태:
+
+```cpp
+struct FRenderingContext {
+    ID3D11RenderTargetView* CurrentRTV;
+    ID3D11DepthStencilView* DSV;
+    D3D11_VIEWPORT Viewport;
+    EEngineShowFlags ShowFlags;
+    EViewMode ViewMode;
+};
+```
+
+### 6.4. 개선 사항
+
+- **모듈화**: 각 Pass가 독립적으로 동작
+- **확장성**: 새로운 Pass 추가 용이
+- **디버깅**: Pass별 출력 확인 가능
+- **성능**: Depth Pre-pass로 Overdraw 감소
+
+---
+
+## 7. View Mode 확장
+
+### 7.1. 지원하는 View Mode
+
+- **Lit**: 기본 조명 렌더링 (Forward+)
+- **Unlit**: 조명 없이 Base Color만 표시
+- **Normal**: Normal Map 적용 결과 시각화
+- **Depth**: Depth Buffer 시각화
+- **Wireframe**: 와이어프레임 모드
+- **Heat Map**: Cluster별 라이트 밀도 표시
+
+### 7.2. 런타임 전환
+
+UI 버튼 클릭으로 실시간 View Mode 전환:
+
+```cpp
+void OnViewModeChanged(EViewMode NewMode) {
+    Renderer->SetViewMode(NewMode);
+    // 셰이더 상수 버퍼 업데이트
+    ViewModeBuffer.ViewMode = static_cast<int>(NewMode);
+}
+```
+
+---
+
+## 8. WorldInverseTranspose 적용
+
+### 8.1. 문제점
+
+Non-uniform Scale 변환 시 World 행렬로 Normal을 변환하면 방향이 왜곡됩니다.
+
+### 8.2. 해결책
+
+Normal 벡터는 World 행렬의 역전치(Inverse Transpose)로 변환:
+
+```hlsl
+// Vertex Shader
+Output.Normal = normalize(mul(float4(Input.Normal, 0.0f), WorldInverseTranspose).xyz);
+```
+
+```cpp
+// CPU에서 계산
+XMMATRIX world = actor->GetWorldMatrix();
+XMMATRIX worldInvTranspose = XMMatrixTranspose(XMMatrixInverse(nullptr, world));
+```
+
+### 8.3. Sphere 특수 처리
+
+Sphere 모델은 정점 위치를 정규화한 것이 Normal이므로, 별도 로직 적용:
+
+```cpp
+if (mesh->IsSphere()) {
+    normal = XMVector3Normalize(position);
+}
+```
+
+---
+
+## 9. 기타 개선 사항
+
+### 9.1. 버그 수정
+
+- RenderDoc 크래시 이슈 해결
+- Fog Pass에서 Fog가 안 나오던 문제 수정
+- Normal View에서 배경 색상 변경 방지
+- Ambient Light 삭제 시 크래시 수정
+- 여러 병합 충돌 해결
+
+### 9.2. 에디터 개선
+
+- vcxproj.filters 파일 구조 정리
+- .editorconfig 추가
+- 다수의 테스트 씬 추가 (L3~L8, LightTest 등)
+- 통계 오버레이 개선
+
+### 9.3. 성능 최적화
+
+- Depth Pre-pass로 Fragment 연산 감소
+- Compute Shader 기반 Culling
+- Structured Buffer로 라이트 데이터 전송
+
+---
+
+## 10. 결론 및 향후 계획
+
+### 10.1. 주요 성과
+
+- ✅ **Forward+ 렌더링 파이프라인 완성**: 수백 개 라이트 실시간 처리
+- ✅ **완전한 조명 시스템**: 4종 라이트 타입 지원
+- ✅ **Uber Shader 아키텍처**: 유지보수성 대폭 향상
+- ✅ **Normal Map 시스템**: 디테일 표현력 증가
+- ✅ **Render Pass 재구성**: 확장 가능한 파이프라인
+
+### 10.2. 통계
+
+- **총 커밋**: 97개
+- **주요 기여자**: lorevoon (26), nayechan (18), dack-c (17), Donghee (14)
+- **변경 파일**: 수백 개 (셰이더, 소스 코드, 씬 등)
+- **주요 PR**: #33 (Forward+), #26 (Uber Shader), #25 (Spot Light), #28 (Unlit)
+
+### 10.3. 향후 개선 방향
+
+- Shadow Mapping 구현
+- Screen Space Reflections (SSR)
+- Physically Based Rendering (PBR) 머티리얼
+- Deferred Rendering 파이프라인 추가
+- Volumetric Lighting
