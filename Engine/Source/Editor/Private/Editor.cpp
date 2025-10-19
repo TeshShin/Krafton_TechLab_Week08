@@ -12,6 +12,7 @@
 #include "Core/Public/Misc/ScopeCycleCounter.h"
 #include "Editor/Public/Line/BatchLineManager.h"
 #include "Editor/Public/UI/StatOverlay.h"
+#include "Scene/Public/Component/LightComponentBase.h"
 
 UEditor::UEditor()
 {
@@ -32,6 +33,18 @@ UEditor::~UEditor()
 
 void UEditor::Update()
 {
+	bool bIsInPIE = GEditor->IsPIESessionActive();
+	if (bIsInPIE && !bWasInPIE)
+	{
+		auto& LineManager = UBatchLineManager::GetInstance();
+		for (const FName& Label : DebugArrowLabels)
+		{
+			LineManager.RemoveDebugLine(Label);
+		}
+		DebugArrowLabels.clear();
+	}
+	bWasInPIE = bIsInPIE;
+
 	URenderer& Renderer = URenderer::GetInstance();
 	FViewport* Viewport = Renderer.GetViewportClient();
 
@@ -50,10 +63,34 @@ void UEditor::Update()
 	}
 
 	UpdateBatchLines();
+	UpdateLightDebugInfo();
 
 	ProcessMouseInput();
 
 	UpdateLayout();
+}
+
+void UEditor::UpdateLightDebugInfo()
+{
+	if (GEditor->IsPIESessionActive()) { return; }
+
+	auto& LineManager = UBatchLineManager::GetInstance();
+	for (const FName& Label : DebugArrowLabels)
+	{
+		LineManager.RemoveDebugLine(Label);
+	}
+	DebugArrowLabels.clear();
+
+	ULevel* Level = GWorld->GetLevel();
+	if (!Level) { return; }
+
+	for (ULightComponentBase* Light : Level->GetLights())
+	{
+		if (Light)
+		{
+			Light->DrawDebugArrow(DebugArrowLabels);
+		}
+	}
 }
 
 void UEditor::RenderEditor()

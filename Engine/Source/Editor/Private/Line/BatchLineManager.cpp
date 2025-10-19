@@ -125,6 +125,54 @@ void UBatchLineManager::AddDebugCircle(const FName& BaseLabel, const FVector& Ce
 	}
 }
 
+void UBatchLineManager::AddDebugArrow(const FName& InLabel, const FVector& InStart, const FVector& InEnd, const FVector4& InColor, float InHeadSize, TArray<FName>& OutLabels)
+{
+	// Draw the arrow shaft
+	AddDebugLine(InLabel, InStart, InEnd, InColor);
+
+	// Draw the arrow head
+	FVector Direction = (InEnd - InStart).GetNormalized();
+	FVector UpVector = (abs(Direction.Z) < 0.999f) ? FVector(0, 0, 1) : FVector(0, 1, 0);
+	FVector RightVector = Direction.Cross(UpVector).GetNormalized();
+	UpVector = RightVector.Cross(Direction);
+
+	FVector HeadBase = InEnd - Direction * InHeadSize;
+
+	FVector HeadPoint1 = HeadBase + RightVector * InHeadSize * 0.5f;
+	FVector HeadPoint2 = HeadBase - RightVector * InHeadSize * 0.5f;
+	FVector HeadPoint3 = HeadBase + UpVector * InHeadSize * 0.5f;
+	FVector HeadPoint4 = HeadBase - UpVector * InHeadSize * 0.5f;
+
+	FName Label1 = FName(InLabel.ToString() + "_Head1");
+	FName Label2 = FName(InLabel.ToString() + "_Head2");
+	FName Label3 = FName(InLabel.ToString() + "_Head3");
+	FName Label4 = FName(InLabel.ToString() + "_Head4");
+	FName Label5 = FName(InLabel.ToString() + "_HeadBase1");
+	FName Label6 = FName(InLabel.ToString() + "_HeadBase2");
+	FName Label7 = FName(InLabel.ToString() + "_HeadBase3");
+	FName Label8 = FName(InLabel.ToString() + "_HeadBase4");
+
+	OutLabels.emplace_back(InLabel);
+	OutLabels.emplace_back(Label1);
+	OutLabels.emplace_back(Label2);
+	OutLabels.emplace_back(Label3);
+	OutLabels.emplace_back(Label4);
+	OutLabels.emplace_back(Label5);
+	OutLabels.emplace_back(Label6);
+	OutLabels.emplace_back(Label7);
+	OutLabels.emplace_back(Label8);
+
+	AddDebugLine(Label1, InEnd, HeadPoint1, InColor);
+	AddDebugLine(Label2, InEnd, HeadPoint2, InColor);
+	AddDebugLine(Label3, InEnd, HeadPoint3, InColor);
+	AddDebugLine(Label4, InEnd, HeadPoint4, InColor);
+
+	AddDebugLine(Label5, HeadPoint1, HeadPoint3, InColor);
+	AddDebugLine(Label6, HeadPoint3, HeadPoint2, InColor);
+	AddDebugLine(Label7, HeadPoint2, HeadPoint4, InColor);
+	AddDebugLine(Label8, HeadPoint4, HeadPoint1, InColor);
+}
+
 void UBatchLineManager::AddDebugCone(const FName& BaseLabel, const FVector& TipLocation, const FVector& Direction,
 	float Radius, float ConeAngleDegrees, const FVector4& Color, TArray<FName>& OutLabels)
 {
@@ -208,6 +256,7 @@ void UBatchLineManager::Update()
         uint32 VertexOffset = 0;
         for (ILineSource* Source : Data->Sources)
         {
+        	if (GEditor->IsPIESessionActive() && !Source->IsRenderInPIE()) { continue; }
             const TArray<FLineVertex>& Vertices = Source->GetVertices();
             const TArray<uint32>& Indices = Source->GetIndices();
 

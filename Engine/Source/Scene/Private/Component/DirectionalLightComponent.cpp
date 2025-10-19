@@ -2,8 +2,20 @@
 #include "Scene/Public/Component/DirectionalLightComponent.h"
 #include "Manager/Public/AssetManager.h"
 #include "Renderer/Public/LightData.h"
+#include "Editor/Public/Line/BatchLineManager.h"
 
 IMPLEMENT_CLASS(UDirectionalLightComponent, ULightComponent)
+
+void UDirectionalLightComponent::DrawDebugArrow(TArray<FName>& InOutLabels)
+{
+	auto& LineManager = UBatchLineManager::GetInstance();
+	const FVector Start = GetWorldLocation();
+	const FVector End = Start + GetWorldForwardVector() * 2.0f;
+	const FVector4 Color(1.0f, 0.0f, 0.0f, 1.0f);
+	FName Label = FName(std::format("{}_Arrow", GetName().ToString()));
+
+	LineManager.AddDebugArrow(Label, Start, End, Color, 1.0f, InOutLabels);
+}
 
 FUnifiedDynamicLight UDirectionalLightComponent::GetUnifiedLightData() const
 {

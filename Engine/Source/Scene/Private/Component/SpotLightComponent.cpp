@@ -9,6 +9,12 @@
 
 IMPLEMENT_CLASS(USpotLightComponent, UPointLightComponent)
 
+USpotLightComponent::USpotLightComponent()
+{
+	bCanEverTick = true;
+}
+
+
 void USpotLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
 	Super::Serialize(bInIsLoading, InOutHandle);
@@ -54,6 +60,17 @@ FUnifiedDynamicLight USpotLightComponent::GetUnifiedLightData() const
     LightData.LightType = static_cast<uint32>(EDynamicLightType::Spot);
 
     return LightData;
+}
+
+void USpotLightComponent::DrawDebugArrow(TArray<FName>& InOutLabels)
+{
+	auto& LineManager = UBatchLineManager::GetInstance();
+	const FVector Tip = GetWorldLocation();
+	const FVector Dir = GetWorldForwardVector();
+	const FVector End = Tip + Dir * 2.0f;
+	const FVector4 Color(1.0f, 0.0f, 0.0f, 1.0f);
+	FName Label = FName(std::format("{}_Arrow", GetName().ToString()));
+	LineManager.AddDebugArrow(Label, Tip, End, Color, 1.0f, InOutLabels);
 }
 
 void USpotLightComponent::DrawDebugLines()

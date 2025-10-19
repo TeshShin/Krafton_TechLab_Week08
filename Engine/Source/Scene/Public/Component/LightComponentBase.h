@@ -107,6 +107,9 @@ private:
 	/*-----------------------------------------------------------------------------
 		Visualization Features
 	 -----------------------------------------------------------------------------*/
+public:
+	virtual void DrawDebugArrow(TArray<FName>& InOutLabels) {}
+
 protected:
 	virtual void DrawDebugLines() {}
 	virtual void ClearDebugLines();

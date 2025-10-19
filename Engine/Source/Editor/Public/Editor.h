@@ -58,6 +58,7 @@ public:
 private:
 	void InitializeLayout();
 	void UpdateBatchLines();
+	void UpdateLightDebugInfo();
 	void ProcessMouseInput();
 	void UpdateLayout();
 
@@ -98,6 +99,9 @@ private:
 		static_cast<uint64>(EEngineShowFlags::SF_Text) |
 		static_cast<uint64>(EEngineShowFlags::SF_Decal) |
 		static_cast<uint64>(EEngineShowFlags::SF_Fog);
+
+	TArray<FName> DebugArrowLabels;
+	bool bWasInPIE = false;
 
 	// Animation
 	EViewportLayoutState ViewportLayoutState = EViewportLayoutState::Multi;

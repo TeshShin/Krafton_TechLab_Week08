@@ -11,6 +11,7 @@ public:
     virtual const TArray<uint32>& GetIndices() const override { return Indices; }
     virtual bool IsDirty() const override { return bIsDirty; }
     virtual void ClearDirtyFlag() const override { bIsDirty = false; }
+	virtual bool IsRenderInPIE() override { return false; }
 
     void SetCellSize(float InCellSize);
     float GetCellSize() const { return CellSize; }

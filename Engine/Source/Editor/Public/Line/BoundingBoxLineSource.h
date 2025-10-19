@@ -13,6 +13,7 @@ public:
     virtual const TArray<uint32>& GetIndices() const override { return Indices; }
     virtual bool IsDirty() const override { return bIsDirty; }
     virtual void ClearDirtyFlag() const override { bIsDirty = false; }
+	virtual bool IsRenderInPIE() override { return true; }
 
     void SetBoundingVolume(const IBoundingVolume* InBoundingVolume);
 

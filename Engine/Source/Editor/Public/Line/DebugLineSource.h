@@ -20,6 +20,7 @@ public:
 	virtual const TArray<uint32>& GetIndices() const override;
 	virtual bool IsDirty() const override { return bIsDirty; }
 	virtual void ClearDirtyFlag() const override { bIsDirty = false; }
+	virtual bool IsRenderInPIE() override { return true; }
 
 	void AddLine(const FName& InLabel, const FVector& InStart, const FVector& InEnd, const FVector4& InColor);
 	void RemoveLine(const FName& InLabel);

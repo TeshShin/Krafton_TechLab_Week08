@@ -10,7 +10,7 @@ class USpotLightComponent : public UPointLightComponent
     DECLARE_CLASS(USpotLightComponent, UPointLightComponent)
 
 public:
-    USpotLightComponent() = default;
+    USpotLightComponent();
 
     virtual ~USpotLightComponent() = default;
 
@@ -30,8 +30,6 @@ public:
 public:
     virtual void BeginPlay() override { Super::BeginPlay(); }
 
-    virtual void TickComponent(float DeltaTime) override { Super::TickComponent(DeltaTime); }
-
     virtual void EndPlay() override { Super::EndPlay(); }
 
     virtual UClass* GetSpecificWidgetClass() const override;
@@ -43,6 +41,9 @@ public:
     virtual ELightComponentType GetLightType() const override { return ELightComponentType::LightType_Spot; }
 
     virtual struct FUnifiedDynamicLight GetUnifiedLightData() const override;
+
+public:
+	virtual void DrawDebugArrow(TArray<FName>& InOutLabels) override;
 
 protected:
 	virtual void DrawDebugLines() override;
