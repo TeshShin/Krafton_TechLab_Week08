@@ -136,21 +136,93 @@ bool IntersectsSphereFrustum(float3 centerVS, float radius, Frustum f)
     return true;
 }
 
-// Unified light vs cluster test
-bool IntersectsUnifiedLightFrustum(FUnifiedDynamicLight L, Frustum f)
+// Cone vs frustum test in view space (spotlight)
+// apexVS  : cone apex in view space
+// axisVS  : cone axis (normalized, pointing from apex toward cone)
+// angleRad: outer cone half-angle in radians
+// length  : cone length (spot range)
+bool IntersectsConeFrustum(float3 apexVS, float3 axisVS, float angleRad, float length, Frustum f)
 {
-    // Transform center/direction to view space
-    float3 centerVS = mul(float4(L.Position, 1.0f), View).xyz;
+    axisVS = normalize(axisVS);
+    length = max(length, 0.0f);
 
-    if (L.LightType == LIGHT_TYPE_DIRECTIONAL || L.LightType == LIGHT_TYPE_AMBIENT)
+    // Degenerate: zero length -> reduce to point test against slabs and side planes
+    if (length <= 1e-5f)
     {
-        // Directional lights affect all clusters (optionally handle separately)
+        // Side planes
+        [unroll]
+        for (int i = 0; i < 4; ++i)
+        {
+            float dist = dot(f.Sides[i].n, apexVS) + f.Sides[i].d;
+            if (dist < 0.0f) return false;
+        }
+        // Z slabs
+        if (apexVS.z < f.zNear) return false;
+        if (apexVS.z > f.zFar)  return false;
         return true;
     }
 
-    // Use sphere approximation for Point/Spot/Rect
-    float radius = max(L.SourceRadius, 0.0f);
-    return IntersectsSphereFrustum(centerVS, radius, f);
+    // Precompute cone parameters
+    float tanTheta = tan(max(angleRad, 0.0f));
+    float R = length * tanTheta; // base radius
+
+    // Reject against the 4 side planes (planes pass through origin => d = 0)
+    [unroll]
+    for (int i = 0; i < 4; ++i)
+    {
+        float3 n = f.Sides[i].n;
+        float d  = f.Sides[i].d;
+
+        float k = dot(n, axisVS);
+        float s = sqrt(saturate(1.0f - k * k));
+
+        float da = dot(n, apexVS) + d;          // apex distance
+        float db = da + length * k;             // base center distance
+        float maxPlane = max(da, db + R * s);   // furthest point on cone along n
+
+        // If furthest point is still outside (negative), cone is completely outside this plane
+        if (maxPlane < 0.0f)
+            return false;
+    }
+
+    // Z slab rejection (axis-aligned planes zNear <= z <= zFar)
+    float3 baseCenter = apexVS + axisVS * length;
+    float az = axisVS.z;
+    float sZ = sqrt(saturate(1.0f - az * az));
+
+    float zApex = apexVS.z;
+    float zBase = baseCenter.z;
+    float zMax = max(zApex, zBase + R * sZ);
+    float zMin = min(zApex, zBase - R * sZ);
+
+    if (zMax < f.zNear) return false;
+    if (zMin > f.zFar)  return false;
+
+    return true;
+}
+
+// Unified light vs cluster test
+bool IntersectsUnifiedLightFrustum(FUnifiedDynamicLight Light, Frustum Frustum)
+{
+    // Transform center/direction to view space
+    float3 CenterVS = mul(float4(Light.Position, 1.0f), View).xyz;
+
+    if (Light.LightType == LIGHT_TYPE_DIRECTIONAL || Light.LightType == LIGHT_TYPE_AMBIENT)
+    {
+        return true;
+    }
+	if (Light.LightType == LIGHT_TYPE_SPOT)
+	{
+		// Transform direction to view space (w = 0 for direction vectors)
+		float3 AxisVS = normalize(mul(float4(Light.Direction, 0.0f), View).xyz);
+		float  Range  = max(Light.SourceRadius, 0.0f);
+		float  Angle  = radians(Light.Param1); // use outer cone for culling
+		return IntersectsConeFrustum(CenterVS, AxisVS, Angle, Range, Frustum);
+	}
+
+    // Use sphere approximation for Point/Rect
+    float Radius = max(Light.SourceRadius, 0.0f);
+    return IntersectsSphereFrustum(CenterVS, Radius, Frustum);
 }
 
 // 1 thread per cluster (tileX,tileY,zSlice)
