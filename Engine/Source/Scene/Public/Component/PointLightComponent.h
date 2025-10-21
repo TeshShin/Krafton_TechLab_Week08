@@ -75,9 +75,4 @@ private:
 
     /** Radius of light source shape. */
 	float AttenuationRadius = 10.0f;
-public:
-	UPROPERTY_INIT_WITHMETA(int32, xx, 123, FPropertyMetadata({
-		.Flags = EPropertyFlags::EditAnywhere | EPropertyFlags::SaveGame,
-		.DisplayName = "Test Point Light Property"
-	}));
 };
