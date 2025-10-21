@@ -14,6 +14,8 @@
 #include "Editor/Public/UI/StatOverlay.h"
 #include "Scene/Public/Level/Level.h"
 #include "Manager/Public/UIManager.h"
+#include "Manager/Public/InputManager.h"
+#include "Manager/Public/TimeManager.h"
 #include "Renderer/Public/RenderPass/RenderPass.h"
 #include "Renderer/Public/RenderPass/BillboardPass.h"
 #include "Renderer/Public/RenderPass/DecalPass.h"
@@ -27,6 +29,7 @@
 #include "Renderer/Public/RenderPass/DefaultViewPass.h"
 #include "Renderer/Public/RenderPass/SceneDepthPass.h"
 #include "Renderer/Public/RenderPass/RenderingContext.h"
+#include "Renderer/Public/ShaderManager.h"
 #include "Editor/Public/Line/BatchLineManager.h"
 #include "Renderer/Public/RenderPass/EditorDepthPass.h"
 #include "Renderer/Public/RenderPass/EditorOverlayPass.h"
@@ -163,6 +166,21 @@ void URenderer::ReleaseRenderPasses()
 
 void URenderer::Render()
 {
+	// Manual shader reload via F4 key (for immediate testing)
+	static bool bWasF4Pressed = false;
+	bool bIsF4Pressed = UInputManager::GetInstance().IsKeyDown(EKeyInput::F4);
+
+	if (bIsF4Pressed && !bWasF4Pressed)  // Detect key press (not hold)
+	{
+		UE_LOG("===== Shader Hot-Reload Triggered (F4 - Manual) =====");
+		int32 ReloadedCount = FShaderManager::Get().ReloadAllShaders();
+		UE_LOG("Shader Hot-Reload: %d variants recompiled", ReloadedCount);
+	}
+	bWasF4Pressed = bIsF4Pressed;
+
+	// Auto shader reload (timestamp-based, periodic check)
+	CheckShaderHotReload();
+
 	RenderBegin();
 
 	for (FViewportClient& Viewport : ViewportClient->GetViewports())
@@ -334,6 +352,27 @@ void URenderer::RenderEnd() const
 	TIME_PROFILE(DrawCall)
 	GetSwapChain()->Present(0, 0);
 	TIME_PROFILE_END(DrawCall)
+}
+
+void URenderer::CheckShaderHotReload()
+{
+	// Accumulate time
+	ShaderCheckAccumulator += UTimeManager::GetInstance().GetDeltaTime();
+
+	// Check periodically (not every frame for performance)
+	if (ShaderCheckAccumulator >= ShaderCheckInterval)
+	{
+		ShaderCheckAccumulator = 0.0f;
+
+		// Check all tracked shader files for modifications
+		int32 ModifiedFileCount = FShaderManager::Get().CheckAndReloadModifiedShaders();
+
+		// Log only if files were actually modified
+		if (ModifiedFileCount > 0)
+		{
+			UE_LOG("===== Shader Auto-Reload: %d file(s) detected and recompiled =====", ModifiedFileCount);
+		}
+	}
 }
 
 void URenderer::OnResize(uint32 InWidth, uint32 InHeight) const

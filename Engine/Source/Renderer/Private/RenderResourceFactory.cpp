@@ -1,11 +1,17 @@
 ﻿#include "pch.h"
 #include "Renderer/Public/RenderResourceFactory.h"
 #include "Renderer/Public/Renderer.h"
+#include "Renderer/Public/ShaderManager.h"
 #include <d3dcompiler.h>
 #pragma comment(lib, "d3dcompiler.lib")
 
-void FRenderResourceFactory::CreateVertexShaderAndInputLayout(const wstring& InFilePath,
-                                                              const TArray<D3D11_INPUT_ELEMENT_DESC>& InInputLayoutDescs, ID3D11VertexShader** OutVertexShader, ID3D11InputLayout** OutInputLayout, const D3D_SHADER_MACRO* InDefines)
+void FRenderResourceFactory::CreateVertexShaderAndInputLayout(
+	const wstring& InFilePath,
+	const TArray<D3D11_INPUT_ELEMENT_DESC>& InInputLayoutDescs,
+	ID3D11VertexShader** OutVertexShader,
+	ID3D11InputLayout** OutInputLayout,
+	const D3D_SHADER_MACRO* InDefines,
+	bool bEnableHotReload)
 {
 	ID3DBlob* VertexShaderBlob = nullptr;
 	ID3DBlob* ErrorBlob = nullptr;
@@ -28,6 +34,13 @@ void FRenderResourceFactory::CreateVertexShaderAndInputLayout(const wstring& InF
 		URenderer::GetInstance().GetDevice()->CreateInputLayout(InInputLayoutDescs.data(), static_cast<uint32>(InInputLayoutDescs.size()), VertexShaderBlob->GetBufferPointer(), VertexShaderBlob->GetBufferSize(), OutInputLayout);
 
 	SafeRelease(VertexShaderBlob);
+
+	// Register with ShaderManager for hot-reload support
+	// TODO: Move this registration to a more centralized location (e.g., ShaderRegistry class)
+	if (bEnableHotReload && OutVertexShader && *OutVertexShader)
+	{
+		FShaderManager::Get().RegisterVertexShader(InFilePath, InInputLayoutDescs, OutVertexShader, OutInputLayout, InDefines);
+	}
 }
 
 ID3D11Buffer* FRenderResourceFactory::CreateIndexBuffer(const void* InIndices, uint32 InByteWidth)
@@ -39,7 +52,11 @@ ID3D11Buffer* FRenderResourceFactory::CreateIndexBuffer(const void* InIndices, u
 	return IndexBuffer;
 }
 
-void FRenderResourceFactory::CreatePixelShader(const wstring& InFilePath, ID3D11PixelShader** OutPixelShader, const D3D_SHADER_MACRO* InDefines)
+void FRenderResourceFactory::CreatePixelShader(
+	const wstring& InFilePath,
+	ID3D11PixelShader** OutPixelShader,
+	const D3D_SHADER_MACRO* InDefines,
+	bool bEnableHotReload)
 {
 	ID3DBlob* PixelShaderBlob = nullptr;
 	ID3DBlob* ErrorBlob = nullptr;
@@ -59,6 +76,13 @@ void FRenderResourceFactory::CreatePixelShader(const wstring& InFilePath, ID3D11
 
 	URenderer::GetInstance().GetDevice()->CreatePixelShader(PixelShaderBlob->GetBufferPointer(), PixelShaderBlob->GetBufferSize(), nullptr, OutPixelShader);
 	SafeRelease(PixelShaderBlob);
+
+	// Register with ShaderManager for hot-reload support
+	// TODO: Move this registration to a more centralized location (e.g., ShaderRegistry class)
+	if (bEnableHotReload && OutPixelShader && *OutPixelShader)
+	{
+		FShaderManager::Get().RegisterPixelShader(InFilePath, OutPixelShader, InDefines);
+	}
 }
 
 ID3D11SamplerState* FRenderResourceFactory::CreateSamplerState(D3D11_FILTER InFilter, D3D11_TEXTURE_ADDRESS_MODE InAddressMode)
@@ -135,12 +159,20 @@ D3D11_FILL_MODE FRenderResourceFactory::ToD3D11(EFillMode InFill)
 	}
 }
 
-ID3D11ComputeShader* FRenderResourceFactory::CreateComputeShader(
+void FRenderResourceFactory::CreateComputeShader(
     const std::wstring& InFilePath,
+    ID3D11ComputeShader** OutComputeShader,
     const D3D_SHADER_MACRO* InDefines,
     const char* Entry,
-    const char* Profile)
+    const char* Profile,
+    bool bEnableHotReload)
 {
+    if (!OutComputeShader)
+    {
+        UE_LOG_ERROR("Renderer: OutComputeShader is nullptr");
+        return;
+    }
+
     ID3D11Device* Device = URenderer::GetInstance().GetDevice();
     ID3DBlob* ShaderBlob = nullptr;
     ID3DBlob* ErrorBlob  = nullptr;
@@ -171,19 +203,24 @@ ID3D11ComputeShader* FRenderResourceFactory::CreateComputeShader(
             ErrorBlob->Release();
         }
         SafeRelease(ShaderBlob);
-        return nullptr;
+        return;
     }
 
-    ID3D11ComputeShader* CS = nullptr;
-    hr = Device->CreateComputeShader(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), nullptr, &CS);
+    hr = Device->CreateComputeShader(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), nullptr, OutComputeShader);
     SafeRelease(ShaderBlob);
 
     if (FAILED(hr))
     {
         UE_LOG_ERROR("Renderer: CreateComputeShader failed for %ls", InFilePath.c_str());
-        return nullptr;
+        return;
     }
-    return CS;
+
+    // Register with ShaderManager for hot-reload support
+    // TODO: Move this registration to a more centralized location (e.g., ShaderRegistry class)
+    if (bEnableHotReload && OutComputeShader && *OutComputeShader)
+    {
+        FShaderManager::Get().RegisterComputeShader(InFilePath, OutComputeShader, InDefines, Entry, Profile);
+    }
 }
 
 // Structured buffer (SRV + UAV). Use DEFAULT (no CPU access) for UAV use.
