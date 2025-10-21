@@ -2,11 +2,12 @@
 #include "Editor/Public/UI/Widget/Component/PointLightComponentWidget.h"
 #include "Scene/Public/Component/PointLightComponent.h"
 #include "Editor/Public/Editor.h"
+#include "Editor/Public/UI/Widget/Component/ComponentWidget.h"
 #include "Scene/Public/Level/Level.h"
 #include "Scene/Public/Component/ActorComponent.h"
 #include "ImGui/imgui.h"
 
-IMPLEMENT_CLASS(UPointLightComponentWidget, UWidget)
+IMPLEMENT_CLASS(UPointLightComponentWidget, UComponentWidget)
 
 void UPointLightComponentWidget::Initialize()
 {
@@ -27,6 +28,7 @@ void UPointLightComponentWidget::Update()
 
 void UPointLightComponentWidget::RenderWidget()
 {
+	Super::RenderWidget();
     if (!PointLightComponent)
     {
         return;

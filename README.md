@@ -394,3 +394,275 @@ if (mesh->IsSphere()) {
 - Physically Based Rendering (PBR) 머티리얼
 - Deferred Rendering 파이프라인 추가
 - Volumetric Lighting
+
+---
+
+## 11. UPROPERTY 시스템
+
+### 11.1. 개요
+
+UPROPERTY 시스템은 UObject 기반 클래스의 멤버 변수를 런타임 리플렉션 시스템에 등록하여, 자동 직렬화, 복제, UI 생성 등을 지원하는 메타데이터 시스템입니다.
+
+**주요 기능:**
+- 자동 직렬화/역직렬화 (JSON)
+- 자동 객체 복제
+- 에디터 UI 자동 생성
+- 타입 안전성 보장
+- 메타데이터 기반 제약 조건
+
+### 11.2. 기본 사용법
+
+#### 11.2.1. UPROPERTY 매크로 종류
+
+```cpp
+// 1. 기본 선언 (기본값 없음, 메타데이터 없음)
+UPROPERTY(Type, Name)
+
+// 2. 기본값 포함
+UPROPERTY_INIT(Type, Name, DefaultValue)
+
+// 3. 플래그만 지정
+UPROPERTY_INIT_WITHMETA(Type, Name, DefaultValue, UPROPERTY_FLAGS(Flags))
+
+// 4. 완전한 메타데이터 지정
+UPROPERTY_INIT_WITHMETA(Type, Name, DefaultValue, FPropertyMetadata({
+    .Flags = EPropertyFlags::EditAnywhere | EPropertyFlags::SaveGame,
+    .Min = 0.0,
+    .Max = 100.0,
+    .Step = 1.0,
+    .DisplayName = "Property Name",
+    .Tooltip = "Description here",
+    .bSlider = true
+}))
+```
+
+#### 11.2.2. 사용 예제
+
+```cpp
+UCLASS()
+class USpotLightComponent : public UPointLightComponent
+{
+    GENERATED_BODY()
+    DECLARE_CLASS(USpotLightComponent, UPointLightComponent)
+
+public:
+    // 편집 가능 + 저장되는 float 프로퍼티 (슬라이더 UI)
+    UPROPERTY_INIT_WITHMETA(float, OuterConeAngle, 45.0f, FPropertyMetadata({
+        .Flags = EPropertyFlags::EditAnywhere | EPropertyFlags::SaveGame,
+        .Min = 0.0f,
+        .Max = 90.0f,
+        .DisplayName = "Outer Cone Angle",
+        .Tooltip = "Outer angle of the spotlight cone",
+        .bSlider = true
+    }));
+
+    // 단순 플래그만 지정
+    UPROPERTY_INIT_WITHMETA(FString, Description, "Default",
+        UPROPERTY_FLAGS(EPropertyFlags::EditAnywhere | EPropertyFlags::SaveGame));
+
+    // 복제 시 리셋되는 프로퍼티
+    UPROPERTY_INIT_WITHMETA(int32, RuntimeCounter, 0,
+        UPROPERTY_FLAGS(EPropertyFlags::EditAnywhere | EPropertyFlags::DuplicateTransient));
+};
+```
+
+### 11.3. 프로퍼티 플래그
+
+```cpp
+enum class EPropertyFlags : uint64
+{
+    None = 0,
+
+    // 에디터 표시
+    EditAnywhere = 1ULL << 0,      // 에디터에서 편집 가능
+    VisibleAnywhere = 1ULL << 1,   // 에디터에서 읽기 전용 표시
+
+    // 직렬화/복제
+    SaveGame = 1ULL << 2,           // JSON 저장 파일에 포함
+    DuplicateTransient = 1ULL << 3  // 복제 시 기본값으로 리셋
+};
+```
+
+**플래그 조합 예시:**
+```cpp
+// 편집 가능 + 저장됨
+EPropertyFlags::EditAnywhere | EPropertyFlags::SaveGame
+
+// 읽기 전용으로 표시만
+EPropertyFlags::VisibleAnywhere
+
+// 편집 가능하지만 복제 시 리셋
+EPropertyFlags::EditAnywhere | EPropertyFlags::DuplicateTransient
+```
+
+### 11.4. 메타데이터 옵션
+
+```cpp
+struct FPropertyMetadata
+{
+    EPropertyFlags Flags;           // 프로퍼티 플래그
+    double Min;                     // 최소값 (숫자 타입)
+    double Max;                     // 최대값 (숫자 타입)
+    double Step;                    // 증감 단위 (기본: 1.0)
+    const char* Category;           // 카테고리 (미사용)
+    const char* Tooltip;            // 툴팁 텍스트
+    const char* DisplayName;        // UI 표시 이름
+    bool bSlider;                   // Slider UI 사용 여부
+    bool bReadOnly;                 // 읽기 전용 여부
+};
+```
+
+### 11.5. 지원하는 타입
+
+#### 11.5.1. 기본 타입
+- `int8`, `int16`, `int32`, `int64`
+- `uint8`, `uint16`, `uint32`, `uint64`
+- `float`, `double`
+- `bool`
+- `FString`, `FName`
+
+#### 11.5.2. 벡터 및 색상 타입
+```cpp
+// 벡터 타입
+UPROPERTY_INIT_WITHMETA(FVector2, Position2D, FVector2(0, 0), ...);
+UPROPERTY_INIT_WITHMETA(FVector, Position, FVector(0, 0, 0), ...);
+UPROPERTY_INIT_WITHMETA(FVector4, Vector4, FVector4(0, 0, 0, 1), ...);
+
+// 색상 타입 (컬러 피커 UI 자동 생성)
+UPROPERTY_INIT_WITHMETA(FLinearColor3, Color, FLinearColor3(1, 1, 1), ...);
+UPROPERTY_INIT_WITHMETA(FLinearColor, ColorWithAlpha, FLinearColor(1, 1, 1, 1), ...);
+```
+
+#### 11.5.3. JSON 직렬화 형식
+
+벡터 및 색상 타입은 JSON 배열로 직렬화됩니다:
+```json
+{
+    "Position": [1.000000, 2.000000, 3.000000],
+    "Color": [1.000000, 0.500000, 0.250000],
+    "ColorWithAlpha": [1.000000, 0.500000, 0.250000, 0.800000]
+}
+```
+
+### 11.6. 자동 직렬화 및 복제
+
+#### 11.6.1. 자동 직렬화 (Serialize)
+
+`SaveGame` 플래그가 있는 프로퍼티는 자동으로 JSON에 저장/로드됩니다:
+
+```cpp
+void UObject::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+{
+    // UPROPERTY 시스템이 자동으로 처리
+    // SaveGame 플래그가 있는 모든 프로퍼티를 자동 직렬화
+}
+```
+
+#### 11.6.2. 자동 복제 (Duplicate)
+
+객체 복제 시 `DuplicateTransient` 플래그가 없는 프로퍼티만 복사됩니다:
+
+```cpp
+UObject* NewObject = OriginalObject->Duplicate();
+// DuplicateTransient가 아닌 모든 프로퍼티 자동 복제
+```
+
+### 11.7. 자동 UI 생성
+
+#### 11.7.1. ComponentWidget 통합
+
+모든 컴포넌트 위젯은 `UComponentWidget`을 상속받아 자동으로 UPROPERTY UI를 렌더링합니다:
+
+```cpp
+void MyCustomWidget::RenderWidget()
+{
+    // 먼저 UPROPERTY 자동 렌더링
+    Super::RenderWidget();
+
+    // 그 다음 커스텀 UI 추가
+    ImGui::Text("Additional UI");
+}
+```
+
+#### 11.7.2. 타입별 UI
+
+| 타입 | UI 컨트롤 |
+|------|----------|
+| `int32` | `DragInt` 또는 `SliderInt` |
+| `float` | `DragFloat` 또는 `SliderFloat` |
+| `bool` | `Checkbox` |
+| `FString` | `InputText` |
+| `FVector2` | `DragFloat2` |
+| `FVector` | `DragFloat3` |
+| `FVector4` | `DragFloat4` |
+| `FLinearColor3` | `ColorEdit3` (RGB 컬러 피커) |
+| `FLinearColor` | `ColorEdit4` (RGBA 컬러 피커) |
+
+### 11.8. 고급 사용 예제
+
+```cpp
+UCLASS()
+class UMyComponent : public UActorComponent
+{
+    GENERATED_BODY()
+    DECLARE_CLASS(UMyComponent, UActorComponent)
+
+public:
+    // 슬라이더로 편집 가능한 강도
+    UPROPERTY_INIT_WITHMETA(float, Intensity, 5.0f, FPropertyMetadata({
+        .Flags = EPropertyFlags::EditAnywhere | EPropertyFlags::SaveGame,
+        .Min = 0.0,
+        .Max = 20.0,
+        .Step = 0.1,
+        .DisplayName = "Light Intensity",
+        .Tooltip = "Brightness of the light source",
+        .bSlider = true
+    }));
+
+    // 색상 피커
+    UPROPERTY_INIT_WITHMETA(FLinearColor3, LightColor, FLinearColor3(1, 1, 1),
+        FPropertyMetadata({
+            .Flags = EPropertyFlags::EditAnywhere | EPropertyFlags::SaveGame,
+            .DisplayName = "Light Color"
+        }));
+
+    // 위치 벡터
+    UPROPERTY_INIT_WITHMETA(FVector, Offset, FVector(0, 0, 0),
+        FPropertyMetadata({
+            .Flags = EPropertyFlags::EditAnywhere | EPropertyFlags::SaveGame,
+            .Step = 0.01,
+            .DisplayName = "Position Offset"
+        }));
+
+    // 런타임 전용 (저장 안됨)
+    UPROPERTY_INIT_WITHMETA(int32, FrameCount, 0,
+        UPROPERTY_FLAGS(EPropertyFlags::VisibleAnywhere));
+
+    // 복제 시 리셋
+    UPROPERTY_INIT_WITHMETA(bool, bIsActive, false,
+        UPROPERTY_FLAGS(EPropertyFlags::EditAnywhere | EPropertyFlags::DuplicateTransient));
+};
+```
+
+### 11.9. 주의사항
+
+1. **타입 일치**: 기본값의 타입과 선언된 타입이 일치해야 합니다
+   ```cpp
+   // ❌ 잘못된 예
+   UPROPERTY_INIT_WITHMETA(int32, Value, 3.5f, ...)  // float를 int에 대입
+
+   // ✅ 올바른 예
+   UPROPERTY_INIT_WITHMETA(int32, Value, 42, ...)
+   ```
+
+2. **세미콜론**: UPROPERTY 매크로는 반드시 세미콜론으로 끝나야 합니다
+   ```cpp
+   UPROPERTY_INIT_WITHMETA(float, Value, 1.0f, ...)  // ❌ 세미콜론 없음
+   UPROPERTY_INIT_WITHMETA(float, Value, 1.0f, ...); // ✅ 세미콜론 있음
+   ```
+
+3. **Min/Max 제약**: infinity 값은 자동으로 타입별 최대/최소값으로 변환됩니다
+   - `float`: `±FLT_MAX`
+   - `int32`: `INT_MIN` ~ `INT_MAX`
+
+4. **상속**: 부모 클래스의 UPROPERTY도 자동으로 UI에 표시됩니다

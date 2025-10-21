@@ -358,6 +358,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Core\Public\Object\NewObject.h" />
     <ClInclude Include="Source\Core\Public\Object\Object.h" />
     <ClInclude Include="Source\Core\Public\Object\ObjectIterator.h" />
+    <ClInclude Include="Source\Core\Public\Object\Property.h" />
     <ClInclude Include="Source\Core\Public\Types.h" />
     <ClInclude Include="Source\Editor\Public\EditorEngine.h" />
     <ClInclude Include="Source\Editor\Public\Line\BatchLineManager.h" />
@@ -373,6 +374,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Editor\Public\UI\Widget\ActorSpawnWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\ActorTerminationWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\CameraControlWidget.h" />
+    <ClInclude Include="Source\Editor\Public\UI\Widget\Component\ComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\DecalTextureSelectionWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\HeightFogComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\LightComponentWidget.h" />
@@ -507,6 +509,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     </ClCompile>
     <ClCompile Include="Source\Editor\Private\Line\GridLineSource.cpp">
     </ClCompile>
+    <ClCompile Include="Source\Editor\Private\UI\Widget\Component\ComponentWidget.cpp" />
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\SpotLightComponentWidget.cpp" />
     <ClCompile Include="Source\Renderer\Private\RenderPass\EditorDepthPass.cpp" />
     <ClCompile Include="Source\Renderer\Private\RenderPass\EditorOverlayPass.cpp" />

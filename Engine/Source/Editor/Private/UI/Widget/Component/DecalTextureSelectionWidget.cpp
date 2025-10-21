@@ -10,7 +10,7 @@
 #include <filesystem>
 #include "Asset/Public/Material.h"
 
-IMPLEMENT_CLASS(UDecalTextureSelectionWidget, UWidget)
+IMPLEMENT_CLASS(UDecalTextureSelectionWidget, UComponentWidget)
 
 void UDecalTextureSelectionWidget::Initialize()
 {
@@ -36,6 +36,9 @@ void UDecalTextureSelectionWidget::Update()
 
 void UDecalTextureSelectionWidget::RenderWidget()
 {
+    // 먼저 부모 클래스의 RenderWidget을 호출하여 UPROPERTY 자동 렌더링
+    Super::RenderWidget();
+
     if (!DecalComponent)
     {
         return;

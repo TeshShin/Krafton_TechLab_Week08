@@ -2,6 +2,7 @@
 
 #include "LightComponent.h"
 #include "PointLightComponent.h"
+#include "Core/Public/Object/Property.h"
 
 UCLASS()
 class USpotLightComponent : public UPointLightComponent
@@ -65,4 +66,13 @@ private:
     // TODO: Add SpotLight specific member variables
     float InnerConeAngle = 30.0f;  // 30 degrees
     float OuterConeAngle = 45.0f;  // 45 degrees
+
+	/*
+	UPROPERTY_INIT_WITHMETA(float, OuterConeAngle, 45.0f, FPropertyMetadata({
+		.Flags = EPropertyFlags::EditAnywhere | EPropertyFlags::SaveGame,
+		.Min = 0.0f,
+		.Max = 90.0f,
+		.DisplayName = "Outer Cone Angle"
+	}))
+	 */
 };

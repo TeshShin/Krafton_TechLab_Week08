@@ -4,10 +4,13 @@
 #include "Scene/Public/Component/RotatingMovementComponent.h"
 #include "Scene/Public/Level/Level.h"
 
-IMPLEMENT_CLASS(URotatingMovementComponentWidget, UWidget)
+IMPLEMENT_CLASS(URotatingMovementComponentWidget, UComponentWidget)
 
 void URotatingMovementComponentWidget::RenderWidget()
 {
+    // 먼저 부모 클래스의 RenderWidget을 호출하여 UPROPERTY 자동 렌더링
+    Super::RenderWidget();
+
     ULevel* CurrentLevel = GWorld->GetLevel();
 
     if (!CurrentLevel)
