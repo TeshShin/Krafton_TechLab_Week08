@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/Public/Container/Name.h"
 #include "Core/Public/Types.h"
+#include "Core/Public/Math/Vector.h"
 #include <typeinfo>
 #include <limits>
 
@@ -29,6 +30,11 @@ enum class EPropertyType : uint8
 	Struct,
 	Enum,
 	Array,
+	Vector2,
+	Vector,
+	Vector4,
+	LinearColor3,
+	LinearColor,
 	Custom
 };
 
@@ -271,6 +277,16 @@ private:
 			return EPropertyType::String;
 		else if constexpr (std::is_same_v<T, FName>)
 			return EPropertyType::Name;
+		else if constexpr (std::is_same_v<T, FVector2>)
+			return EPropertyType::Vector2;
+		else if constexpr (std::is_same_v<T, FVector>)
+			return EPropertyType::Vector;
+		else if constexpr (std::is_same_v<T, FVector4>)
+			return EPropertyType::Vector4;
+		else if constexpr (std::is_same_v<T, FLinearColor3>)
+			return EPropertyType::LinearColor3;
+		else if constexpr (std::is_same_v<T, FLinearColor>)
+			return EPropertyType::LinearColor;
 		else if constexpr (std::is_pointer_v<T> && std::is_base_of_v<UObject, std::remove_pointer_t<T>>)
 			return EPropertyType::Object;
 		else
@@ -299,6 +315,36 @@ private:
 		else if constexpr (std::is_same_v<U, bool>)
 		{
 			return Value ? FString("true") : FString("false");
+		}
+		else if constexpr (std::is_same_v<U, FVector2>)
+		{
+			char buffer[128];
+			snprintf(buffer, sizeof(buffer), "[%.6f, %.6f]", Value.X, Value.Y);
+			return FString(buffer);
+		}
+		else if constexpr (std::is_same_v<U, FVector>)
+		{
+			char buffer[128];
+			snprintf(buffer, sizeof(buffer), "[%.6f, %.6f, %.6f]", Value.X, Value.Y, Value.Z);
+			return FString(buffer);
+		}
+		else if constexpr (std::is_same_v<U, FVector4>)
+		{
+			char buffer[128];
+			snprintf(buffer, sizeof(buffer), "[%.6f, %.6f, %.6f, %.6f]", Value.X, Value.Y, Value.Z, Value.W);
+			return FString(buffer);
+		}
+		else if constexpr (std::is_same_v<U, FLinearColor3>)
+		{
+			char buffer[128];
+			snprintf(buffer, sizeof(buffer), "[%.6f, %.6f, %.6f]", Value.R, Value.G, Value.B);
+			return FString(buffer);
+		}
+		else if constexpr (std::is_same_v<U, FLinearColor>)
+		{
+			char buffer[128];
+			snprintf(buffer, sizeof(buffer), "[%.6f, %.6f, %.6f, %.6f]", Value.R, Value.G, Value.B, Value.A);
+			return FString(buffer);
 		}
 		else
 		{
@@ -339,6 +385,56 @@ private:
 		{
 			OutValue = FName(Value);
 			return true;
+		}
+		else if constexpr (std::is_same_v<U, FVector2>)
+		{
+			float x, y;
+			if (sscanf_s(Value.c_str(), "[%f, %f]", &x, &y) == 2)
+			{
+				OutValue = FVector2(x, y);
+				return true;
+			}
+			return false;
+		}
+		else if constexpr (std::is_same_v<U, FVector>)
+		{
+			float x, y, z;
+			if (sscanf_s(Value.c_str(), "[%f, %f, %f]", &x, &y, &z) == 3)
+			{
+				OutValue = FVector(x, y, z);
+				return true;
+			}
+			return false;
+		}
+		else if constexpr (std::is_same_v<U, FVector4>)
+		{
+			float x, y, z, w;
+			if (sscanf_s(Value.c_str(), "[%f, %f, %f, %f]", &x, &y, &z, &w) == 4)
+			{
+				OutValue = FVector4(x, y, z, w);
+				return true;
+			}
+			return false;
+		}
+		else if constexpr (std::is_same_v<U, FLinearColor3>)
+		{
+			float r, g, b;
+			if (sscanf_s(Value.c_str(), "[%f, %f, %f]", &r, &g, &b) == 3)
+			{
+				OutValue = FLinearColor3(r, g, b);
+				return true;
+			}
+			return false;
+		}
+		else if constexpr (std::is_same_v<U, FLinearColor>)
+		{
+			float r, g, b, a;
+			if (sscanf_s(Value.c_str(), "[%f, %f, %f, %f]", &r, &g, &b, &a) == 4)
+			{
+				OutValue = FLinearColor(r, g, b, a);
+				return true;
+			}
+			return false;
 		}
 		else
 		{

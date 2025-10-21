@@ -374,6 +374,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Editor\Public\UI\Widget\ActorSpawnWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\ActorTerminationWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\CameraControlWidget.h" />
+    <ClInclude Include="Source\Editor\Public\UI\Widget\Component\ComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\DecalTextureSelectionWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\HeightFogComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\LightComponentWidget.h" />
@@ -506,6 +507,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     </ClCompile>
     <ClCompile Include="Source\Editor\Private\Line\GridLineSource.cpp">
     </ClCompile>
+    <ClCompile Include="Source\Editor\Private\UI\Widget\Component\ComponentWidget.cpp" />
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\SpotLightComponentWidget.cpp" />
     <ClCompile Include="Source\Renderer\Private\RenderPass\StaticMeshUnlitPass.cpp" />
     <ClCompile Include="Source\Scene\Private\Actor\SpotLightActor.cpp" />

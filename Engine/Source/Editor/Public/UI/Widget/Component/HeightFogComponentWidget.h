@@ -1,13 +1,13 @@
 #pragma once
-#include "Editor/Public/UI/Widget/Widget.h"
+#include "Editor/Public/UI/Widget/Component/ComponentWidget.h"
 
 class UHeightFogComponent;
 
 UCLASS()
-class UHeightFogComponentWidget : public UWidget
+class UHeightFogComponentWidget : public UComponentWidget
 {
 	GENERATED_BODY()
-	DECLARE_CLASS(UHeightFogComponentWidget, UWidget)
+	DECLARE_CLASS(UHeightFogComponentWidget, UComponentWidget)
 public:
 	void Initialize() override;
 	void Update() override;

@@ -27,7 +27,7 @@ void USpotLightComponentWidget::RenderWidget()
 	}
 
 	// UPROPERTY 시스템을 사용한 자동 UI 생성 (UWidget의 기본 구현 사용)
-	RenderProperties(SpotLightComponent, true);
+	//RenderProperties(SpotLightComponent, true);
 
 	Super::RenderWidget();
 

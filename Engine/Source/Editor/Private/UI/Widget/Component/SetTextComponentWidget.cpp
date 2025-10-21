@@ -5,7 +5,7 @@
 #include "Editor/Public/Editor.h"
 #include <climits>
 
-IMPLEMENT_CLASS(USetTextComponentWidget, UWidget)
+IMPLEMENT_CLASS(USetTextComponentWidget, UComponentWidget)
 
 void USetTextComponentWidget::Initialize()
 {
@@ -16,12 +16,15 @@ void USetTextComponentWidget::Update()
 {
 	UActorComponent* Component = GEditor->GetEditorModule()->GetSelectedComponent();
 	if (!Component) { return; }
-	
+
 	SelectedTextComponent = Cast<UTextComponent>(Component);
 }
 
 void USetTextComponentWidget::RenderWidget()
 {
+	// 먼저 부모 클래스의 RenderWidget을 호출하여 UPROPERTY 자동 렌더링
+	Super::RenderWidget();
+
 	if (!SelectedTextComponent) { return; }
 	
 	ImGui::Text("Type Text");

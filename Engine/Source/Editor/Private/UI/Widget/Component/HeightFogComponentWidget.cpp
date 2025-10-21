@@ -5,7 +5,7 @@
 #include "Scene/Public/Level/Level.h"
 #include "ImGui/imgui.h"
 
-IMPLEMENT_CLASS(UHeightFogComponentWidget, UWidget)
+IMPLEMENT_CLASS(UHeightFogComponentWidget, UComponentWidget)
 
 void UHeightFogComponentWidget::Initialize()
 {
@@ -26,6 +26,9 @@ void UHeightFogComponentWidget::Update()
 
 void UHeightFogComponentWidget::RenderWidget()
 {
+    // 먼저 부모 클래스의 RenderWidget을 호출하여 UPROPERTY 자동 렌더링
+    Super::RenderWidget();
+
     if (!FogComponent)
     {
         return;

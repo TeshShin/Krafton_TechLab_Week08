@@ -1,15 +1,15 @@
 #pragma once
 #include "Asset/Public/Material.h"
-#include "Editor/Public/UI/Widget/Widget.h"
+#include "Editor/Public/UI/Widget/Component/ComponentWidget.h"
 
 class UClass;
 class UDecalComponent;
 
 UCLASS()
-class UDecalTextureSelectionWidget : public UWidget
+class UDecalTextureSelectionWidget : public UComponentWidget
 {
 	GENERATED_BODY()
-	DECLARE_CLASS(UDecalTextureSelectionWidget, UWidget)
+	DECLARE_CLASS(UDecalTextureSelectionWidget, UComponentWidget)
 public:
 	void Initialize() override;
 	void Update() override;

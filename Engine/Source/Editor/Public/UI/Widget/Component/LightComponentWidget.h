@@ -1,9 +1,13 @@
 ﻿#pragma once
-#include "Editor/Public/UI/Widget/Widget.h"
+#include "Editor/Public/UI/Widget/Component/ComponentWidget.h"
 
-class ULightComponentWidget: public UWidget
+/**
+ * @brief 라이트 컴포넌트 위젯
+ * 기본 UPROPERTY 렌더링 후 추가적인 라이트 관련 UI를 제공합니다.
+ */
+class ULightComponentWidget: public UComponentWidget
 {
-    DECLARE_CLASS(ULightComponentWidget, UWidget);
+    DECLARE_CLASS(ULightComponentWidget, UComponentWidget);
     
 public:
     ULightComponentWidget() = default;
