@@ -42,6 +42,13 @@ public:
     UPropertyBase* FindProperty(const FName& PropertyName) const;
     UPropertyBase* FindProperty(const char* PropertyName) const;
 
+    /**
+     * @brief 이 클래스와 모든 부모 클래스의 프로퍼티를 재귀적으로 수집합니다.
+     * Serialize/Duplicate에서 상속된 프로퍼티까지 처리하기 위해 사용됩니다.
+     * @param OutProperties 수집된 프로퍼티 목록
+     */
+    void GetAllProperties(TArray<UPropertyBase*>& OutProperties) const;
+
 private:
     FName ClassName;
     UClass* SuperClass;

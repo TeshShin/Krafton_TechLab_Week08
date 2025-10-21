@@ -45,7 +45,8 @@ enum class EPropertyFlags : uint64
 	VisibleAnywhere = 1ULL << 1,        // 에디터에서 어디서나 표시 (읽기 전용)
 
 	// 직렬화 및 저장
-	SaveGame = 1ULL << 2,              // 저장 파일에 포함
+	SaveGame = 1ULL << 2,				// 저장 파일에 포함
+	DuplicateTransient = 1ULL << 3		// 모든 유형의 복제에 대해 default value로 리셋
 };
 
 /**

@@ -65,25 +65,25 @@ protected:
 private:
     // TODO: Add SpotLight specific member variables
     float InnerConeAngle = 30.0f;  // 30 degrees
-    float OuterConeAngle = 45.0f;  // 45 degrees
+	UPROPERTY_INIT_WITHMETA(float, OuterConeAngle, 45.0f, FPropertyMetadata({
+		.Flags = EPropertyFlags::EditAnywhere | EPropertyFlags::SaveGame,
+		.Min = 0.0f,
+		.Max = 90.0f,
+		.DisplayName = "Outer Cone Angle"
+	}))
+    //float OuterConeAngle = 45.0f;  // 45 degrees
 
 public:
-    // UPROPERTY 시스템 테스트 - 다양한 메타데이터 활용
-    UPROPERTY(float, TestField1)  // 1. 표시 안됨 (플래그 없음)
+    // UPROPERTY 시스템 테스트 - 자동 직렬화/복제 테스트
 
-    // 2. FLAGS 매크로 사용 - 간단한 플래그 지정
-    UPROPERTY_WITHMETA(int32, TestField2, UPROPERTY_FLAGS(EPropertyFlags::VisibleAnywhere))
-
-    // 3. FLAGS 매크로 - 여러 플래그 조합
-    UPROPERTY_INIT_WITHMETA(float, TestField3, 25.0f,
-    	UPROPERTY_FLAGS(EPropertyFlags::EditAnywhere | EPropertyFlags::SaveGame))
-
-    // 4. 완전한 메타데이터 - FPropertyMetadata 직접 사용
-    UPROPERTY_INIT_WITHMETA(float, TestField4, 3.5f, FPropertyMetadata({
+    // 4. 편집 가능 + 직렬화됨 + 완전한 메타데이터
+    UPROPERTY_INIT_WITHMETA(int, TestField4, 3.5f, FPropertyMetadata({
         .Flags = EPropertyFlags::EditAnywhere | EPropertyFlags::SaveGame,
-        .Min = 0.0,
-        .Max = 100.0,
         .Tooltip = "Test field with full metadata",
         .DisplayName = "Test Field 4"
-    }))
+    }));
+
+    // 5. 복제 시 리셋됨 (DuplicateTransient)
+    UPROPERTY_INIT_WITHMETA(int32, TestField5, 999,
+        UPROPERTY_FLAGS(EPropertyFlags::EditAnywhere | EPropertyFlags::DuplicateTransient));
 };

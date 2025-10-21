@@ -169,3 +169,25 @@ UPropertyBase* UClass::FindProperty(const char* PropertyName) const
 {
 	return FindProperty(FName(PropertyName));
 }
+
+/**
+ * @brief 이 클래스와 모든 부모 클래스의 프로퍼티를 재귀적으로 수집
+ * @param OutProperties 수집된 프로퍼티 목록 (부모 → 자식 순서)
+ */
+void UClass::GetAllProperties(TArray<UPropertyBase*>& OutProperties) const
+{
+	// 부모 클래스의 프로퍼티를 먼저 수집 (재귀)
+	if (SuperClass)
+	{
+		SuperClass->GetAllProperties(OutProperties);
+	}
+
+	// 현재 클래스의 프로퍼티 추가
+	for (UPropertyBase* Prop : Properties)
+	{
+		if (Prop)
+		{
+			OutProperties.emplace_back(Prop);
+		}
+	}
+}
