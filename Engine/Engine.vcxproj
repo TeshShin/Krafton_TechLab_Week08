@@ -358,6 +358,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Core\Public\Object\NewObject.h" />
     <ClInclude Include="Source\Core\Public\Object\Object.h" />
     <ClInclude Include="Source\Core\Public\Object\ObjectIterator.h" />
+    <ClInclude Include="Source\Core\Public\Object\Property.h" />
     <ClInclude Include="Source\Core\Public\Types.h" />
     <ClInclude Include="Source\Editor\Public\EditorEngine.h" />
     <ClInclude Include="Source\Editor\Public\Line\BatchLineManager.h" />

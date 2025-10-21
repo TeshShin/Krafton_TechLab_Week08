@@ -2,6 +2,7 @@
 #include "Core/Public/Container/Name.h"
 
 class UObject;
+class UPropertyBase;
 /**
  * @brief UClass Metadata System
  * Runtime에 컴파일 시에 다양한 클래스 정보를 제공하기 위해 만들어진 클래스
@@ -21,7 +22,7 @@ public:
     static TArray<UClass*> FindClasses(UClass* SuperClass);
 private:
     static TArray<UClass*>& GetAllClasses();
-    
+
 public:
     UClass(const FName& InName, UClass* InSuperClass, size_t InClassSize, ClassConstructorType InConstructor, bool InIsAbstract = false);
 
@@ -29,11 +30,17 @@ public:
     const FName& GetName() const { return ClassName; }
     UClass* GetSuperClass() const { return SuperClass; }
     size_t GetClassSize() const { return ClassSize; }
-    
+
     bool IsChildOf(UClass* InClass) const;
     UObject* CreateDefaultObject() const;
 
     bool IsAbstract() const { return bIsAbstract; }
+
+    // Property System
+    void AddProperty(UPropertyBase* Property);
+    const TArray<UPropertyBase*>& GetProperties() const { return Properties; }
+    UPropertyBase* FindProperty(const FName& PropertyName) const;
+    UPropertyBase* FindProperty(const char* PropertyName) const;
 
 private:
     FName ClassName;
@@ -41,6 +48,7 @@ private:
     size_t ClassSize;
     ClassConstructorType Constructor;
     bool bIsAbstract;
+    TArray<UPropertyBase*> Properties;
 };
 
 /**

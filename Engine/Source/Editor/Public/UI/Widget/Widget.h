@@ -1,6 +1,8 @@
 #pragma once
 #include "Core/Public/Object/Object.h"
 
+class UPropertyBase;
+
 /**
  * @brief UI의 기능 단위인 위젯 클래스의 Interface Class
  * 위젯이라면 필수적인 공통 인터페이스와 기능을 제공
@@ -27,4 +29,16 @@ public:
 	// Special Member Function
 	UWidget() = default;
 	~UWidget() override = default;
+
+protected:
+	/**
+	 * @brief UPROPERTY 시스템을 사용하여 자동으로 프로퍼티 UI를 렌더링합니다.
+	 *
+	 * VisibleAnywhere 또는 EditAnywhere 플래그가 있는 프로퍼티만 표시됩니다.
+	 * EditAnywhere 플래그가 있으면 편집 가능한 UI로, 그 외에는 읽기 전용으로 표시됩니다.
+	 *
+	 * @param TargetObject 프로퍼티를 표시할 대상 객체
+	 * @param bShowHeader 헤더("Properties")를 표시할지 여부 (기본: true)
+	 */
+	virtual void RenderProperties(UObject* TargetObject, bool bShowHeader = true);
 };

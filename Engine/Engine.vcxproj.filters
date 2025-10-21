@@ -177,12 +177,6 @@
     <ClCompile Include="Source\Editor\Private\Axis.cpp">
       <Filter>Engine\Source\Editor\Private</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Private\BatchLines.cpp">
-      <Filter>Engine\Source\Editor\Private</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\Private\BoundingBoxLines.cpp">
-      <Filter>Engine\Source\Editor\Private</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Editor\Private\Camera.cpp">
       <Filter>Engine\Source\Editor\Private</Filter>
     </ClCompile>
@@ -190,9 +184,6 @@
       <Filter>Engine\Source\Editor\Private</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\Private\Gizmo.cpp">
-      <Filter>Engine\Source\Editor\Private</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\Private\Grid.cpp">
       <Filter>Engine\Source\Editor\Private</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\Private\ObjectPicker.cpp">
@@ -466,9 +457,11 @@
       <Filter>Engine\Source\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="Source\Renderer\Private\RenderPass\StaticMeshUnlitPass.cpp" />
-    <ClCompile Include="Asset\Shader\LightTilesComputeShader.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </ClCompile>
+    <ClCompile Include="Source\Editor\Private\Line\BatchLineManager.cpp" />
+    <ClCompile Include="Source\Editor\Private\Line\BoundingBoxLineSource.cpp" />
+    <ClCompile Include="Source\Editor\Private\Line\DebugLineSource.cpp" />
+    <ClCompile Include="Source\Editor\Private\Line\GridLineSource.cpp" />
+    <ClCompile Include="Source\Scene\Private\Actor\SpotLightActor.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Scene\Public\Component\LightComponent.h">
@@ -607,12 +600,6 @@
     <ClInclude Include="Source\Editor\Public\Axis.h">
       <Filter>Engine\Source\Editor\Public</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\Public\BatchLines.h">
-      <Filter>Engine\Source\Editor\Public</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\Public\BoundingBoxLines.h">
-      <Filter>Engine\Source\Editor\Public</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Editor\Public\Camera.h">
       <Filter>Engine\Source\Editor\Public</Filter>
     </ClInclude>
@@ -623,9 +610,6 @@
       <Filter>Engine\Source\Editor\Public</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Public\Gizmo.h">
-      <Filter>Engine\Source\Editor\Public</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\Public\Grid.h">
       <Filter>Engine\Source\Editor\Public</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Public\ObjectPicker.h">
@@ -950,6 +934,13 @@
       <Filter>Engine\Source\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\Public\RenderPass\StaticMeshUnlitPass.h" />
+    <ClInclude Include="Source\Editor\Public\Line\BatchLineManager.h" />
+    <ClInclude Include="Source\Editor\Public\Line\BoundingBoxLineSource.h" />
+    <ClInclude Include="Source\Editor\Public\Line\DebugLineSource.h" />
+    <ClInclude Include="Source\Editor\Public\Line\GridLineSource.h" />
+    <ClInclude Include="Source\Editor\Public\Line\ILineSource.h" />
+    <ClInclude Include="Source\Scene\Public\Actor\SpotLightActor.h" />
+    <ClInclude Include="Source\Core\Public\Object\Property.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />
