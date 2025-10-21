@@ -429,3 +429,12 @@ WARP.md
 
 # class diagram
 *.cd
+
+# KTL Engine - Shader Binary Cache
+# Compiled shader objects (.cso) are auto-generated from .hlsl sources
+# Each developer/CI environment should compile their own cache
+*.cso
+
+# KTL Engine - Intermediate Build Files
+# Auto-generated intermediate files (can be safely regenerated)
+Engine/Intermediate/
