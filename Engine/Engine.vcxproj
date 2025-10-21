@@ -453,6 +453,10 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Renderer\Public\RenderPass\StaticMeshUnlitPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\TextPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderResourceFactory.h" />
+    <ClInclude Include="Source\Renderer\Public\ShaderCache.h" />
+    <ClInclude Include="Source\Renderer\Public\ShaderBinaryCache.h" />
+    <ClInclude Include="Source\Renderer\Public\ShaderPool.h" />
+    <ClInclude Include="Source\Renderer\Public\ShaderFactory.h" />
     <ClInclude Include="Source\Renderer\Public\ShaderManager.h" />
     <ClInclude Include="Source\Scene\Public\Actor\Actor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\AmbientLightActor.h" />
@@ -515,6 +519,9 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClCompile Include="Source\Renderer\Private\RenderPass\EditorDepthPass.cpp" />
     <ClCompile Include="Source\Renderer\Private\RenderPass\EditorOverlayPass.cpp" />
     <ClCompile Include="Source\Renderer\Private\RenderPass\StaticMeshUnlitPass.cpp" />
+    <ClCompile Include="Source\Renderer\Private\ShaderBinaryCache.cpp" />
+    <ClCompile Include="Source\Renderer\Private\ShaderPool.cpp" />
+    <ClCompile Include="Source\Renderer\Private\ShaderFactory.cpp" />
     <ClCompile Include="Source\Renderer\Private\ShaderManager.cpp" />
     <ClCompile Include="Source\Scene\Private\Actor\SpotLightActor.cpp" />
     <ClCompile Include="Source\Scene\Private\Component\SpotLightComponent.cpp" />

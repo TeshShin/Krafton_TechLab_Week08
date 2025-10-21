@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Public/CoreTypes.h"
+#include "Renderer/Public/ShaderPool.h"
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <string>
@@ -7,28 +8,20 @@
 using namespace std;
 
 /**
- * @brief Shader type enumeration for tracking different shader stages
- */
-enum class EShaderType : uint8
-{
-	VertexShader,
-	PixelShader,
-	ComputeShader
-};
-
-/**
  * @brief Represents a single compiled shader variant with all metadata needed for hot-reload
  *
  * A shader variant is created when a shader file is compiled with specific preprocessor defines.
  * For example, TextureVS.hlsl compiled with LIGHTING_MODEL_PHONG is one variant,
  * and the same file compiled with LIGHTING_MODEL_GOURAUD is another variant.
+ *
+ * NOTE: After refactoring to use FShaderPool, this structure primarily tracks pointer addresses
+ * for hot-reload updates. The actual shader objects and reference counting are managed by FShaderPool.
  */
 struct FShaderVariant
 {
+	FShaderKey Key;                                  ///< Unique identifier for this shader variant in the pool
 	wstring SourcePath;                              ///< Absolute or relative path to .hlsl file (e.g., "Asset/Shader/TextureVS.hlsl")
-	TArray<D3D_SHADER_MACRO> Defines;                ///< Preprocessor macros used for compilation (heap-allocated copy)
 	TArray<D3D11_INPUT_ELEMENT_DESC> InputLayout;    ///< Input layout descriptors (only for vertex shaders)
-	EShaderType Type;                                ///< Shader stage type
 
 	void** ShaderPtr;                                ///< Pointer to the shader pointer (e.g., &VSPhong in RenderPass)
 	ID3D11InputLayout** InputLayoutPtr;              ///< Pointer to input layout pointer (only for vertex shaders, can be nullptr)
@@ -38,8 +31,7 @@ struct FShaderVariant
 	wstring LastErrorMessage;                        ///< Error message from last failed compilation attempt
 
 	FShaderVariant()
-		: Type(EShaderType::VertexShader)
-		, ShaderPtr(nullptr)
+		: ShaderPtr(nullptr)
 		, InputLayoutPtr(nullptr)
 		, LastWriteTime{}
 		, bLastCompileSucceeded(true)
@@ -49,20 +41,27 @@ struct FShaderVariant
 /**
  * @brief Central shader management system for hot-reload support
  *
- * FShaderManager tracks all shaders created through RenderResourceFactory and provides
- * hot-reload functionality. When a shader file is modified, all variants compiled from
- * that file can be automatically recompiled.
+ * FShaderManager provides shader hot-reload functionality by integrating with FShaderPool.
+ * After refactoring, it serves as the bridge between RenderPass shader pointers and the
+ * underlying shared shader pool (Flyweight pattern).
+ *
+ * Architecture (Post-Refactoring):
+ * - FShaderPool: Manages compiled shader objects with reference counting and binary caching
+ * - FShaderManager: Tracks pointer addresses for hot-reload and delegates compilation to pool
+ * - RenderPass: Owns shader pointers, unaware of hot-reload implementation
  *
  * Design Philosophy:
  * - Non-intrusive: RenderPass classes don't need to know about hot-reload
  * - Transparent: Shader pointers are updated in-place, no code changes needed
  * - Robust: Compilation failures don't crash the application, old shaders remain valid
+ * - Efficient: Shared compilation via Flyweight pattern, binary caching for fast startup
  *
  * Usage Pattern:
- * 1. RenderResourceFactory registers shaders during RenderPass construction
- * 2. File watcher detects shader file changes (future work)
- * 3. ShaderManager recompiles all variants of the changed file
- * 4. RenderPass automatically uses new shaders on next frame
+ * 1. RenderResourceFactory calls Register*Shader() during RenderPass construction
+ * 2. ShaderManager delegates to Pool.GetOrCompile*() (cache hit or compile)
+ * 3. Timestamp-based file watcher detects shader file changes
+ * 4. ShaderManager recompiles all variants via Pool.RecompileShader()
+ * 5. All tracked pointers are updated automatically
  *
  * @note This is a singleton class accessed via Get()
  * @note Thread-safety: Currently not thread-safe, should only be called from render thread
@@ -75,6 +74,12 @@ public:
 	 * @return Reference to the global ShaderManager instance
 	 */
 	static FShaderManager& Get();
+
+	/**
+	 * @brief Get the shader pool for direct access
+	 * @return Reference to the shader pool
+	 */
+	FShaderPool& GetPool() { return Pool; }
 
 	/**
 	 * @brief Register a vertex shader for hot-reload tracking
@@ -233,14 +238,17 @@ private:
 	FShaderManager& operator=(const FShaderManager&) = delete;
 
 	/**
-	 * @brief Internal helper to copy preprocessor macro array to heap
+	 * @brief Convert D3D_SHADER_MACRO array to FShaderDefine array
 	 * @param InDefines Source macro array (can be nullptr)
-	 * @return Heap-allocated copy with proper null terminator
+	 * @return Array of FShaderDefine structs
 	 */
-	TArray<D3D_SHADER_MACRO> CopyDefines(const D3D_SHADER_MACRO* InDefines);
+	TArray<FShaderDefine> ConvertDefines(const D3D_SHADER_MACRO* InDefines);
 
 	/**
 	 * @brief Internal helper to recompile a single shader variant
+	 *
+	 * Uses Pool.RecompileShader() to get new shader from pool, then updates
+	 * the tracked pointer address.
 	 *
 	 * @param Variant The variant to recompile
 	 * @return True if compilation succeeded, false otherwise
@@ -264,6 +272,7 @@ private:
 	bool IsFileTimeNewer(const FILETIME& Time1, const FILETIME& Time2) const;
 
 private:
+	FShaderPool Pool;                                         ///< Shared shader object pool (Flyweight pattern)
 	TArray<FShaderVariant> Variants;                          ///< All registered shader variants
 	TMap<wstring, TArray<size_t>> PathToVariantIndices;       ///< Fast lookup: file path -> variant indices
 

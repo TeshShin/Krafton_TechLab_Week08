@@ -7,6 +7,15 @@
 FShaderManager& FShaderManager::Get()
 {
 	static FShaderManager Instance;
+	static bool bInitialized = false;
+
+	if (!bInitialized)
+	{
+		Instance.Pool.Initialize();
+		bInitialized = true;
+		UE_LOG("ShaderManager: Initialized with FShaderPool");
+	}
+
 	return Instance;
 }
 
@@ -23,13 +32,19 @@ void FShaderManager::RegisterVertexShader(
 		return;
 	}
 
+	// Convert D3D_SHADER_MACRO to FShaderDefine
+	TArray<FShaderDefine> Defines = ConvertDefines(InDefines);
+
+	// Create shader key for tracking
+	FShaderKey Key(InFilePath, Defines, EShaderType::VertexShader);
+
+	// Track variant for hot-reload (don't modify the shader, just track it)
 	FShaderVariant Variant;
+	Variant.Key = Key;
 	Variant.SourcePath = InFilePath;
-	Variant.Type = EShaderType::VertexShader;
+	Variant.InputLayout = InInputLayoutDescs;
 	Variant.ShaderPtr = (void**)OutVertexShader;
 	Variant.InputLayoutPtr = OutInputLayout;
-	Variant.Defines = CopyDefines(InDefines);
-	Variant.InputLayout = InInputLayoutDescs;
 	Variant.LastWriteTime = GetFileWriteTime(InFilePath);
 	Variant.bLastCompileSucceeded = true;
 
@@ -38,7 +53,7 @@ void FShaderManager::RegisterVertexShader(
 	PathToVariantIndices[InFilePath].push_back(Index);
 
 	UE_LOG("ShaderManager: Registered vertex shader variant #%zu from '%ls' (%zu defines)",
-		Index, InFilePath.c_str(), Variant.Defines.size());
+		Index, InFilePath.c_str(), Defines.size());
 }
 
 void FShaderManager::RegisterPixelShader(
@@ -52,12 +67,18 @@ void FShaderManager::RegisterPixelShader(
 		return;
 	}
 
+	// Convert D3D_SHADER_MACRO to FShaderDefine
+	TArray<FShaderDefine> Defines = ConvertDefines(InDefines);
+
+	// Create shader key for tracking
+	FShaderKey Key(InFilePath, Defines, EShaderType::PixelShader);
+
+	// Track variant for hot-reload (don't modify the shader, just track it)
 	FShaderVariant Variant;
+	Variant.Key = Key;
 	Variant.SourcePath = InFilePath;
-	Variant.Type = EShaderType::PixelShader;
 	Variant.ShaderPtr = (void**)OutPixelShader;
 	Variant.InputLayoutPtr = nullptr;
-	Variant.Defines = CopyDefines(InDefines);
 	Variant.LastWriteTime = GetFileWriteTime(InFilePath);
 	Variant.bLastCompileSucceeded = true;
 
@@ -66,7 +87,7 @@ void FShaderManager::RegisterPixelShader(
 	PathToVariantIndices[InFilePath].push_back(Index);
 
 	UE_LOG("ShaderManager: Registered pixel shader variant #%zu from '%ls' (%zu defines)",
-		Index, InFilePath.c_str(), Variant.Defines.size());
+		Index, InFilePath.c_str(), Defines.size());
 }
 
 void FShaderManager::RegisterComputeShader(
@@ -82,12 +103,18 @@ void FShaderManager::RegisterComputeShader(
 		return;
 	}
 
+	// Convert D3D_SHADER_MACRO to FShaderDefine
+	TArray<FShaderDefine> Defines = ConvertDefines(InDefines);
+
+	// Create shader key for tracking
+	FShaderKey Key(InFilePath, Defines, EShaderType::ComputeShader);
+
+	// Track variant for hot-reload (don't modify the shader, just track it)
 	FShaderVariant Variant;
+	Variant.Key = Key;
 	Variant.SourcePath = InFilePath;
-	Variant.Type = EShaderType::ComputeShader;
 	Variant.ShaderPtr = (void**)OutComputeShader;
 	Variant.InputLayoutPtr = nullptr;
-	Variant.Defines = CopyDefines(InDefines);
 	Variant.LastWriteTime = GetFileWriteTime(InFilePath);
 	Variant.bLastCompileSucceeded = true;
 
@@ -96,9 +123,9 @@ void FShaderManager::RegisterComputeShader(
 	PathToVariantIndices[InFilePath].push_back(Index);
 
 	UE_LOG("ShaderManager: Registered compute shader variant #%zu from '%ls' (%zu defines)",
-		Index, InFilePath.c_str(), Variant.Defines.size());
+		Index, InFilePath.c_str(), Defines.size());
 
-	// TODO: Store Entry and Profile for compute shaders (currently not needed for basic hot-reload)
+	// TODO: Store Entry and Profile for compute shaders if non-standard variants needed
 }
 
 int32 FShaderManager::ReloadShader(const wstring& InFilePath)
@@ -234,166 +261,110 @@ void FShaderManager::ClearAll()
 {
 	UE_LOG_WARNING("ShaderManager: Clearing all %zu variant(s). Hot-reload will no longer work until re-registration.", Variants.size());
 
-	// Free heap-allocated define strings
-	for (FShaderVariant& Variant : Variants)
-	{
-		for (D3D_SHADER_MACRO& Macro : Variant.Defines)
-		{
-			if (Macro.Name)
-			{
-				free((void*)Macro.Name);
-				Macro.Name = nullptr;
-			}
-			if (Macro.Definition)
-			{
-				free((void*)Macro.Definition);
-				Macro.Definition = nullptr;
-			}
-		}
-	}
+	// Note: We don't need to manually free FShaderDefine strings - they manage their own memory via std::string
+	// We also don't release shaders here because FShaderPool manages them with reference counting
 
 	Variants.clear();
 	PathToVariantIndices.clear();
+
+	// Optionally clear the pool as well (releases all shaders)
+	// Pool.Release(); // Uncomment if you want to clear the entire pool
 }
 
-TArray<D3D_SHADER_MACRO> FShaderManager::CopyDefines(const D3D_SHADER_MACRO* InDefines)
+TArray<FShaderDefine> FShaderManager::ConvertDefines(const D3D_SHADER_MACRO* InDefines)
 {
-	TArray<D3D_SHADER_MACRO> Result;
+	TArray<FShaderDefine> Result;
 
 	if (!InDefines)
 	{
-		// No defines: add null terminator
-		Result.push_back({ nullptr, nullptr });
 		return Result;
 	}
 
-	// Copy all defines until we hit the null terminator
+	// Convert all defines until we hit the null terminator
 	for (int i = 0; InDefines[i].Name != nullptr; ++i)
 	{
-		D3D_SHADER_MACRO Macro;
-		Macro.Name = _strdup(InDefines[i].Name);
-		Macro.Definition = InDefines[i].Definition ? _strdup(InDefines[i].Definition) : nullptr;
-		Result.push_back(Macro);
+		Result.push_back(FShaderDefine(
+			string(InDefines[i].Name),
+			InDefines[i].Definition ? string(InDefines[i].Definition) : ""
+		));
 	}
-
-	// Add null terminator
-	Result.push_back({ nullptr, nullptr });
 
 	return Result;
 }
 
 bool FShaderManager::RecompileVariant(FShaderVariant& Variant)
 {
-	// Prepare macro array pointer (D3D11 expects nullptr if no defines)
-	const D3D_SHADER_MACRO* DefinesPtr = Variant.Defines.empty() ? nullptr : Variant.Defines.data();
+	// Use Pool.RecompileShader() to get new shader
+	void* NewShaderPtr = Pool.RecompileShader(Variant.Key);
 
-	bool bSuccess = false;
+	if (!NewShaderPtr)
+	{
+		// Compilation failed: Keep old shader
+		Variant.bLastCompileSucceeded = false;
+		Variant.LastErrorMessage = L"Compilation failed (check debug output for details)";
+		return false;
+	}
 
-	switch (Variant.Type)
+	// Success: Update pointer based on shader type
+	// IMPORTANT: Must release old shader to decrement RenderPass's reference count
+	switch (Variant.Key.Type)
 	{
 	case EShaderType::VertexShader:
 	{
-		ID3D11VertexShader* NewShader = nullptr;
-		ID3D11InputLayout* NewLayout = nullptr;
+		// Release RenderPass's old shader reference
+		ID3D11VertexShader* OldVS = *(ID3D11VertexShader**)Variant.ShaderPtr;
+		SafeRelease(OldVS);
 
-		// Recompile using RenderResourceFactory (with bEnableHotReload=false to avoid re-registration)
-		FRenderResourceFactory::CreateVertexShaderAndInputLayout(
-			Variant.SourcePath,
-			Variant.InputLayout,
-			&NewShader,
-			Variant.InputLayoutPtr ? &NewLayout : nullptr,
-			DefinesPtr,
-			false  // ⭐ Disable hot-reload to prevent infinite recursion
-		);
+		// Assign new shader (already AddRef'd by Pool.RecompileShader)
+		*(ID3D11VertexShader**)Variant.ShaderPtr = (ID3D11VertexShader*)NewShaderPtr;
 
-		if (NewShader)
+		// For vertex shaders, also update input layout if it exists
+		if (Variant.InputLayoutPtr)
 		{
-			// Success: Replace old shader
-			SafeRelease(*(ID3D11VertexShader**)Variant.ShaderPtr);
-			*(ID3D11VertexShader**)Variant.ShaderPtr = NewShader;
+			// Release old layout
+			ID3D11InputLayout* OldLayout = *Variant.InputLayoutPtr;
+			SafeRelease(OldLayout);
 
-			if (Variant.InputLayoutPtr && NewLayout)
+			// Get new layout from pool
+			ID3D11InputLayout* NewLayout = nullptr;
+			Pool.GetOrCompileVS(Variant.Key, &NewLayout, &Variant.InputLayout);
+			if (NewLayout)
 			{
-				SafeRelease(*Variant.InputLayoutPtr);
 				*Variant.InputLayoutPtr = NewLayout;
 			}
-
-			bSuccess = true;
-			Variant.bLastCompileSucceeded = true;
-			Variant.LastWriteTime = GetFileWriteTime(Variant.SourcePath);
-			Variant.LastErrorMessage.clear();
-		}
-		else
-		{
-			// Failure: Keep old shader, store error
-			Variant.bLastCompileSucceeded = false;
-			Variant.LastErrorMessage = L"Compilation failed (check debug output for details)";
 		}
 		break;
 	}
 
 	case EShaderType::PixelShader:
 	{
-		ID3D11PixelShader* NewShader = nullptr;
+		// Release old shader
+		ID3D11PixelShader* OldPS = *(ID3D11PixelShader**)Variant.ShaderPtr;
+		SafeRelease(OldPS);
 
-		FRenderResourceFactory::CreatePixelShader(
-			Variant.SourcePath,
-			&NewShader,
-			DefinesPtr,
-			false  // ⭐ Disable hot-reload
-		);
-
-		if (NewShader)
-		{
-			SafeRelease(*(ID3D11PixelShader**)Variant.ShaderPtr);
-			*(ID3D11PixelShader**)Variant.ShaderPtr = NewShader;
-
-			bSuccess = true;
-			Variant.bLastCompileSucceeded = true;
-			Variant.LastWriteTime = GetFileWriteTime(Variant.SourcePath);
-			Variant.LastErrorMessage.clear();
-		}
-		else
-		{
-			Variant.bLastCompileSucceeded = false;
-			Variant.LastErrorMessage = L"Compilation failed (check debug output for details)";
-		}
+		// Assign new shader
+		*(ID3D11PixelShader**)Variant.ShaderPtr = (ID3D11PixelShader*)NewShaderPtr;
 		break;
 	}
 
 	case EShaderType::ComputeShader:
 	{
-		ID3D11ComputeShader* NewShader = nullptr;
+		// Release old shader
+		ID3D11ComputeShader* OldCS = *(ID3D11ComputeShader**)Variant.ShaderPtr;
+		SafeRelease(OldCS);
 
-		FRenderResourceFactory::CreateComputeShader(
-			Variant.SourcePath,
-			&NewShader,
-			DefinesPtr,
-			"main",
-			"cs_5_0",
-			false  // ⭐ Disable hot-reload
-		);
-
-		if (NewShader)
-		{
-			SafeRelease(*(ID3D11ComputeShader**)Variant.ShaderPtr);
-			*(ID3D11ComputeShader**)Variant.ShaderPtr = NewShader;
-
-			bSuccess = true;
-			Variant.bLastCompileSucceeded = true;
-			Variant.LastWriteTime = GetFileWriteTime(Variant.SourcePath);
-			Variant.LastErrorMessage.clear();
-		}
-		else
-		{
-			Variant.bLastCompileSucceeded = false;
-			Variant.LastErrorMessage = L"Compilation failed (check debug output for details)";
-		}
+		// Assign new shader
+		*(ID3D11ComputeShader**)Variant.ShaderPtr = (ID3D11ComputeShader*)NewShaderPtr;
 		break;
 	}
 	}
 
-	return bSuccess;
+	// Update metadata
+	Variant.bLastCompileSucceeded = true;
+	Variant.LastWriteTime = GetFileWriteTime(Variant.SourcePath);
+	Variant.LastErrorMessage.clear();
+
+	return true;
 }
 
 FILETIME FShaderManager::GetFileWriteTime(const wstring& InFilePath) const

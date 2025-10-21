@@ -69,10 +69,10 @@ PS_INPUT mainVS(VS_INPUT Input)
 //#define LIGHTING_MODEL_GOURAUD // for coding
 #if defined(LIGHTING_MODEL_GOURAUD)
 	float3 wsNormal = Output.WorldNormal;
-	
+
 	float3 ViewDir = normalize(ViewWorldLocation - Output.WorldPosition);
     float SpecularPower = max(Ns, 1.0f); // Prevent division by zero
-	
+
     // Accumulate separated diffuse and specular contributions
     float3 TotalDiffuse = float3(0, 0, 0);
     float3 TotalSpecular = float3(0, 0, 0);
@@ -100,6 +100,6 @@ PS_INPUT mainVS(VS_INPUT Input)
 	Output.WorldTangent = worldT;
 	Output.TangentSign = Input.Tangent.w;
 #endif
-	
+
 	return Output;
 }
