@@ -255,16 +255,6 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	// GlobalAmbient is deprecated - all lights now go through unified StructuredBuffer
 	LightConstants.UnifiedLightCount = UnifiedLights.size();
 
-	//for (ULightComponentBase* Light : Context.Lights)
-	//{
-	//	if (Light->GetLightType() == ELightComponentType::LightType_Ambient)
-	//	{
-	//		LightConstants.GlobalAmbient.Color = Light->GetLightColor();
-	//		LightConstants.GlobalAmbient.Intensity = Light->GetIntensity();
-	//		break; // Only one ambient light is supported
-	//	}
-	//}
-
 	if (Context.ViewMode == EViewModeIndex::VMI_Lit_Gouraud)
 	{
 		Pipeline->SetConstantBuffer(10, true, ConstantBufferLight);
