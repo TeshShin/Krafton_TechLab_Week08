@@ -28,8 +28,6 @@ public:
 	~UEditor();
 
 	void Update();
-	void RenderEditor();
-	void RenderGizmo(UCamera* InCamera);
 
 	void SetViewMode(EViewModeIndex InNewViewMode) { CurrentViewMode = InNewViewMode; }
 	EViewModeIndex GetViewMode() const { return CurrentViewMode; }
@@ -48,9 +46,9 @@ public:
 
 // Getter
 public:
-	UBatchLineManager* GetBatchLines();
-	UAxis* GetAxis() { return &Axis; }
-	UGizmo* GetGizmo() { return &Gizmo; }
+	TArray<const FEditorPrimitive*> GetEditorDepthPrimitives() const;
+	TArray<const FEditorPrimitive*> GetEditorOverlayPrimitives() const;
+
 	SSplitter* GetRootSplitter() { return &RootSplitter; }
 	SSplitter* GetLeftSplitter() { return &LeftSplitter; }
 	SSplitter* GetRightSplitter() { return &RightSplitter; }
@@ -80,9 +78,9 @@ private:
 	float SavedRootRatio = 0.5f;
 	float SavedLeftRatio = 0.5f;
 	float SavedRightRatio = 0.5f;
-	UGizmo Gizmo;
-	UAxis Axis;
 
+	FGizmo Gizmo;
+	FAxis Axis;
 
 	SSplitterV RootSplitter;
 	SSplitterH LeftSplitter;

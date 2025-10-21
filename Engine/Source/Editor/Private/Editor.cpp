@@ -93,18 +93,6 @@ void UEditor::UpdateLightDebugInfo()
 	}
 }
 
-void UEditor::RenderEditor()
-{
-	if (GEditor->IsPIESessionActive()) { return; }
-	Axis.Render();
-}
-
-void UEditor::RenderGizmo(UCamera* InCamera)
-{
-	if (GEditor->IsPIESessionActive()) { return; }
-	Gizmo.RenderGizmo(InCamera);
-}
-
 void UEditor::SetSingleViewportLayout(int InActiveIndex)
 {
 	if (ViewportLayoutState == EViewportLayoutState::Animating) return;
@@ -371,11 +359,7 @@ void UEditor::ProcessMouseInput()
 	CurrentCamera = &CurrentViewport->Camera;
 
 	AActor* ActorPicked = GetSelectedActor();
-	if (ActorPicked)
-	{
-		// 피킹 전 현재 카메라에 맞는 기즈모 스케일 업데이트
-		Gizmo.UpdateScale(CurrentCamera);
-	}
+	Gizmo.Update(CurrentCamera);
 
 	const UInputManager& InputManager = UInputManager::GetInstance();
 	const FVector& MousePos = InputManager.GetMousePosition();
@@ -390,14 +374,8 @@ void UEditor::ProcessMouseInput()
 	FVector CollisionPoint;
 	float ActorDistance = -1;
 
-	if (InputManager.IsKeyPressed(EKeyInput::Tab))
-	{
-		Gizmo.IsWorldMode() ? Gizmo.SetLocal() : Gizmo.SetWorld();
-	}
-	if (InputManager.IsKeyPressed(EKeyInput::Space))
-	{
-		Gizmo.ChangeGizmoMode();
-	}
+	if (InputManager.IsKeyPressed(EKeyInput::Tab)) { Gizmo.ChangeWorldLocalMode(); }
+	if (InputManager.IsKeyPressed(EKeyInput::Space)) { Gizmo.ChangeGizmoMode(); }
 	if (InputManager.IsKeyReleased(EKeyInput::MouseLeft))
 	{
 		Gizmo.EndDrag();
@@ -616,7 +594,15 @@ void UEditor::SelectComponent(UActorComponent* InComponent)
 	UUIManager::GetInstance().OnSelectedComponentChanged(SelectedComponent);
 }
 
-UBatchLineManager* UEditor::GetBatchLines()
+TArray<const FEditorPrimitive*> UEditor::GetEditorDepthPrimitives() const
 {
-	return &UBatchLineManager::GetInstance();
+	TArray<const FEditorPrimitive*> AllPrimitives = Axis.GetEditorPrimitive();
+	AllPrimitives.insert(AllPrimitives.end(), UBatchLineManager::GetInstance().GetBatchLinePrimitive());
+	return AllPrimitives;
+}
+
+TArray<const FEditorPrimitive*> UEditor::GetEditorOverlayPrimitives() const
+{
+	TArray<const FEditorPrimitive*> AllPrimitives = Gizmo.GetEditorPrimitive();
+	return AllPrimitives;
 }

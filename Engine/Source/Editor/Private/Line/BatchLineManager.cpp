@@ -1,13 +1,11 @@
 #include "pch.h"
 #include "Editor/Public/Line/BatchLineManager.h"
-#include "Renderer/Public/Renderer.h"
 #include "Renderer/Public/RenderResourceFactory.h"
 #include "Editor/Public/EditorPrimitive.h"
 #include "Editor/Public/Line/GridLineSource.h"
 #include "Editor/Public/Line/BoundingBoxLineSource.h"
 #include "Editor/Public/Line/DebugLineSource.h"
 #include "Editor/Public/Line/ILineSource.h"
-#include "Editor/Public/Line/LineVertex.h"
 
 struct FBatchLineManagerData
 {
@@ -22,9 +20,7 @@ struct FBatchLineManagerData
 
 IMPLEMENT_SINGLETON_CLASS(UBatchLineManager, UObject)
 
-UBatchLineManager::UBatchLineManager()
-{
-}
+UBatchLineManager::UBatchLineManager() = default;
 
 UBatchLineManager::~UBatchLineManager()
 {
@@ -43,22 +39,9 @@ void UBatchLineManager::Init()
     Data->DebugSource = new FDebugLineSource();
     Data->Sources.push_back(Data->DebugSource);
 
-    // Create shaders and other resources here
-    ID3D11VertexShader* VertexShader;
-    ID3D11InputLayout* InputLayout;
-    TArray<D3D11_INPUT_ELEMENT_DESC> Layout =
-    {
-        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FLineVertex, Position), D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FLineVertex, Color), D3D11_INPUT_PER_VERTEX_DATA, 0}
-    };
-    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/BatchLineShader.hlsl", Layout, &VertexShader, &InputLayout);
-
-    ID3D11PixelShader* PixelShader;
-    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/BatchLineShader.hlsl", &PixelShader);
-
-    Data->Primitive.VertexShader = VertexShader;
-    Data->Primitive.InputLayout = InputLayout;
-    Data->Primitive.PixelShader = PixelShader;
+	Data->Primitive.Location = FVector(0, 0, 0);
+	Data->Primitive.Scale = FVector(1, 1, 1);
+	Data->Primitive.Rotation = FQuaternion::Identity();
     Data->Primitive.Topology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
 }
 
@@ -68,9 +51,6 @@ void UBatchLineManager::Release()
     SafeDelete(Data->BoundingBoxSource);
     SafeDelete(Data->DebugSource);
 
-    SafeRelease(Data->Primitive.VertexShader);
-    SafeRelease(Data->Primitive.InputLayout);
-    SafeRelease(Data->Primitive.PixelShader);
     SafeRelease(Data->Primitive.VertexBuffer);
     SafeRelease(Data->Primitive.IndexBuffer);
 
@@ -250,7 +230,7 @@ void UBatchLineManager::Update()
 
     if (Data->bIsDirty)
     {
-        TArray<FLineVertex> AllVertices;
+        TArray<FNormalVertex> AllVertices;
         TArray<uint32> AllIndices;
 
         uint32 VertexOffset = 0;
@@ -260,7 +240,10 @@ void UBatchLineManager::Update()
             const TArray<FLineVertex>& Vertices = Source->GetVertices();
             const TArray<uint32>& Indices = Source->GetIndices();
 
-            AllVertices.insert(AllVertices.end(), Vertices.begin(), Vertices.end());
+        	for (const FLineVertex& Vertex : Vertices)
+        	{
+        		AllVertices.emplace_back(FNormalVertex::FromLineVertex(Vertex));
+        	}
 
             for (uint32 Index : Indices)
             {
@@ -290,10 +273,11 @@ void UBatchLineManager::Update()
     }
 }
 
-void UBatchLineManager::Render()
+const struct FEditorPrimitive* UBatchLineManager::GetBatchLinePrimitive() const
 {
-    if (Data->Primitive.VertexBuffer && Data->Primitive.IndexBuffer)
-    {
-        URenderer::GetInstance().RenderEditorPrimitive(Data->Primitive, Data->Primitive.RenderState, sizeof(FLineVertex), sizeof(uint32));
-    }
+	if (Data)
+	{
+		return &Data->Primitive;
+	}
+	return nullptr;
 }

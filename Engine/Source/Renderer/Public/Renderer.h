@@ -26,19 +26,17 @@ public:
 	// Initialize
 	void CreateDepthStencilState();
 	void CreateBlendState();
-	void CreateDefaultShader();
 	void CreateConstantBuffers();
+	void CreateRenderPasses();
 
 	// Release
 	void ReleaseConstantBuffers();
-	void ReleaseDefaultShader();
 	void ReleaseDepthStencilState();
 	void ReleaseBlendState();
+	void ReleaseRenderPasses();
 
 	// Render
 	void Render();
-
-	void RenderEditorPrimitive(const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState, uint32 InStride = 0, uint32 InIndexBufferStride = 0);
 
 	void OnResize(uint32 Inwidth = 0, uint32 InHeight = 0) const;
 
@@ -97,12 +95,6 @@ private:
 	// Constant Buffers
 	ID3D11Buffer* ConstantBufferModels = nullptr;
 	ID3D11Buffer* ConstantBufferViewProj = nullptr;
-	ID3D11Buffer* ConstantBufferColor = nullptr;
-
-	// Default Shaders
-	ID3D11VertexShader* DefaultVertexShader = nullptr;
-	ID3D11PixelShader* DefaultPixelShader = nullptr;
-	ID3D11InputLayout* DefaultInputLayout = nullptr;
 
 	FViewport* ViewportClient = nullptr;
 
@@ -111,6 +103,7 @@ private:
 	TArray<class FRenderPass*> LevelPasses;
 	TArray<class FRenderPass*> PostProcessPasses;
 	TMap<EViewModeIndex, class FRenderPass*> ViewModePasses;
-	TArray<class FRenderPass*> EditorDepthPasses;
+	class FRenderPass* EditorDepthPass;
+	class FRenderPass* EditorOverlayPass;
 	TArray<class FRenderPass*> EditorOverlayPasses;
 };

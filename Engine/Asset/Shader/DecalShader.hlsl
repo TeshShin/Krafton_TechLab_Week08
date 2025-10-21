@@ -4,10 +4,13 @@ cbuffer constants : register(b0)
 	row_major float4x4 WorldInverseTranspose;
 }
 
-cbuffer PerFrame : register(b1)
+cbuffer Camera : register(b1)
 {
-	row_major float4x4 View;		// View Matrix Calculation of MVP Matrix
-	row_major float4x4 Projection;	// Projection Matrix Calculation of MVP Matrix
+	row_major float4x4 View;
+	row_major float4x4 Projection;
+	float3 ViewWorldLocation;
+	float NearClip;
+	float FarClip;
 };
 
 cbuffer DecalConstants : register(b2)

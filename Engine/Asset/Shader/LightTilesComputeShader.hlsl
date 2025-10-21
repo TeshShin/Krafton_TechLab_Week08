@@ -6,7 +6,7 @@
 // ================================================================
 
 // Camera and tiling parameters
-cbuffer CameraCB : register(b0)
+cbuffer CameraCB : register(b10)
 {
     row_major float4x4 View;
     row_major float4x4 Proj;
@@ -21,7 +21,7 @@ cbuffer CameraCB : register(b0)
 };
 
 // Forward+ control parameters
-cbuffer ForwardPlusCB : register(b1)
+cbuffer ForwardPlusCB : register(b11)
 {
     uint NumLights;                // number of entries in DynamicLights
     uint MaxLightsPerCluster;      // capacity per cluster

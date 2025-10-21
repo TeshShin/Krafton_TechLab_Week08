@@ -43,7 +43,7 @@ UPrimitiveComponent* UObjectPicker::PickPrimitive(UCamera* InActiveCamera, const
 	return ShortestPrimitive;
 }
 
-void UObjectPicker::PickGizmo(UCamera* InActiveCamera, const FRay& WorldRay, UGizmo& Gizmo, FVector& CollisionPoint)
+void UObjectPicker::PickGizmo(UCamera* InActiveCamera, const FRay& WorldRay, FGizmo& Gizmo, FVector& CollisionPoint)
 {
 	//Forward, Right, Up순으로 테스트할거임.
 	//원기둥 위의 한 점 P, 축 위의 임의의 점 A에(기즈모 포지션) 대해, AP벡터와 축 벡터 V와 피타고라스 정리를 적용해서 점 P의 축부터의 거리 r을 구할 수 있음.

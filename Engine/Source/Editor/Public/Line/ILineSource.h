@@ -1,7 +1,5 @@
 #pragma once
 
-#include "LineVertex.h"
-
 class ILineSource
 {
 public:

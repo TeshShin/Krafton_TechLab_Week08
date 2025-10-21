@@ -5,10 +5,13 @@
 #include "Renderer/Public/Renderer.h"
 #include "Editor/Public/Editor.h"
 
-UGizmo::UGizmo()
+FGizmo::FGizmo()
 {
 	UAssetManager& ResourceManager = UAssetManager::GetInstance();
 	Primitives.resize(3);
+	Primitives[0].resize(3);
+	Primitives[1].resize(3);
+	Primitives[2].resize(3);
 	GizmoColor.resize(3);
 
 	/* *
@@ -18,44 +21,44 @@ UGizmo::UGizmo()
 	GizmoColor[1] = FVector4(0, 1, 0, 1);
 	GizmoColor[2] = FVector4(0, 0, 1, 1);
 
-	/* *
-	* @brief Translation Setting
-	*/
-	const float ScaleT = TranslateCollisionConfig.Scale;
-	Primitives[0].VertexBuffer = ResourceManager.GetVertexbuffer(EPrimitiveType::Arrow);
-	Primitives[0].NumVertices = ResourceManager.GetNumVertices(EPrimitiveType::Arrow);
-	Primitives[0].Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	Primitives[0].Scale = FVector(ScaleT, ScaleT, ScaleT);
-	Primitives[0].bShouldAlwaysVisible = true;
+	for (uint32 Idx = 0; Idx < 3; Idx++)
+	{
+		/* *
+		* @brief Translation Setting
+		*/
+		const float ScaleT = TranslateCollisionConfig.Scale;
+		Primitives[0][Idx].VertexBuffer = ResourceManager.GetVertexbuffer(EPrimitiveType::Arrow);
+		Primitives[0][Idx].NumVertices = ResourceManager.GetNumVertices(EPrimitiveType::Arrow);
+		Primitives[0][Idx].Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		Primitives[0][Idx].Scale = FVector(ScaleT, ScaleT, ScaleT);
 
-	/* *
-	* @brief Rotation Setting
-	*/
-	Primitives[1].VertexBuffer = ResourceManager.GetVertexbuffer(EPrimitiveType::Ring);
-	Primitives[1].NumVertices = ResourceManager.GetNumVertices(EPrimitiveType::Ring);
-	Primitives[1].Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	Primitives[1].Scale = FVector(ScaleT, ScaleT, ScaleT);
-	Primitives[1].bShouldAlwaysVisible = true;
+		/* *
+		* @brief Rotation Setting
+		*/
+		Primitives[1][Idx].VertexBuffer = ResourceManager.GetVertexbuffer(EPrimitiveType::Ring);
+		Primitives[1][Idx].NumVertices = ResourceManager.GetNumVertices(EPrimitiveType::Ring);
+		Primitives[1][Idx].Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		Primitives[1][Idx].Scale = FVector(ScaleT, ScaleT, ScaleT);
 
-	/* *
-	* @brief Scale Setting
-	*/
-	Primitives[2].VertexBuffer = ResourceManager.GetVertexbuffer(EPrimitiveType::CubeArrow);
-	Primitives[2].NumVertices = ResourceManager.GetNumVertices(EPrimitiveType::CubeArrow);
-	Primitives[2].Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	Primitives[2].Scale = FVector(ScaleT, ScaleT, ScaleT);
-	Primitives[2].bShouldAlwaysVisible = true;
+		/* *
+		* @brief Scale Setting
+		*/
+		Primitives[2][Idx].VertexBuffer = ResourceManager.GetVertexbuffer(EPrimitiveType::CubeArrow);
+		Primitives[2][Idx].NumVertices = ResourceManager.GetNumVertices(EPrimitiveType::CubeArrow);
+		Primitives[2][Idx].Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		Primitives[2][Idx].Scale = FVector(ScaleT, ScaleT, ScaleT);
 
-	/* *
-	* @brief Render State
-	*/
-	RenderState.FillMode = EFillMode::Solid;
-	RenderState.CullMode = ECullMode::None;
+		/* *
+		* @brief Render State
+		*/
+		RenderState.FillMode = EFillMode::Solid;
+		RenderState.CullMode = ECullMode::None;
+	}
 }
 
-UGizmo::~UGizmo() = default;
+FGizmo::~FGizmo() = default;
 
-void UGizmo::UpdateScale(UCamera* InCamera)
+void FGizmo::Update(UCamera* InCamera)
 {
 	TargetComponent = Cast<USceneComponent>(GEditor->GetEditorModule()->GetSelectedComponent());
 	if (!TargetComponent || !InCamera) { return; }
@@ -63,7 +66,7 @@ void UGizmo::UpdateScale(UCamera* InCamera)
 	float Scale;
 	if (InCamera->GetCameraType() == ECameraType::ECT_Perspective)
 	{
-		float DistanceToCamera = (InCamera->GetLocation() - TargetComponent->GetWorldLocation()).Length();
+		const float DistanceToCamera = (InCamera->GetLocation() - TargetComponent->GetWorldLocation()).Length();
 		Scale = DistanceToCamera * ScaleFactor;
 		if (DistanceToCamera < MinScaleFactor)
 			Scale = MinScaleFactor * ScaleFactor;
@@ -75,32 +78,13 @@ void UGizmo::UpdateScale(UCamera* InCamera)
 
 	TranslateCollisionConfig.Scale = Scale;
 	RotateCollisionConfig.Scale = Scale;
-}
 
-void UGizmo::RenderGizmo(UCamera* InCamera)
-{
-	TargetComponent = Cast<USceneComponent>(GEditor->GetEditorModule()->GetSelectedComponent());
-	if (!TargetComponent || !InCamera) { return; }
-
-	float RenderScale;
-	if (InCamera->GetCameraType() == ECameraType::ECT_Perspective)
+	TArray<FEditorPrimitive>& P = Primitives[static_cast<int>(GizmoMode)];
+	for (uint32 Idx = 0; Idx < 3; Idx++)
 	{
-		float DistanceToCamera = (InCamera->GetLocation() - TargetComponent->GetWorldLocation()).Length();
-		RenderScale = DistanceToCamera * ScaleFactor;
-		if (DistanceToCamera < MinScaleFactor)
-			RenderScale = MinScaleFactor * ScaleFactor;
+		P[Idx].Location = TargetComponent->GetWorldLocation();
+		P[Idx].Scale = FVector(Scale, Scale, Scale);
 	}
-	else // Orthographic
-	{
-		RenderScale = OrthoScaleFactor;
-	}
-
-	URenderer& Renderer = URenderer::GetInstance();
-	const int Mode = static_cast<int>(GizmoMode);
-	auto& P = Primitives[Mode];
-	P.Location = TargetComponent->GetWorldLocation();
-
-	P.Scale = FVector(RenderScale, RenderScale, RenderScale);
 
 	// 2) 드래그 중에는 나머지 축 유지되는 모드 (회전 후 새로운 로컬 기즈모 보여줌)
 	FQuaternion LocalRot;
@@ -116,25 +100,19 @@ void UGizmo::RenderGizmo(UCamera* InCamera)
 	{
 		LocalRot = bIsWorld ? FQuaternion::Identity() : TargetComponent->GetWorldRotationAsQuaternion();
 	}
-	FVector LocalRotEuler = LocalRot.ToEuler();
-	
+
 	// X축 (Forward) - 빨간색
-	P.Rotation = FQuaternion::Identity() * LocalRot;
-	P.Color = ColorFor(EGizmoDirection::Forward);
-	Renderer.RenderEditorPrimitive(P, RenderState);
-	
+	P[0].Rotation = FQuaternion::Identity() * LocalRot;
+	P[0].Color = ColorFor(EGizmoDirection::Forward);
 	// Y축 (Right) - 초록색 (Z축 주위로 -90도 회전)
-	P.Rotation =  FQuaternion::FromAxisAngle(FVector::UpVector(), -90.0f * (PI / 180.0f)) * LocalRot;
-	P.Color = ColorFor(EGizmoDirection::Right);
-	Renderer.RenderEditorPrimitive(P, RenderState);
-	
+	P[1].Rotation =  FQuaternion::FromAxisAngle(FVector::UpVector(), -90.0f * ToRad) * LocalRot;
+	P[1].Color = ColorFor(EGizmoDirection::Right);
 	// Z축 (Up) - 파란색 (Y축 주위로 90도 회전)
-	P.Rotation =  FQuaternion::FromAxisAngle(FVector::RightVector(), 90.0f * (PI / 180.0f)) * LocalRot;
-	P.Color = ColorFor(EGizmoDirection::Up);
-	Renderer.RenderEditorPrimitive(P, RenderState);
+	P[2].Rotation =  FQuaternion::FromAxisAngle(FVector::RightVector(), 90.0f * ToRad) * LocalRot;
+	P[2].Color = ColorFor(EGizmoDirection::Up);
 }
 
-void UGizmo::ChangeGizmoMode()
+void FGizmo::ChangeGizmoMode()
 {
 	switch (GizmoMode)
 	{
@@ -147,19 +125,19 @@ void UGizmo::ChangeGizmoMode()
 	}
 }
 
-void UGizmo::SetLocation(const FVector& Location)
+void FGizmo::SetLocation(const FVector& Location)
 {
 	TargetComponent->SetWorldLocation(Location);
 }
 
-bool UGizmo::IsInRadius(float Radius)
+bool FGizmo::IsInRadius(float Radius)
 {
 	if (Radius >= RotateCollisionConfig.InnerRadius * RotateCollisionConfig.Scale && Radius <= RotateCollisionConfig.OuterRadius * RotateCollisionConfig.Scale)
 		return true;
 	return false;
 }
 
-void UGizmo::OnMouseDragStart(FVector& CollisionPoint)
+void FGizmo::OnMouseDragStart(FVector& CollisionPoint)
 {
 	bIsDragging = true;
 	DragStartMouseLocation = CollisionPoint;
@@ -173,7 +151,7 @@ void UGizmo::OnMouseDragStart(FVector& CollisionPoint)
 }
 
 // 하이라이트 색상은 렌더 시점에만 계산 (상태 오염 방지)
-FVector4 UGizmo::ColorFor(EGizmoDirection InAxis) const
+FVector4 FGizmo::ColorFor(EGizmoDirection InAxis) const
 {
 	const int Idx = AxisIndex(InAxis);
 	//UE_LOG("%d", Idx);
@@ -187,4 +165,11 @@ FVector4 UGizmo::ColorFor(EGizmoDirection InAxis) const
 		return BaseColor;
 	else
 		return Paint;
+}
+
+TArray<const FEditorPrimitive*> FGizmo::GetEditorPrimitive() const
+{
+	if (!TargetComponent) { return {}; }
+	const TArray<FEditorPrimitive>& P = Primitives[static_cast<int>(GizmoMode)];
+	return { &P[0], &P[1], &P[2] };
 }

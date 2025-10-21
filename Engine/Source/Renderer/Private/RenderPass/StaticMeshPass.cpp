@@ -153,7 +153,7 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 
 	// CS constant buffers (slots b0,b1 to match LightTilesComputeShader.hlsl)
 	ID3D11Buffer* csCBs[2] = { FP_CameraCB, FP_ParamsCB };
-	ctx->CSSetConstantBuffers(0, 2, csCBs);
+	ctx->CSSetConstantBuffers(10, 2, csCBs);
 
 	// CS SRV (t0 = unified dynamic lights; you already filled/grew this)
 	ID3D11ShaderResourceView* csSRVs[1] = { UnifiedLightSRV };

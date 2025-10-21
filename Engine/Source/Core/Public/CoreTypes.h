@@ -52,7 +52,7 @@ struct FMaterialConstants
 	float Time; // Time in seconds
 };
 
-struct FVertex
+struct FLineVertex
 {
 	FVector Position;
 	FVector4 Color;
@@ -65,6 +65,17 @@ struct FNormalVertex
 	FVector4 Color;
 	FVector2 TexCoord;
 	FVector4 Tangent;
+
+	static FNormalVertex FromLineVertex(const FLineVertex& Line)
+	{
+		FNormalVertex NewVertex;
+		NewVertex.Position = Line.Position;
+		NewVertex.Normal = FVector::ZeroVector();
+		NewVertex.Color = Line.Color;
+		NewVertex.TexCoord = FVector2(0, 0);
+		NewVertex.Tangent = FVector4::ZeroVector();
+		return NewVertex;
+	}
 };
 
 struct FRay

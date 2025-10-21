@@ -1,13 +1,13 @@
 #pragma once
-#include "Core/Public/Object/Object.h"
 #include "Editor/Public/EditorPrimitive.h"
 
-class UAxis : public UObject
+class FAxis : public IEditorPrimitive
 {
 public:
-	UAxis();
-	~UAxis() override;
+	FAxis();
+	~FAxis() override;
 	void Render();
+	TArray<const FEditorPrimitive*> GetEditorPrimitive() const override;
 
 private:
 	FEditorPrimitive Primitive;
