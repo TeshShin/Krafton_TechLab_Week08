@@ -72,6 +72,14 @@ public:
 private:
 	void RenderBegin() const;
 
+	/**
+	 * @brief Check for modified shader files and auto-reload them
+	 *
+	 * Called periodically (every ShaderCheckInterval seconds) to detect shader changes
+	 * and automatically recompile modified shaders.
+	 */
+	void CheckShaderHotReload();
+
 	void RenderLevel(struct FRenderingContext& RenderingContext);
 	void RenderPostProcess(struct FRenderingContext& RenderingContext);
 	void RenderByViewMode(struct FRenderingContext& RenderingContext);
@@ -106,4 +114,8 @@ private:
 	class FRenderPass* EditorDepthPass;
 	class FRenderPass* EditorOverlayPass;
 	TArray<class FRenderPass*> EditorOverlayPasses;
+
+	// Shader Hot-Reload
+	float ShaderCheckAccumulator = 0.0f;           ///< Time accumulator for periodic shader checks
+	const float ShaderCheckInterval = 0.5f;        ///< Check shader files every 0.5 seconds (configurable)
 };

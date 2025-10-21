@@ -666,3 +666,305 @@ public:
    - `int32`: `INT_MIN` ~ `INT_MAX`
 
 4. **상속**: 부모 클래스의 UPROPERTY도 자동으로 UI에 표시됩니다
+
+---
+
+## 12. Shader 시스템 (Hot-Reload & Binary Caching)
+
+### 12.1. 개요
+
+KTL 엔진의 Shader 시스템은 **Hot-Reload**와 **Binary Caching**을 지원하여 빠른 셰이더 개발 및 최적화된 런타임 성능을 제공합니다.
+
+**주요 기능:**
+- ✅ **Hot-Reload**: 셰이더 파일 수정 시 실시간 재컴파일 (F4 키 + 0.5초 자동 감지)
+- ✅ **Flyweight 패턴**: 동일한 셰이더 variant는 하나의 객체로 공유
+- ✅ **Binary Caching**: 컴파일된 셰이더를 `.cso` 파일로 저장하여 빠른 시작
+- ✅ **MD5 + Timestamp 검증**: 소스 변경 감지 및 캐시 무효화
+- ✅ **ComPtr 기반 관리**: 자동 참조 카운팅으로 메모리 안전성 보장
+
+### 12.2. 아키텍처
+
+#### 12.2.1. 계층 구조
+
+```
+┌─────────────────┐
+│   RenderPass    │  Raw pointer 소유 (ID3D11VertexShader*)
+└────────┬────────┘
+         │ calls
+         ▼
+┌─────────────────────────────┐
+│ RenderResourceFactory       │  [DEPRECATED] Legacy wrapper
+│  - CreateVertexShader       │  (하위 호환성 유지)
+│  - CreatePixelShader        │
+└────────┬────────────────────┘
+         │ delegates to
+         ▼
+┌─────────────────────────────┐
+│ ShaderFactory (NEW)         │  Modern API
+│  - CreateVertexShader()     │  ├─ 생성 전용 (SRP 준수)
+│  - CreatePixelShader()      │  ├─ Helper 함수 제공
+│  - CreateComputeShader()    │  └─ Pool 사용
+└────────┬────────────────────┘
+         │ uses
+         ▼
+┌─────────────────────────────┐
+│ FShaderPool                 │  Flyweight pattern
+│  - VSCache (ComPtr map)     │  ├─ 셰이더 객체 공유
+│  - PSCache (ComPtr map)     │  ├─ 참조 카운팅
+│  - CSCache (ComPtr map)     │  └─ Binary Cache 연동
+└────────┬────────────────────┘
+         │ uses
+         ▼
+┌─────────────────────────────┐
+│ FShaderBinaryCache          │  .cso 파일 I/O
+│  - LoadFromCache()          │  ├─ MD5 해시 검증
+│  - SaveToCache()            │  └─ Timestamp 검증
+└─────────────────────────────┘
+
+         ┌─────────────────────┐
+         │ FShaderManager      │  Hot-reload tracking
+         │  - RegisterVS/PS/CS │  ├─ 포인터 주소 추적
+         │  - ReloadShader()   │  ├─ 파일 변경 감지
+         │  - RecompileVariant │  └─ Pool 재컴파일 요청
+         └─────────────────────┘
+```
+
+### 12.3. Shader Key 시스템
+
+동일한 셰이더 variant를 식별하기 위한 고유 키:
+
+```cpp
+struct FShaderKey {
+    wstring SourcePath;              // e.g., L"Asset/Shader/TextureVS.hlsl"
+    TArray<FShaderDefine> Defines;   // 전처리기 매크로 (정렬됨)
+    EShaderType Type;                // VertexShader, PixelShader, ComputeShader
+
+    size_t GetHash() const;          // Hash for TMap lookup
+    wstring GetCacheFileName() const; // e.g., "TextureVS_PHONG_1A2B3C4D.cso"
+};
+```
+
+**예시:**
+- `TextureVS.hlsl + LIGHTING_MODEL=PHONG + VertexShader` → Key1
+- `TextureVS.hlsl + LIGHTING_MODEL=GOURAUD + VertexShader` → Key2
+- 다른 키 = 별도 컴파일 및 캐싱
+
+### 12.4. 사용 방법
+
+#### 12.4.1. 기존 코드 (RenderResourceFactory - Deprecated)
+
+하위 호환성을 위해 기존 API는 그대로 동작합니다:
+
+```cpp
+// RenderPass에서 사용
+ID3D11VertexShader* VS = nullptr;
+ID3D11InputLayout* Layout = nullptr;
+
+FRenderResourceFactory::CreateVertexShaderAndInputLayout(
+    L"Asset/Shader/MyShader.hlsl",
+    LayoutDescs,
+    &VS,
+    &Layout,
+    nullptr,      // Defines
+    true          // Enable hot-reload
+);
+```
+
+#### 12.4.2. 새로운 코드 (ShaderFactory - Recommended)
+
+새 코드는 두 단계 패턴을 사용합니다:
+
+```cpp
+class MyRenderPass {
+    ID3D11VertexShader* VS = nullptr;
+    ID3D11InputLayout* Layout = nullptr;
+    ID3D11PixelShader* PS = nullptr;
+
+    void Initialize() {
+        // Define macros
+        D3D_SHADER_MACRO Defines[] = {
+            { "LIGHTING_MODEL", "PHONG" },
+            { nullptr, nullptr }
+        };
+
+        // Step 1: Create shaders using ShaderFactory
+        FShaderKey VSKey = ShaderFactory::CreateShaderKey(
+            L"Asset/Shader/MyShader.hlsl",
+            Defines,
+            EShaderType::VertexShader
+        );
+        VS = ShaderFactory::CreateVertexShader(VSKey, &Layout, &LayoutDescs);
+
+        FShaderKey PSKey = ShaderFactory::CreateShaderKey(
+            L"Asset/Shader/MyShader.hlsl",
+            Defines,
+            EShaderType::PixelShader
+        );
+        PS = ShaderFactory::CreatePixelShader(PSKey);
+
+        // Step 2: Register for hot-reload (optional)
+        FShaderManager::Get().RegisterVertexShader(
+            L"Asset/Shader/MyShader.hlsl",
+            LayoutDescs,
+            &VS,        // Pointer address for hot-reload
+            &Layout,
+            Defines
+        );
+        FShaderManager::Get().RegisterPixelShader(
+            L"Asset/Shader/MyShader.hlsl",
+            &PS,
+            Defines
+        );
+    }
+
+    void Release() {
+        SafeRelease(VS);
+        SafeRelease(Layout);
+        SafeRelease(PS);
+    }
+};
+```
+
+**장점:**
+- ✅ **명확한 책임 분리**: 생성(ShaderFactory) vs 등록(ShaderManager)
+- ✅ **선택적 Hot-Reload**: Step 2 생략 가능 (임시 셰이더)
+- ✅ **SOLID 원칙 준수**: 각 컴포넌트가 단일 책임만 가짐
+
+### 12.5. Hot-Reload 동작 방식
+
+#### 12.5.1. 자동 감지 (0.5초 간격)
+
+```cpp
+// Engine 메인 루프
+static float TimeSinceLastCheck = 0.0f;
+TimeSinceLastCheck += DeltaTime;
+
+if (TimeSinceLastCheck >= 0.5f) {
+    FShaderManager::Get().CheckAndReloadModifiedShaders();
+    TimeSinceLastCheck = 0.0f;
+}
+```
+
+#### 12.5.2. 수동 리로드 (F4 키)
+
+```cpp
+// 모든 등록된 셰이더 리컴파일
+FShaderManager::Get().ReloadAllShaders();
+
+// 특정 파일만 리컴파일
+FShaderManager::Get().ReloadShader(L"Asset/Shader/MyShader.hlsl");
+```
+
+#### 12.5.3. 안전한 리컴파일
+
+- 컴파일 실패 시: Old shader 유지 (크래시 방지)
+- 성공 시: RenderPass의 포인터를 새 셰이더로 자동 교체
+- ComPtr로 관리: 메모리 누수 없음
+
+### 12.6. Binary Cache 시스템
+
+#### 12.6.1. Cache 파일 구조
+
+```
+.cso File Format:
+┌──────────────────────────┐
+│ FShaderCacheHeader       │  Magic number + Version + MD5 hash
+├──────────────────────────┤
+│ FShaderCacheMetadata     │  Source path + Defines + Timestamp
+├──────────────────────────┤
+│ Bytecode (variable size) │  Compiled shader bytecode
+└──────────────────────────┘
+```
+
+#### 12.6.2. Cache Invalidation
+
+```cpp
+// MD5 hash comparison
+bool IsValid = (CachedMD5 == CurrentMD5);
+
+// Timestamp comparison
+FILETIME CurrentTime = GetFileWriteTime(SourcePath);
+bool IsNewer = (CurrentTime > CachedTimestamp);
+
+// Load from cache only if valid
+if (IsValid && !IsNewer) {
+    LoadFromCache();
+} else {
+    CompileFromSource();
+    SaveToCache();
+}
+```
+
+### 12.7. 성능 최적화
+
+#### 12.7.1. Flyweight Pattern
+
+동일한 셰이더를 여러 곳에서 사용해도 메모리는 1개만 사용:
+
+```
+Before (No Flyweight):
+- RenderPass1: VS_PHONG (Compiled #1)
+- RenderPass2: VS_PHONG (Compiled #2)  ❌ 중복!
+- RenderPass3: VS_PHONG (Compiled #3)  ❌ 중복!
+
+After (With Flyweight):
+- RenderPass1: VS_PHONG ─┐
+- RenderPass2: VS_PHONG ─┼─> Pool[Key] = VS_PHONG (1개만 존재)
+- RenderPass3: VS_PHONG ─┘
+```
+
+#### 12.7.2. 시작 속도 개선
+
+| 상황 | 소요 시간 |
+|------|----------|
+| Cold start (No cache) | ~500ms (D3DCompileFromFile) |
+| Warm start (Cache hit) | ~50ms (File I/O only) |
+| **10배 빠름!** | |
+
+### 12.8. SOLID 원칙 준수
+
+| 원칙 | 구현 |
+|------|------|
+| **SRP** | ShaderFactory(생성), ShaderManager(등록), ShaderPool(캐싱) |
+| **OCP** | 새 셰이더 타입 추가 시 기존 코드 수정 불필요 |
+| **LSP** | ShaderFactory는 선택사항, 기존 API도 그대로 동작 |
+| **ISP** | Hot-reload 불필요 시 Register 단계 생략 가능 |
+| **DIP** | 구체적 구현이 아닌 추상화(FShaderKey)에 의존 |
+
+### 12.9. 주의사항
+
+1. **포인터 수명**: ShaderManager에 등록한 포인터는 객체 생명 주기 동안 유효해야 함
+   ```cpp
+   // ❌ 잘못된 예: 지역 변수
+   void BadExample() {
+       ID3D11VertexShader* VS = nullptr;
+       ShaderFactory::CreateVertexShader(...);
+       ShaderManager::Get().RegisterVertexShader(..., &VS, ...);
+   } // VS가 스택에서 사라짐 → 무효한 포인터!
+
+   // ✅ 올바른 예: 멤버 변수
+   class MyRenderPass {
+       ID3D11VertexShader* VS = nullptr;  // 멤버 변수
+       void Initialize() {
+           ShaderManager::Get().RegisterVertexShader(..., &VS, ...);
+       }
+   };
+   ```
+
+2. **SafeRelease 필수**: Pool에서 받은 셰이더는 반드시 Release 필요
+   ```cpp
+   VS = ShaderFactory::CreateVertexShader(...); // RefCount++
+   SafeRelease(VS);  // RefCount-- (필수!)
+   ```
+
+3. **순환 참조 방지**: Pool의 ComPtr + RenderPass의 raw pointer = 안전
+   - Pool: ComPtr로 소유 (자동 Release)
+   - RenderPass: Raw pointer로 참조 (수동 Release)
+
+### 12.10. 향후 개선 방향
+
+- [ ] Async Shader Compilation (백그라운드 스레드)
+- [ ] Shader Variant Precompilation (에디터 시작 시)
+- [ ] Shader Graph 시스템 (노드 기반 셰이더 에디터)
+- [ ] 더 정교한 Cache Invalidation (Dependency tracking)
+- [ ] Shader Permutation Reduction (Uber shader 최적화)

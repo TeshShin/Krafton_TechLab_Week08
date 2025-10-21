@@ -1,33 +1,56 @@
 ﻿#include "pch.h"
 #include "Renderer/Public/RenderResourceFactory.h"
+#include "Renderer/Public/ShaderFactory.h"
 #include "Renderer/Public/Renderer.h"
 #include <d3dcompiler.h>
+
+#include "Renderer/Public/ShaderManager.h"
 #pragma comment(lib, "d3dcompiler.lib")
 
-void FRenderResourceFactory::CreateVertexShaderAndInputLayout(const wstring& InFilePath,
-                                                              const TArray<D3D11_INPUT_ELEMENT_DESC>& InInputLayoutDescs, ID3D11VertexShader** OutVertexShader, ID3D11InputLayout** OutInputLayout, const D3D_SHADER_MACRO* InDefines)
+void FRenderResourceFactory::CreateVertexShaderAndInputLayout(
+	const wstring& InFilePath,
+	const TArray<D3D11_INPUT_ELEMENT_DESC>& InInputLayoutDescs,
+	ID3D11VertexShader** OutVertexShader,
+	ID3D11InputLayout** OutInputLayout,
+	const D3D_SHADER_MACRO* InDefines,
+	bool bEnableHotReload)
 {
-	ID3DBlob* VertexShaderBlob = nullptr;
-	ID3DBlob* ErrorBlob = nullptr;
+	// [DEPRECATED] Use ShaderFactory::CreateVertexShader instead
+	// This legacy wrapper delegates to new pool-based API
 
-	UINT Flags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if defined(DEBUG) || defined(_DEBUG)
-	Flags |= D3DCOMPILE_DEBUG;
-#endif
-
-	HRESULT Result = D3DCompileFromFile(InFilePath.data(), InDefines, D3D_COMPILE_STANDARD_FILE_INCLUDE, "mainVS", "vs_5_0", Flags, 0, &VertexShaderBlob, &ErrorBlob);
-	if (FAILED(Result))
+	if (!OutVertexShader)
 	{
-		if (ErrorBlob) { OutputDebugStringA(static_cast<char*>(ErrorBlob->GetBufferPointer())); SafeRelease(ErrorBlob); }
-		SafeRelease(VertexShaderBlob);
+		UE_LOG_ERROR("RenderResourceFactory: OutVertexShader is null");
 		return;
 	}
 
-	URenderer::GetInstance().GetDevice()->CreateVertexShader(VertexShaderBlob->GetBufferPointer(), VertexShaderBlob->GetBufferSize(), nullptr, OutVertexShader);
-	if (InInputLayoutDescs.size() > 0)
-		URenderer::GetInstance().GetDevice()->CreateInputLayout(InInputLayoutDescs.data(), static_cast<uint32>(InInputLayoutDescs.size()), VertexShaderBlob->GetBufferPointer(), VertexShaderBlob->GetBufferSize(), OutInputLayout);
+	// Create shader key using helper
+	FShaderKey Key = ShaderFactory::CreateShaderKey(InFilePath, InDefines, EShaderType::VertexShader);
 
-	SafeRelease(VertexShaderBlob);
+	// Delegate to new API (pool-based, with binary caching)
+	ID3D11VertexShader* VS = ShaderFactory::CreateVertexShader(
+		Key,
+		OutInputLayout,
+		OutInputLayout ? &InInputLayoutDescs : nullptr,
+		bEnableHotReload
+	);
+
+	if (VS)
+	{
+		*OutVertexShader = VS;
+
+		// Register for hot-reload after assignment (so ShaderManager gets the correct pointer address)
+		if (bEnableHotReload)
+		{
+			FShaderManager::Get().RegisterVertexShader(
+				InFilePath,
+				InInputLayoutDescs,
+				OutVertexShader,
+				OutInputLayout,
+				InDefines
+			);
+		}
+	}
 }
 
 ID3D11Buffer* FRenderResourceFactory::CreateIndexBuffer(const void* InIndices, uint32 InByteWidth)
@@ -39,26 +62,41 @@ ID3D11Buffer* FRenderResourceFactory::CreateIndexBuffer(const void* InIndices, u
 	return IndexBuffer;
 }
 
-void FRenderResourceFactory::CreatePixelShader(const wstring& InFilePath, ID3D11PixelShader** OutPixelShader, const D3D_SHADER_MACRO* InDefines)
+void FRenderResourceFactory::CreatePixelShader(
+	const wstring& InFilePath,
+	ID3D11PixelShader** OutPixelShader,
+	const D3D_SHADER_MACRO* InDefines,
+	bool bEnableHotReload)
 {
-	ID3DBlob* PixelShaderBlob = nullptr;
-	ID3DBlob* ErrorBlob = nullptr;
+	// [DEPRECATED] Use ShaderFactory::CreatePixelShader instead
+	// This legacy wrapper delegates to new pool-based API
 
-	UINT Flags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if defined(DEBUG) || defined(_DEBUG)
-	Flags |= D3DCOMPILE_DEBUG;
-#endif
-
-	HRESULT Result = D3DCompileFromFile(InFilePath.data(), InDefines, D3D_COMPILE_STANDARD_FILE_INCLUDE, "mainPS", "ps_5_0", Flags, 0, &PixelShaderBlob, &ErrorBlob);
-	if (FAILED(Result))
+	if (!OutPixelShader)
 	{
-		if (ErrorBlob) { OutputDebugStringA(static_cast<char*>(ErrorBlob->GetBufferPointer())); SafeRelease(ErrorBlob); }
-		SafeRelease(PixelShaderBlob);
+		UE_LOG_ERROR("RenderResourceFactory: OutPixelShader is null");
 		return;
 	}
 
-	URenderer::GetInstance().GetDevice()->CreatePixelShader(PixelShaderBlob->GetBufferPointer(), PixelShaderBlob->GetBufferSize(), nullptr, OutPixelShader);
-	SafeRelease(PixelShaderBlob);
+	// Create shader key using helper
+	FShaderKey Key = ShaderFactory::CreateShaderKey(InFilePath, InDefines, EShaderType::PixelShader);
+
+	// Delegate to new API (pool-based, with binary caching)
+	ID3D11PixelShader* PS = ShaderFactory::CreatePixelShader(Key, bEnableHotReload);
+
+	if (PS)
+	{
+		*OutPixelShader = PS;
+
+		// Register for hot-reload after assignment
+		if (bEnableHotReload)
+		{
+			FShaderManager::Get().RegisterPixelShader(
+				InFilePath,
+				OutPixelShader,
+				InDefines
+			);
+		}
+	}
 }
 
 ID3D11SamplerState* FRenderResourceFactory::CreateSamplerState(D3D11_FILTER InFilter, D3D11_TEXTURE_ADDRESS_MODE InAddressMode)
@@ -135,55 +173,45 @@ D3D11_FILL_MODE FRenderResourceFactory::ToD3D11(EFillMode InFill)
 	}
 }
 
-ID3D11ComputeShader* FRenderResourceFactory::CreateComputeShader(
+void FRenderResourceFactory::CreateComputeShader(
     const std::wstring& InFilePath,
+    ID3D11ComputeShader** OutComputeShader,
     const D3D_SHADER_MACRO* InDefines,
     const char* Entry,
-    const char* Profile)
+    const char* Profile,
+    bool bEnableHotReload)
 {
-    ID3D11Device* Device = URenderer::GetInstance().GetDevice();
-    ID3DBlob* ShaderBlob = nullptr;
-    ID3DBlob* ErrorBlob  = nullptr;
+	// [DEPRECATED] Use ShaderFactory::CreateComputeShader instead
+	// This legacy wrapper delegates to new pool-based API
 
-    UINT Flags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if defined(_DEBUG)
-    Flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#endif
-
-    HRESULT hr = D3DCompileFromFile(
-        InFilePath.c_str(),
-        InDefines,
-        D3D_COMPILE_STANDARD_FILE_INCLUDE,
-        Entry,
-        Profile,
-        Flags,
-        0,
-        &ShaderBlob,
-        &ErrorBlob);
-
-    if (FAILED(hr))
+    if (!OutComputeShader)
     {
-        if (ErrorBlob)
-        {
-            UE_LOG_ERROR("Renderer: CS compile error for %ls\n%s",
-                InFilePath.c_str(),
-                (const char*)ErrorBlob->GetBufferPointer());
-            ErrorBlob->Release();
-        }
-        SafeRelease(ShaderBlob);
-        return nullptr;
+        UE_LOG_ERROR("RenderResourceFactory: OutComputeShader is null");
+        return;
     }
 
-    ID3D11ComputeShader* CS = nullptr;
-    hr = Device->CreateComputeShader(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), nullptr, &CS);
-    SafeRelease(ShaderBlob);
+	// Create shader key using helper
+	FShaderKey Key = ShaderFactory::CreateShaderKey(InFilePath, InDefines, EShaderType::ComputeShader);
 
-    if (FAILED(hr))
-    {
-        UE_LOG_ERROR("Renderer: CreateComputeShader failed for %ls", InFilePath.c_str());
-        return nullptr;
-    }
-    return CS;
+	// Delegate to new API (pool-based, with binary caching)
+	ID3D11ComputeShader* CS = ShaderFactory::CreateComputeShader(Key, Entry, Profile, bEnableHotReload);
+
+	if (CS)
+	{
+		*OutComputeShader = CS;
+
+		// Register for hot-reload after assignment
+		if (bEnableHotReload)
+		{
+			FShaderManager::Get().RegisterComputeShader(
+				InFilePath,
+				OutComputeShader,
+				InDefines,
+				Entry,
+				Profile
+			);
+		}
+	}
 }
 
 // Structured buffer (SRV + UAV). Use DEFAULT (no CPU access) for UAV use.

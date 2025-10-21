@@ -95,11 +95,11 @@ enum class ELogType : uint8
 };
 DECLARE_UINT8_ENUM_REFLECTION(ELogType)
 
-enum class EShaderType : uint8
-{
-	Default = 0,
-	BatchLine
-};
+// enum class EShaderType : uint8
+// {
+// 	Default = 0,
+// 	BatchLine
+// };
 
 /**
  * @brief UObject Primitive Type Enum
