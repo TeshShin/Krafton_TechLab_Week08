@@ -170,8 +170,10 @@ void UBatchLineManager::AddDebugCone(const FName& BaseLabel, const FVector& TipL
 	const FVector ConeUpVector = RightVector.Cross(Direction);
 
 	const float AngleRad = ConeAngleDegrees * ToRad;
-	const float BottomCircleRadius = Radius * tan(AngleRad);
-	const FVector BaseCenter = TipLocation + Direction * Radius;
+	const float ConeHeight = Radius * cos(AngleRad);
+	const float BottomCircleRadius = Radius * sin(AngleRad);
+
+	const FVector BaseCenter = TipLocation + Direction * ConeHeight;
 	// 밑면 원 그리기
 	constexpr int32 CircleSegments = 32;
 	for (int32 i = 0; i < CircleSegments; ++i)
