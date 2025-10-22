@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Public/Container/Name.h"
+#include "Core/Public/Types.h"
 
 class UObject;
 class UPropertyBase;
@@ -49,6 +50,34 @@ public:
      */
     void GetAllProperties(TArray<UPropertyBase*>& OutProperties) const;
 
+    // Class Metadata System
+    /**
+     * @brief 클래스 메타데이터를 설정합니다.
+     * @param Key 메타데이터 키
+     * @param Value 메타데이터 값
+     */
+    void SetMetadata(const FName& Key, const FString& Value);
+
+    /**
+     * @brief 클래스 메타데이터를 가져옵니다.
+     * @param Key 메타데이터 키
+     * @return 메타데이터 값. 존재하지 않으면 nullopt 반환
+     */
+    TOptional<FString> GetMetadata(const FName& Key) const;
+
+    /**
+     * @brief 클래스에 특정 메타데이터가 존재하는지 확인합니다.
+     * @param Key 메타데이터 키
+     * @return 존재하면 true, 아니면 false
+     */
+    bool HasMetadata(const FName& Key) const;
+
+    /**
+     * @brief 모든 클래스 메타데이터를 가져옵니다.
+     * @return 메타데이터 맵의 const 참조
+     */
+    const TMap<FName, FString>& GetAllMetadata() const;
+
 private:
     FName ClassName;
     UClass* SuperClass;
@@ -56,6 +85,9 @@ private:
     ClassConstructorType Constructor;
     bool bIsAbstract;
     TArray<UPropertyBase*> Properties;
+
+    // Class Metadata Storage
+    TMap<FName, FString> ClassMetadata;
 };
 
 /**
@@ -199,3 +231,25 @@ UObject* ClassName::CreateDefaultObject##ClassName() \
     return new ClassName(); \
 }\
 static bool bIsRegistered_##ClassName = [](){ ClassName::StaticClass(); return true; }();
+
+/**
+ * @brief 클래스 메타데이터 등록 매크로
+ * @param ClassName 메타데이터를 등록할 클래스 이름
+ * @param Key 메타데이터 키
+ * @param Value 메타데이터 값
+ *
+ * 사용 예시:
+ * IMPLEMENT_CLASS(MyClass, UObject)
+ * CLASS_METADATA(MyClass, "DisplayName", "My Custom Class")
+ * CLASS_METADATA(MyClass, "Category", "Gameplay")
+ * CLASS_METADATA(MyClass, "Description", "This is a custom class")
+ */
+#define CLASS_METADATA(ClassName, Key, Value) \
+namespace { \
+    struct ClassName##_Metadata_##Key { \
+        ClassName##_Metadata_##Key() { \
+            ClassName::StaticClass()->SetMetadata(FName(Key), FString(Value)); \
+        } \
+    }; \
+    static ClassName##_Metadata_##Key ClassName##_Metadata_Instance_##Key; \
+}

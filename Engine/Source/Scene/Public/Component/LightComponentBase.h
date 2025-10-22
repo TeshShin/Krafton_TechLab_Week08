@@ -67,8 +67,6 @@ public:
 
     FVector GetLightColor() const { return LightColor;}
 
-	bool IsVisible() const { return bVisible; }
-
     virtual ELightComponentType GetLightType() const { return ELightComponentType::LightType_Max; }
 
     /**
@@ -89,8 +87,6 @@ public:
 
     void SetLightColor(const FVector& InLightColor);
 
-	void SetVisible(bool bInVisible) { bVisible = bInVisible; }
-
 private:
     /** Total energy that the light emits. */
     float Intensity = 5.0f;
@@ -100,9 +96,6 @@ private:
      * @todo Change type of this variable into FLinearColor
      */
     FVector LightColor = { 1.0f, 1.0f, 1.0f };
-
-    bool bVisible = true;
-
 
 	/*-----------------------------------------------------------------------------
 		Visualization Features

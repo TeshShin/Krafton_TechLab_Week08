@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "Editor/Public/UI/Widget/SpriteSelectionWidget.h"
+#include "Editor/Public/UI/Widget/Component/BillboardComponentWidget.h"
 #include "Scene/Public/Level/Level.h"
 #include "Manager/Public/AssetManager.h"
 #include "Scene/Public/Component/BillBoardComponent.h"
@@ -8,44 +8,34 @@
 #include <climits>
 
 
-IMPLEMENT_CLASS(USpriteSelectionWidget, UWidget)
+IMPLEMENT_CLASS(UBillboardComponentWidget, UComponentWidget)
 
-void USpriteSelectionWidget::Initialize()
+void UBillboardComponentWidget::Initialize()
 {
-	// Do Nothing Here
+	Super::Initialize();
 }
 
-void USpriteSelectionWidget::Update()
+void UBillboardComponentWidget::Update()
 {
-	ULevel* CurrentLevel = GWorld->GetLevel();
-
-	if (CurrentLevel)
-	{
-		AActor* NewSelectedActor = GEditor->GetEditorModule()->GetSelectedActor();
-
-		// Update Current Selected Actor
-		if (NewSelectedActor && SelectedActor != NewSelectedActor)
-		{
-			SelectedActor = NewSelectedActor;
-
-			for (UActorComponent* Component : SelectedActor->GetOwnedComponents())
-			{
-				if (UBillBoardComponent* UUIDTextComponent = Cast<UBillBoardComponent>(Component))
-					{ SelectedBillBoard = UUIDTextComponent; }
-			}
-		}
-	}
+	Super::Update();
 }
 
-void USpriteSelectionWidget::RenderWidget()
+void UBillboardComponentWidget::RenderWidget()
 {
-	if (!SelectedActor) { return; }
-	
+	// 먼저 UPROPERTY를 자동으로 렌더링
+	Super::RenderWidget();
+
+	// 선택된 컴포넌트 가져오기
+	UActorComponent* SelectedComponent = GEditor->GetEditorModule()->GetSelectedComponent();
+	UBillBoardComponent* SelectedBillBoard = Cast<UBillBoardComponent>(SelectedComponent);
+
+	if (!SelectedBillBoard) { return; }
+
 	ImGui::Separator();
 	ImGui::Text("Select Sprite");
 
 	ImGui::Spacing();
-		
+
 	static int CurrentItem = 0;
 
 	TArray<FString> Items;
@@ -60,7 +50,7 @@ void USpriteSelectionWidget::RenderWidget()
 	}
 
 	sort(Items.begin(), Items.end());
-	
+
 	if (ImGui::BeginCombo("Sprite", Items[CurrentItem].c_str()))
 	{
 		for (int32 N = 0; N < Items.size(); N++)
@@ -69,11 +59,11 @@ void USpriteSelectionWidget::RenderWidget()
 			if (ImGui::Selectable(Items[N].c_str(), bIsSelected))
 			{
 				CurrentItem = N;
-				SetSpriteOfActor(Items[CurrentItem]);
+				SetSprite(Items[CurrentItem]);
 			}
 
 			if (bIsSelected)
-				ImGui::SetItemDefaultFocus(); // �⺻ ��Ŀ��
+				ImGui::SetItemDefaultFocus();
 		}
 		ImGui::EndCombo();
 	}
@@ -83,10 +73,11 @@ void USpriteSelectionWidget::RenderWidget()
 	WidgetNum = (WidgetNum + 1) % std::numeric_limits<uint32>::max();
 }
 
-void USpriteSelectionWidget::SetSpriteOfActor(FString NewSprite)
+void UBillboardComponentWidget::SetSprite(FString NewSprite)
 {
-	if (!SelectedActor)
-		return;
+	UActorComponent* SelectedComponent = GEditor->GetEditorModule()->GetSelectedComponent();
+	UBillBoardComponent* SelectedBillBoard = Cast<UBillBoardComponent>(SelectedComponent);
+
 	if (!SelectedBillBoard)
 		return;
 

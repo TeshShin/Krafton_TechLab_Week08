@@ -177,7 +177,7 @@ void FDecalPass::Execute(FRenderingContext& Context)
     // --- Render Decals ---
     for (UDecalComponent* Decal : Context.Decals)
     {
-        if (!Decal || !Decal->IsVisible()) { continue; }
+        if (!Decal || !Decal->IsVisibleInHierarchy()) { continue; }
 
         const IBoundingVolume* DecalBV = Decal->GetBoundingBox();
         if (!DecalBV || DecalBV->GetType() != EBoundingVolumeType::OBB) { continue; }
@@ -220,7 +220,7 @@ void FDecalPass::Execute(FRenderingContext& Context)
 
         for (UPrimitiveComponent* Prim : Primitives)
         {
-            if (!Prim || !Prim->IsVisible() || Prim->IsVisualizationComponent() || !Prim->bReceivesDecals) { continue; }
+            if (!Prim || !Prim->IsVisibleInHierarchy() || Prim->IsVisualizationComponent() || !Prim->bReceivesDecals) { continue; }
 
             const IBoundingVolume* PrimBV = Prim->GetBoundingBox();
         	if (!PrimBV || PrimBV->GetType() != EBoundingVolumeType::AABB) { continue; }

@@ -152,60 +152,17 @@ void USceneHierarchyWidget::RenderActorInfo(AActor* InActor, int32 InIndex)
 	FName ActorName = InActor->GetName();
 	FString ActorDisplayName = ActorName.ToString();
 
-	// Actor의 PrimitiveComponent와 LightComponent의 Visibility 체크
-	bool bHasVisibleComponent = false;
-	bool bAllVisible = true;
+	// Actor의 Visibility 상태 표시 및 토글
+	bool bIsVisible = InActor->IsVisible();
 
-	// Actor의 모든 Component 중에서 PrimitiveComponent와 LightComponent 찾기
-	for (auto& Component : InActor->GetOwnedComponents())
+	if (ImGui::SmallButton(bIsVisible ? "[O]" : "[X]"))
 	{
-		if (UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(Component))
-		{
-			bHasVisibleComponent = true;
-			if (!PrimitiveComponent->IsVisible())
-			{
-				bAllVisible = false;
-			}
-		}
-		else if (ULightComponentBase* LightComponent = Cast<ULightComponentBase>(Component))
-		{
-			bHasVisibleComponent = true;
-			if (!LightComponent->IsVisible())
-			{
-				bAllVisible = false;
-			}
-		}
-	}
-
-	// PrimitiveComponent 또는 LightComponent가 있는 경우에만 Visibility 버튼 표시
-	if (bHasVisibleComponent)
-	{
-		if (ImGui::SmallButton(bAllVisible ? "[O]" : "[X]"))
-		{
-			// 모든 PrimitiveComponent와 LightComponent의 Visibility 토글
-			bool bNewVisibility = !bAllVisible;
-			for (auto& Component : InActor->GetOwnedComponents())
-			{
-				if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(Component))
-				{
-					PrimComp->SetVisibility(bNewVisibility);
-				}
-				else if (ULightComponentBase* LightComp = Cast<ULightComponentBase>(Component))
-				{
-					LightComp->SetVisible(bNewVisibility);
-				}
-			}
-			UE_LOG_INFO("SceneHierarchy: %s의 가시성이 %s로 변경되었습니다",
-			            ActorName.ToString().data(),
-			            bNewVisibility ? "Visible" : "Hidden");
-		}
-	}
-	else
-	{
-		// Visible Component가 없는 경우 비활성화된 버튼 표시
-		ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f);
-		ImGui::SmallButton("[-]");
-		ImGui::PopStyleVar();
+		// Actor의 Visibility 토글
+		bool bNewVisibility = !bIsVisible;
+		InActor->SetVisible(bNewVisibility);
+		UE_LOG_INFO("SceneHierarchy: %s의 가시성이 %s로 변경되었습니다",
+		            ActorName.ToString().data(),
+		            bNewVisibility ? "Visible" : "Hidden");
 	}
 
 	// 이름 클릭 감지 (오른쪽)

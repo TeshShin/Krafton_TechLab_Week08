@@ -191,3 +191,51 @@ void UClass::GetAllProperties(TArray<UPropertyBase*>& OutProperties) const
 		}
 	}
 }
+
+/**
+ * @brief 클래스 메타데이터를 설정합니다.
+ * @param Key 메타데이터 키
+ * @param Value 메타데이터 값
+ */
+void UClass::SetMetadata(const FName& Key, const FString& Value)
+{
+	ClassMetadata[Key] = Value;
+	UE_LOG("UClass: Metadata set: %s.%s = %s",
+		ClassName.ToString().data(),
+		Key.ToString().data(),
+		Value.data());
+}
+
+/**
+ * @brief 클래스 메타데이터를 가져옵니다.
+ * @param Key 메타데이터 키
+ * @return 메타데이터 값. 존재하지 않으면 nullopt 반환
+ */
+TOptional<FString> UClass::GetMetadata(const FName& Key) const
+{
+	auto it = ClassMetadata.find(Key);
+	if (it != ClassMetadata.end())
+	{
+		return it->second;
+	}
+	return std::nullopt;
+}
+
+/**
+ * @brief 클래스에 특정 메타데이터가 존재하는지 확인합니다.
+ * @param Key 메타데이터 키
+ * @return 존재하면 true, 아니면 false
+ */
+bool UClass::HasMetadata(const FName& Key) const
+{
+	return ClassMetadata.find(Key) != ClassMetadata.end();
+}
+
+/**
+ * @brief 모든 클래스 메타데이터를 가져옵니다.
+ * @return 메타데이터 맵의 const 참조
+ */
+const TMap<FName, FString>& UClass::GetAllMetadata() const
+{
+	return ClassMetadata;
+}

@@ -31,9 +31,6 @@ public:
 	FVector4 GetColor() const { return Color; }
 	void SetColor(const FVector4& InColor) { Color = InColor; }
 
-	bool IsVisible() const { return bVisible; }
-	void SetVisibility(bool bVisibility) { bVisible = bVisibility; }
-
 	bool CanPick() const { return bCanPick; }
 	void SetCanPick(bool bInCanPick) { bCanPick = bInCanPick; }
 
@@ -64,7 +61,6 @@ protected:
 	D3D11_PRIMITIVE_TOPOLOGY Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	FRenderState RenderState = {};
 
-	bool bVisible = true;
 	bool bCanPick = true;
 
 	IBoundingVolume* BoundingBox = nullptr;

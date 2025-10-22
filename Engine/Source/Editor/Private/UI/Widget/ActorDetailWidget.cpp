@@ -498,6 +498,16 @@ void UActorDetailWidget::RenderTransformEdit()
 	ImGui::Text("Component Properties");
 	ImGui::PushID(SelectedComponent);
 
+	// Component Visibility (읽기 전용, SceneComponent만)
+	if (USceneComponent* SceneComp = Cast<USceneComponent>(SelectedComponent))
+	{
+		bool bComponentVisible = SceneComp->IsVisible();
+		if (ImGui::Checkbox("Visible", &bComponentVisible))
+		{
+			SceneComp->SetVisible(bComponentVisible);
+		}
+	}
+
 	// bCanEverTick 체크박스
 	bool bTickEnabled = SelectedComponent->CanEverTick();
 	if (ImGui::Checkbox("Enable Tick (bCanEverTick)", &bTickEnabled))

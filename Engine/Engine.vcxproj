@@ -374,6 +374,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Editor\Public\UI\Widget\ActorSpawnWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\ActorTerminationWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\CameraControlWidget.h" />
+    <ClInclude Include="Source\Editor\Public\UI\Widget\Component\BillboardComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\ComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\DecalTextureSelectionWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\HeightFogComponentWidget.h" />
@@ -391,7 +392,6 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Editor\Public\UI\Widget\SceneHierarchyWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\SceneIOWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\SplitterDebugWidget.h" />
-    <ClInclude Include="Source\Editor\Public\UI\Widget\SpriteSelectionWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\ViewportMenuBarWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Widget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Window\ConsoleWindow.h" />
@@ -514,6 +514,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     </ClCompile>
     <ClCompile Include="Source\Editor\Private\Line\GridLineSource.cpp">
     </ClCompile>
+    <ClCompile Include="Source\Editor\Private\UI\Widget\Component\BillboardComponentWidget.cpp" />
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\ComponentWidget.cpp" />
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\SpotLightComponentWidget.cpp" />
     <ClCompile Include="Source\Renderer\Private\RenderPass\EditorDepthPass.cpp" />
@@ -604,8 +605,6 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClCompile Include="Source\Editor\Private\UI\Widget\SceneIOWidget.cpp">
     </ClCompile>
     <ClCompile Include="Source\Editor\Private\UI\Widget\SplitterDebugWidget.cpp">
-    </ClCompile>
-    <ClCompile Include="Source\Editor\Private\UI\Widget\SpriteSelectionWidget.cpp">
     </ClCompile>
     <ClCompile Include="Source\Editor\Private\UI\Widget\ViewportMenuBarWidget.cpp">
     </ClCompile>
