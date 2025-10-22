@@ -167,8 +167,17 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 	// Set compute shader
 	ctx->CSSetShader(LightTilesCS, nullptr, 0);
 
-	// Dispatch one thread per cluster (per your CS)
-	ctx->Dispatch(NumTilesX, NumTilesY, NumZSlices);
+    // Dispatch with threadgroups covering clusters.
+    // Must stay in sync with [numthreads] in LightTilesComputeShader.hlsl
+    const uint32 GroupSizeX = 8;
+    const uint32 GroupSizeY = 8;
+    const uint32 GroupSizeZ = 1;
+
+    const uint32 GroupsX = (NumTilesX + GroupSizeX - 1) / GroupSizeX;
+    const uint32 GroupsY = (NumTilesY + GroupSizeY - 1) / GroupSizeY;
+    const uint32 GroupsZ = (NumZSlices + GroupSizeZ - 1) / GroupSizeZ;
+
+    ctx->Dispatch(GroupsX, GroupsY, GroupsZ);
 
 	// Unbind CS UAVs/SRVs to avoid hazards when we rebinding as PS SRVs later
 	ID3D11UnorderedAccessView* nullUAVs[2] = { nullptr, nullptr };
