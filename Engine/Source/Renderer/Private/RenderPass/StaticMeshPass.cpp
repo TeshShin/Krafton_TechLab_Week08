@@ -170,6 +170,13 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 	ID3D11ShaderResourceView* csSRVs[1] = { UnifiedLightSRV };
 	ctx->CSSetShaderResources(0, 1, csSRVs);
 
+	// Clear UAV buffers to prevent garbage values from previous frames
+	// This is critical for orthographic cameras where some threads may early-return without initializing
+	UINT clearValue[4] = { 0, 0, 0, 0 };
+	ctx->ClearUnorderedAccessViewUint(ClusterCountUAV, clearValue);
+	ctx->ClearUnorderedAccessViewUint(LocalLightCountForHeatmapUAV, clearValue);
+	// Note: ClusterIndexUAV doesn't need clearing since it's only read at indices < ClusterCount
+
 	// CS UAVs (u0 = counts, u1 = indices, u2 = local light counts for heatmap)
 	ID3D11UnorderedAccessView* csUAVs[3] = { ClusterCountUAV, ClusterIndexUAV, LocalLightCountForHeatmapUAV };
 	UINT initialCounts[3] = { 0, 0, 0 }; // ignored for structured UAVs
