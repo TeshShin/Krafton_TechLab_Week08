@@ -106,12 +106,31 @@ uint FP_ComputeClusterID(float4 svpos /* SV_POSITION */, float3 worldPos)
 
     // LH view space depth (camera looks +Z)
     float3 posVS = mul(float4(worldPos, 1.0f), FP_View).xyz;
-    float depthVS = max(posVS.z, FP_NearZ + 1e-6);
+    float depthVS = posVS.z;
 
-    // Log z-slicing (exactly match CS partitioning)
-    float logDen = log(FP_FarZ / FP_NearZ);
-    float sliceF = (log(depthVS / FP_NearZ) / logDen) * FP_NumZSlices;
-    int zSlice = clamp(int(floor(sliceF)), 0, int(FP_NumZSlices - 1));
+    // Detect orthographic vs perspective to match the compute shader partitioning
+    // D3D-style: perspective has FP_Projection[2][3] ~= 1 and FP_Projection[3][3] ~= 0;
+    //            orthographic has FP_Projection[2][3] ~= 0 and FP_Projection[3][3] ~= 1
+    bool isOrtho = (abs(FP_Projection[2][3]) < 1e-6f) && (abs(FP_Projection[3][3] - 1.0f) < 1e-6f);
+
+    // Match CS z-slicing: logarithmic for perspective, linear for orthographic
+    int zSlice;
+    if (!isOrtho)
+    {
+        // Clamp depth to [NearZ, FarZ]
+        float depthClamped = clamp(depthVS, FP_NearZ + 1e-6f, FP_FarZ - 1e-6f);
+        float logDen = log(FP_FarZ / FP_NearZ);
+        float sliceF = (log(depthClamped / FP_NearZ) / max(logDen, 1e-6f)) * FP_NumZSlices;
+        zSlice = clamp(int(floor(sliceF)), 0, int(FP_NumZSlices - 1));
+    }
+    else
+    {
+        // Linear partitioning across [NearZ, FarZ]
+        float depthClamped = clamp(depthVS, FP_NearZ, FP_FarZ);
+        float t = (depthClamped - FP_NearZ) / max(FP_FarZ - FP_NearZ, 1e-6f);
+        float sliceF = t * FP_NumZSlices;
+        zSlice = clamp(int(floor(sliceF)), 0, int(FP_NumZSlices - 1));
+    }
 
 	return (zSlice * FP_NumTilesY + tileY) * FP_NumTilesX + tileX;
 }

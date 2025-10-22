@@ -80,6 +80,10 @@ Frustum BuildClusterFrustum(uint tileX, uint tileY, uint zSlice)
 {
     Frustum f;
 
+    // Detect orthographic vs perspective projection.
+    // D3D-style: perspective has Proj[2][3] ~= 1 and Proj[3][3] ~= 0; ortho has Proj[2][3] ~= 0 and Proj[3][3] ~= 1
+    bool isOrtho = (abs(Proj[2][3]) < 1e-6f) && (abs(Proj[3][3] - 1.0f) < 1e-6f);
+
     // Tile bounds in NDC [-1,1]
     // X: 0..NumTilesX-1 maps left(-1) -> right(+1)
     float xFracMin = (tileX)     / (float)max(NumTilesX, 1);
@@ -97,25 +101,58 @@ Frustum BuildClusterFrustum(uint tileX, uint tileY, uint zSlice)
     float2 ndcMin = float2(ndcMinX, ndcMinY);
     float2 ndcMax = float2(ndcMaxX, ndcMaxY);
 
-    // Logarithmic partitioning in view-space depth (optional but common)
-    float zNear = NearZ * pow(FarZ / NearZ, (float)zSlice / (float)max(NumZSlices, 1));
-    float zFar  = NearZ * pow(FarZ / NearZ, (float)(zSlice + 1) / (float)max(NumZSlices, 1));
+    // Depth partitioning: use logarithmic for perspective, linear for orthographic
+    float zNear, zFar;
+    if (!isOrtho)
+    {
+        zNear = NearZ * pow(FarZ / NearZ, (float)zSlice / (float)max(NumZSlices, 1));
+        zFar  = NearZ * pow(FarZ / NearZ, (float)(zSlice + 1) / (float)max(NumZSlices, 1));
 
-    // Corner rays in view space
-    float3 r00 = UnprojectToViewRay(float2(ndcMin.x, ndcMin.y)); // bottom-left
-    float3 r10 = UnprojectToViewRay(float2(ndcMax.x, ndcMin.y)); // bottom-right
-    float3 r01 = UnprojectToViewRay(float2(ndcMin.x, ndcMax.y)); // top-left
-    float3 r11 = UnprojectToViewRay(float2(ndcMax.x, ndcMax.y)); // top-right
-    float3 rCenter = normalize(r00 + r10 + r01 + r11);
+    	// Perspective: side planes pass through origin; build from corner rays
+    	float3 r00 = UnprojectToViewRay(float2(ndcMin.x, ndcMin.y)); // bottom-left
+    	float3 r10 = UnprojectToViewRay(float2(ndcMax.x, ndcMin.y)); // bottom-right
+    	float3 r01 = UnprojectToViewRay(float2(ndcMin.x, ndcMax.y)); // top-left
+    	float3 r11 = UnprojectToViewRay(float2(ndcMax.x, ndcMax.y)); // top-right
+    	float3 rCenter = normalize(r00 + r10 + r01 + r11);
 
-    // Side planes passing through the origin; choose winding so normals point inward
-    // Build side planes; flip normals so they face inward (dot with rCenter > 0)
-    f.Sides[0].n = normalize(cross(r00, r01)); if (dot(f.Sides[0].n, rCenter) < 0) f.Sides[0].n = -f.Sides[0].n; f.Sides[0].d = 0.0f; // Left
-    f.Sides[1].n = normalize(cross(r11, r10)); if (dot(f.Sides[1].n, rCenter) < 0) f.Sides[1].n = -f.Sides[1].n; f.Sides[1].d = 0.0f; // Right
-    f.Sides[2].n = normalize(cross(r00, r10)); if (dot(f.Sides[2].n, rCenter) < 0) f.Sides[2].n = -f.Sides[2].n; f.Sides[2].d = 0.0f; // Bottom
-    f.Sides[3].n = normalize(cross(r11, r01)); if (dot(f.Sides[3].n, rCenter) < 0) f.Sides[3].n = -f.Sides[3].n; f.Sides[3].d = 0.0f; // Top
+    	// Build side planes; flip normals so they face inward (dot with rCenter > 0)
+    	f.Sides[0].n = normalize(cross(r00, r01)); if (dot(f.Sides[0].n, rCenter) < 0) f.Sides[0].n = -f.Sides[0].n; f.Sides[0].d = 0.0f; // Left
+    	f.Sides[1].n = normalize(cross(r11, r10)); if (dot(f.Sides[1].n, rCenter) < 0) f.Sides[1].n = -f.Sides[1].n; f.Sides[1].d = 0.0f; // Right
+    	f.Sides[2].n = normalize(cross(r00, r10)); if (dot(f.Sides[2].n, rCenter) < 0) f.Sides[2].n = -f.Sides[2].n; f.Sides[2].d = 0.0f; // Bottom
+    	f.Sides[3].n = normalize(cross(r11, r01)); if (dot(f.Sides[3].n, rCenter) < 0) f.Sides[3].n = -f.Sides[3].n; f.Sides[3].d = 0.0f; // Top
+    }
+    else
+    {
+        float t0 = (float)zSlice / (float)max(NumZSlices, 1);
+        float t1 = (float)(zSlice + 1) / (float)max(NumZSlices, 1);
+        zNear = lerp(NearZ, FarZ, t0);
+        zFar  = lerp(NearZ, FarZ, t1);
 
-    // Z range (view space, camera at origin looking +Z for D3D LH)
+    	// Orthographic: side planes are axis-aligned slabs in view space with non-zero offsets.
+    	// Unproject NDC corners to view space (z doesn't affect x/y in ortho; pick zNDC=0)
+    	float zNDC = 0.0f;
+    	float4 v00 = mul(float4(ndcMin.x, ndcMin.y, zNDC, 1.0f), InvProj);
+    	float4 v10 = mul(float4(ndcMax.x, ndcMin.y, zNDC, 1.0f), InvProj);
+    	float4 v01 = mul(float4(ndcMin.x, ndcMax.y, zNDC, 1.0f), InvProj);
+    	float4 v11 = mul(float4(ndcMax.x, ndcMax.y, zNDC, 1.0f), InvProj);
+    	v00.xyz /= max(v00.w, 1e-6f);
+    	v10.xyz /= max(v10.w, 1e-6f);
+    	v01.xyz /= max(v01.w, 1e-6f);
+    	v11.xyz /= max(v11.w, 1e-6f);
+
+    	float leftX   = min(v00.x, v01.x);
+    	float rightX  = max(v10.x, v11.x);
+    	float bottomY = min(v00.y, v10.y);
+    	float topY    = max(v01.y, v11.y);
+
+    	// Planes: inside region satisfies x in [leftX,rightX], y in [bottomY,topY]
+    	f.Sides[0].n = float3(+1, 0, 0); f.Sides[0].d = -leftX;   // Left:  x - leftX >= 0
+    	f.Sides[1].n = float3(-1, 0, 0); f.Sides[1].d = +rightX;  // Right: -x + rightX >= 0
+    	f.Sides[2].n = float3(0, +1, 0); f.Sides[2].d = -bottomY; // Bottom: y - bottomY >= 0
+    	f.Sides[3].n = float3(0, -1, 0); f.Sides[3].d = +topY;    // Top:   -y + topY >= 0
+    }
+
+    // Z range (view space, camera looking +Z for D3D LH)
     f.zNear = zNear;
     f.zFar  = zFar;
     return f;
@@ -124,10 +161,10 @@ Frustum BuildClusterFrustum(uint tileX, uint tileY, uint zSlice)
 // Sphere vs frustum test in view space
 bool IntersectsSphereFrustum(float3 centerVS, float radius, Frustum f)
 {
-    // Side planes (planes pass through origin => d = 0)
+    // Side planes (support both origin-passing and offset planes)
     for (int i = 0; i < 4; ++i)
     {
-        float dist = dot(f.Sides[i].n, centerVS) + f.Sides[i].d; // d==0
+        float dist = dot(f.Sides[i].n, centerVS) + f.Sides[i].d;
         if (dist < -radius) { return false; }
     }
     // Z slabs
