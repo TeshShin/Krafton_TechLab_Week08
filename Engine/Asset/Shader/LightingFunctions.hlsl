@@ -63,7 +63,8 @@ FLightingResult CalculateBlinnPhongLighting(float3 LightDir, float3 Normal, floa
 FLightingResult CalculateLambertLighting(float3 LightDir, float3 Normal, float3 LightColor)
 {
     FLightingResult Result;
-	Result.Ambient = float3(0, 0, 0);
+    Result.Ambient = float3(0, 0, 0);
+
     float NdotL = saturate(dot(Normal, LightDir));
     Result.Diffuse = LightColor * NdotL;
     Result.Specular = float3(0, 0, 0);

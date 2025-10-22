@@ -609,7 +609,8 @@ void UUIManager::CreateDockSpace()
 
 	// DockSpace 생성
 	ImGuiID DockSpaceID = ImGui::GetID("MyDockSpace");
-	ImGui::DockSpace(DockSpaceID, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
+	ImGuiDockNodeFlags DockSpaceFlags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoDockingInCentralNode;
+	ImGui::DockSpace(DockSpaceID, ImVec2(0.0f, 0.0f), DockSpaceFlags);
 
 	// 중앙 노드(Central Node) 정보 추적
 	ImGuiDockNode* CentralNode = ImGui::DockBuilderGetCentralNode(DockSpaceID);
@@ -622,12 +623,19 @@ void UUIManager::CreateDockSpace()
 	}
 	else if (CentralNode)
 	{
-		// 중앙 노드에 창이 도킹되어 있으면 viewport 비활성화
+		// 중앙 노드에 창이 도킹되어 있어도 위치/크기는 항상 업데이트
+		// (Editor.cpp에서 이 값을 항상 사용하므로)
 		bHasCentralNode = false;
+		CentralNodePos = CentralNode->Pos;
+		CentralNodeSize = CentralNode->Size;
 	}
 	else
 	{
+		// CentralNode가 nullptr인 경우, DockSpace의 전체 영역을 사용
+		// (main 브랜치의 WorkPos/WorkSize와 동일한 fallback)
 		bHasCentralNode = false;
+		CentralNodePos = ImVec2(Viewport->Pos.x, Viewport->Pos.y + MenuBarHeight);
+		CentralNodeSize = ImVec2(Viewport->Size.x, Viewport->Size.y - MenuBarHeight);
 	}
 
 	ImGui::End();
