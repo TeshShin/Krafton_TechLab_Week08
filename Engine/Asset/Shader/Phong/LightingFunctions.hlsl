@@ -42,13 +42,13 @@ FLightingResult CalculateBlinnPhongLighting(float3 LightDir, float3 Normal, floa
 
     // Diffuse (Lambertian)
     float NdotL = saturate(dot(Normal, LightDir));
-    Result.Diffuse = LightColor * NdotL;
-
-    // Specular (Blinn-Phong)
-    float3 HalfVec = normalize(LightDir + ViewDir);
-    float NdotH = saturate(dot(Normal, HalfVec));
-    float SpecularFactor = pow(NdotH, SpecularPower);
-	Result.Specular = LightColor * SpecularFactor;
+	Result.Diffuse = LightColor * NdotL;
+    
+    // Specular (Phong)
+	float3 ReflectDir = reflect(-LightDir, Normal);
+	float RdotV = saturate(dot(ReflectDir, ViewDir));
+	float SpecularFactor2 = pow(RdotV, SpecularPower);
+	Result.Specular = LightColor * SpecularFactor2;
 
     return Result;
 }
@@ -63,7 +63,6 @@ FLightingResult CalculateBlinnPhongLighting(float3 LightDir, float3 Normal, floa
 FLightingResult CalculateLambertLighting(float3 LightDir, float3 Normal, float3 LightColor)
 {
     FLightingResult Result;
-	Result.Ambient = float3(0, 0, 0);
 
     float NdotL = saturate(dot(Normal, LightDir));
     Result.Diffuse = LightColor * NdotL;

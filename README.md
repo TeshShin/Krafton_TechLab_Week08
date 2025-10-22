@@ -1,12 +1,26 @@
-# Week7 Team5 기술문서
+# KTL Engine - Technical Documentation
 
-## 1. 개요
+## 프로젝트 개요
 
-본 문서는 KTL 엔진에 7주차(2025.10.16 ~ 2025.10.19)에 구현된 주요 렌더링 시스템의 기술적 사양과 아키텍처를 설명합니다.
+**KTL Engine**은 DirectX 11 기반의 실시간 3D 렌더링 엔진으로, Forward+ (Clustered Forward Shading) 렌더링 파이프라인, 완전한 조명 시스템, 그리고 현대적인 셰이더 관리 시스템을 갖추고 있습니다.
 
-7주차에는 **Clustered Forward Shading (Forward+)** 렌더링 파이프라인 구축, **완전한 조명 시스템** (4종 라이트 타입), **Uber Shader 아키텍처**, **Normal Map 시스템**, **Render Pass 구조 재정립** 등 대규모 렌더링 인프라 개선 작업이 진행되었습니다.
+**주요 특징**:
+- ✅ **Forward+ Rendering**: 수백 개의 동적 광원 실시간 처리
+- ✅ **완전한 조명 시스템**: Directional, Point, Spot, Ambient Light 지원
+- ✅ **Shader Hot-Reload & Binary Caching**: 빠른 개발 및 최적화된 런타임 성능
+- ✅ **UPROPERTY 시스템**: 자동 직렬화, 복제, UI 생성
+- ✅ **계층적 Visibility 시스템**: SceneComponent 기반 Visibility 관리
+- ✅ **Uber Shader 아키텍처**: 유지보수 용이한 셰이더 구조
 
-총 **97개의 커밋**으로 구성되며, 대규모 조명 처리와 유지보수성을 크게 향상시켰습니다.
+---
+
+## Week7-8 작업 기간 (2025.10.16 ~ 2025.10.23)
+
+본 문서는 KTL 엔진에 Week7-8 기간(2025.10.16 ~ 2025.10.23)에 구현된 주요 시스템의 기술적 사양과 아키텍처를 설명합니다.
+
+이 기간 동안 **Clustered Forward Shading (Forward+)** 렌더링 파이프라인 완성, **Shader Hot-Reload & Binary Caching 시스템**, **UPROPERTY 리플렉션 시스템**, **계층적 Visibility 시스템** 등 대규모 인프라 개선 작업이 진행되었습니다.
+
+총 **120+ 개의 커밋**으로 구성되며, 렌더링 성능, 개발 효율성, 유지보수성을 크게 향상시켰습니다.
 
 ---
 
@@ -14,7 +28,15 @@
 
 ### 2.1. 개요
 
-Forward+ 렌더링은 화면을 타일로 나누어 각 타일에 영향을 미치는 라이트만 처리함으로써, 수백~수천 개의 동적 광원을 효율적으로 렌더링할 수 있는 기법입니다. 기존 Forward Rendering의 단순함을 유지하면서도 Deferred Rendering 수준의 조명 성능을 달성합니다.
+Forward+ 렌더링은 화면을 3D 클러스터(타일 + 깊이 슬라이스)로 나누어 각 클러스터에 영향을 미치는 라이트만 처리함으로써, 수백~수천 개의 동적 광원을 효율적으로 렌더링할 수 있는 기법입니다. 기존 Forward Rendering의 단순함을 유지하면서도 Deferred Rendering 수준의 조명 성능을 달성합니다.
+
+**구현 완료 날짜**: 2025.10.22 (Main 브랜치 머지)
+
+**주요 개선사항** (10.20-10.22):
+- ✅ Spot Light Cone-Frustum Intersection 정밀 구현
+- ✅ Orthographic & Perspective Projection 모두 지원
+- ✅ Compute Shader numthreads 최적화 (8×8×1)
+- ✅ 타일 크기: 16×16 픽셀, Z-슬라이스: 24개 (로그 분할)
 
 ### 2.2. 핵심 아키텍처
 
@@ -382,10 +404,16 @@ if (mesh->IsSphere()) {
 
 ### 10.2. 통계
 
-- **총 커밋**: 97개
-- **주요 기여자**: lorevoon (26), nayechan (18), dack-c (17), Donghee (14)
-- **변경 파일**: 수백 개 (셰이더, 소스 코드, 씬 등)
-- **주요 PR**: #33 (Forward+), #26 (Uber Shader), #25 (Spot Light), #28 (Unlit)
+- **총 커밋**: 120+개
+- **작업 기간**: 2025.10.16 ~ 2025.10.23 (8일)
+- **주요 기여자**: lorevoon, nayechan, dack-c, Donghee
+- **변경 파일**: 수백 개 (셰이더, 소스 코드, 씬, 시스템 등)
+- **주요 PR**:
+  - #33 (Forward+)
+  - #44 (Shader Hot-Reload & Binary Caching)
+  - #41 (UPROPERTY System)
+  - #45 (Hierarchical Visibility)
+  - #47 (Shader Folder-based Recompilation)
 
 ### 10.3. 향후 개선 방향
 
@@ -397,9 +425,127 @@ if (mesh->IsSphere()) {
 
 ---
 
-## 11. UPROPERTY 시스템
+## 11. Hierarchical Visibility 시스템
 
-### 11.1. 개요
+### 13.1. 개요
+
+계층적 Visibility 시스템은 `USceneComponent`의 부모-자식 관계를 활용하여, **부모 컴포넌트가 숨겨지면 자식도 자동으로 숨겨지는** 기능을 제공합니다.
+
+**구현 날짜**: 2025.10.22 (PR #45)
+
+**주요 기능**:
+- ✅ `SetVisibility(bool bNewVisibility)`: 현재 컴포넌트와 모든 자식 Visibility 설정
+- ✅ `IsVisibleInHierarchy()`: 부모 체인 전체 Visibility 확인
+- ✅ Abstract Component 생성 방지: `MeshComponent`, `PrimitiveComponent` 등은 생성 메뉴에서 제외
+
+### 13.2. 구현 상세
+
+#### 12.2.1. SetVisibility (재귀적 Visibility 설정)
+
+```cpp
+void USceneComponent::SetVisibility(bool bNewVisibility)
+{
+    bVisible = bNewVisibility;
+
+    // 재귀적으로 모든 자식 컴포넌트에 적용
+    for (USceneComponent* Child : Children)
+    {
+        if (Child)
+        {
+            Child->SetVisibility(bNewVisibility);
+        }
+    }
+}
+```
+
+#### 12.2.2. IsVisibleInHierarchy (부모 체인 확인)
+
+```cpp
+bool USceneComponent::IsVisibleInHierarchy() const
+{
+    if (!bVisible)
+        return false;
+
+    // 부모가 있으면 부모의 Visibility도 확인
+    if (AttachParent)
+        return AttachParent->IsVisibleInHierarchy();
+
+    return true;
+}
+```
+
+#### 12.2.3. 렌더링 통합
+
+모든 렌더 패스에서 `IsVisibleInHierarchy()` 사용:
+
+```cpp
+// StaticMeshPass.cpp
+for (UStaticMeshComponent* MeshComp : Context.StaticMeshes)
+{
+    if (!MeshComp->IsVisibleInHierarchy()) continue;
+    // 렌더링...
+}
+
+// BillboardPass.cpp
+for (ULightComponentBase* Light : Context.Lights)
+{
+    if (!Light->IsVisibleInHierarchy()) continue;
+    // Billboard 렌더링...
+}
+```
+
+### 13.3. Abstract Component 필터링
+
+특정 컴포넌트는 직접 생성할 수 없도록 Abstract로 표시:
+
+```cpp
+// MeshComponent.cpp
+UClass* UMeshComponent::StaticClass()
+{
+    static UClass* Class = new UClass(
+        "MeshComponent", "USceneComponent",
+        sizeof(UMeshComponent),
+        true  // bIsAbstract = true
+    );
+    return Class;
+}
+```
+
+**Abstract로 표시된 컴포넌트**:
+- `UMeshComponent`
+- `UPrimitiveComponent`
+- `ULightComponentBase`
+
+**에디터 UI**: Abstract 컴포넌트는 "Add Component" 메뉴에서 자동 제외됩니다.
+
+### 13.4. 사용 예시
+
+```cpp
+// Actor에 라이트 추가 (Billboard 포함)
+UPointLightComponent* Light = Actor->AddComponent<UPointLightComponent>();
+UBillboardComponent* Billboard = Actor->AddComponent<UBillboardComponent>();
+Billboard->AttachToComponent(Light);  // Light의 자식으로 설정
+
+// 라이트를 숨기면 Billboard도 자동으로 숨겨짐
+Light->SetVisibility(false);
+
+// 확인
+assert(Light->IsVisibleInHierarchy() == false);
+assert(Billboard->IsVisibleInHierarchy() == false);  // 부모가 숨겨져서 false
+```
+
+### 13.5. 장점
+
+- ✅ **일관성**: 부모-자식 관계가 Visibility에 자동 반영
+- ✅ **편의성**: 한 줄로 전체 계층 숨기기/보이기
+- ✅ **안전성**: Abstract 컴포넌트 직접 생성 방지
+- ✅ **성능**: 숨겨진 컴포넌트는 렌더링 파이프라인에서 조기 제외
+
+---
+
+## 12. UPROPERTY 시스템
+
+### 13.1. 개요
 
 UPROPERTY 시스템은 UObject 기반 클래스의 멤버 변수를 런타임 리플렉션 시스템에 등록하여, 자동 직렬화, 복제, UI 생성 등을 지원하는 메타데이터 시스템입니다.
 
@@ -410,9 +556,9 @@ UPROPERTY 시스템은 UObject 기반 클래스의 멤버 변수를 런타임 �
 - 타입 안전성 보장
 - 메타데이터 기반 제약 조건
 
-### 11.2. 기본 사용법
+### 13.2. 기본 사용법
 
-#### 11.2.1. UPROPERTY 매크로 종류
+#### 12.2.1. UPROPERTY 매크로 종류
 
 ```cpp
 // 1. 기본 선언 (기본값 없음, 메타데이터 없음)
@@ -436,7 +582,7 @@ UPROPERTY_INIT_WITHMETA(Type, Name, DefaultValue, FPropertyMetadata({
 }))
 ```
 
-#### 11.2.2. 사용 예제
+#### 12.2.2. 사용 예제
 
 ```cpp
 UCLASS()
@@ -466,7 +612,7 @@ public:
 };
 ```
 
-### 11.3. 프로퍼티 플래그
+### 13.3. 프로퍼티 플래그
 
 ```cpp
 enum class EPropertyFlags : uint64
@@ -495,7 +641,7 @@ EPropertyFlags::VisibleAnywhere
 EPropertyFlags::EditAnywhere | EPropertyFlags::DuplicateTransient
 ```
 
-### 11.4. 메타데이터 옵션
+### 13.4. 메타데이터 옵션
 
 ```cpp
 struct FPropertyMetadata
@@ -512,16 +658,16 @@ struct FPropertyMetadata
 };
 ```
 
-### 11.5. 지원하는 타입
+### 13.5. 지원하는 타입
 
-#### 11.5.1. 기본 타입
+#### 12.5.1. 기본 타입
 - `int8`, `int16`, `int32`, `int64`
 - `uint8`, `uint16`, `uint32`, `uint64`
 - `float`, `double`
 - `bool`
 - `FString`, `FName`
 
-#### 11.5.2. 벡터 및 색상 타입
+#### 12.5.2. 벡터 및 색상 타입
 ```cpp
 // 벡터 타입
 UPROPERTY_INIT_WITHMETA(FVector2, Position2D, FVector2(0, 0), ...);
@@ -533,7 +679,7 @@ UPROPERTY_INIT_WITHMETA(FLinearColor3, Color, FLinearColor3(1, 1, 1), ...);
 UPROPERTY_INIT_WITHMETA(FLinearColor, ColorWithAlpha, FLinearColor(1, 1, 1, 1), ...);
 ```
 
-#### 11.5.3. JSON 직렬화 형식
+#### 12.5.3. JSON 직렬화 형식
 
 벡터 및 색상 타입은 JSON 배열로 직렬화됩니다:
 ```json
@@ -544,9 +690,9 @@ UPROPERTY_INIT_WITHMETA(FLinearColor, ColorWithAlpha, FLinearColor(1, 1, 1, 1), 
 }
 ```
 
-### 11.6. 자동 직렬화 및 복제
+### 13.6. 자동 직렬화 및 복제
 
-#### 11.6.1. 자동 직렬화 (Serialize)
+#### 12.6.1. 자동 직렬화 (Serialize)
 
 `SaveGame` 플래그가 있는 프로퍼티는 자동으로 JSON에 저장/로드됩니다:
 
@@ -558,7 +704,7 @@ void UObject::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 }
 ```
 
-#### 11.6.2. 자동 복제 (Duplicate)
+#### 12.6.2. 자동 복제 (Duplicate)
 
 객체 복제 시 `DuplicateTransient` 플래그가 없는 프로퍼티만 복사됩니다:
 
@@ -567,9 +713,9 @@ UObject* NewObject = OriginalObject->Duplicate();
 // DuplicateTransient가 아닌 모든 프로퍼티 자동 복제
 ```
 
-### 11.7. 자동 UI 생성
+### 13.7. 자동 UI 생성
 
-#### 11.7.1. ComponentWidget 통합
+#### 12.7.1. ComponentWidget 통합
 
 모든 컴포넌트 위젯은 `UComponentWidget`을 상속받아 자동으로 UPROPERTY UI를 렌더링합니다:
 
@@ -584,7 +730,7 @@ void MyCustomWidget::RenderWidget()
 }
 ```
 
-#### 11.7.2. 타입별 UI
+#### 12.7.2. 타입별 UI
 
 | 타입 | UI 컨트롤 |
 |------|----------|
@@ -598,7 +744,7 @@ void MyCustomWidget::RenderWidget()
 | `FLinearColor3` | `ColorEdit3` (RGB 컬러 피커) |
 | `FLinearColor` | `ColorEdit4` (RGBA 컬러 피커) |
 
-### 11.8. 고급 사용 예제
+### 13.8. 고급 사용 예제
 
 ```cpp
 UCLASS()
@@ -644,7 +790,7 @@ public:
 };
 ```
 
-### 11.9. 주의사항
+### 13.9. 주의사항
 
 1. **타입 일치**: 기본값의 타입과 선언된 타입이 일치해야 합니다
    ```cpp
@@ -669,9 +815,9 @@ public:
 
 ---
 
-## 12. Shader 시스템 (Hot-Reload & Binary Caching)
+## 13. Shader 시스템 (Hot-Reload & Binary Caching)
 
-### 12.1. 개요
+### 13.1. 개요
 
 KTL 엔진의 Shader 시스템은 **Hot-Reload**와 **Binary Caching**을 지원하여 빠른 셰이더 개발 및 최적화된 런타임 성능을 제공합니다.
 
@@ -682,7 +828,7 @@ KTL 엔진의 Shader 시스템은 **Hot-Reload**와 **Binary Caching**을 지원
 - ✅ **MD5 + Timestamp 검증**: 소스 변경 감지 및 캐시 무효화
 - ✅ **ComPtr 기반 관리**: 자동 참조 카운팅으로 메모리 안전성 보장
 
-### 12.2. 아키텍처
+### 13.2. 아키텍처
 
 #### 12.2.1. 계층 구조
 
@@ -731,7 +877,7 @@ KTL 엔진의 Shader 시스템은 **Hot-Reload**와 **Binary Caching**을 지원
          └─────────────────────┘
 ```
 
-### 12.3. Shader Key 시스템
+### 13.3. Shader Key 시스템
 
 동일한 셰이더 variant를 식별하기 위한 고유 키:
 
@@ -751,7 +897,7 @@ struct FShaderKey {
 - `TextureVS.hlsl + LIGHTING_MODEL=GOURAUD + VertexShader` → Key2
 - 다른 키 = 별도 컴파일 및 캐싱
 
-### 12.4. 사용 방법
+### 13.4. 사용 방법
 
 #### 12.4.1. 기존 코드 (RenderResourceFactory - Deprecated)
 
@@ -832,7 +978,7 @@ class MyRenderPass {
 - ✅ **선택적 Hot-Reload**: Step 2 생략 가능 (임시 셰이더)
 - ✅ **SOLID 원칙 준수**: 각 컴포넌트가 단일 책임만 가짐
 
-### 12.5. Hot-Reload 동작 방식
+### 13.5. Hot-Reload 동작 방식
 
 #### 12.5.1. 자동 감지 (0.5초 간격)
 
@@ -882,7 +1028,7 @@ FShaderManager::Get().ReloadShader(L"Asset/Shader/MyShader.hlsl");
 - 성공 시: RenderPass의 포인터를 새 셰이더로 자동 교체
 - ComPtr로 관리: 메모리 누수 없음
 
-### 12.6. Binary Cache 시스템
+### 13.6. Binary Cache 시스템
 
 #### 12.6.1. Cache 파일 구조
 
@@ -932,7 +1078,7 @@ if (IsValid && !IsFolderModified && !FlagsChanged) {
 - 📝 **Include 파일 변경**: `LightingFunctions.hlsl` 등 공통 파일 수정 → 폴더 타임스탬프 변경
 - 🛠️ **빌드 설정 변경**: Debug ↔ Release, 최적화 플래그 변경 → CompileFlags 변경
 
-### 12.7. 성능 최적화
+### 13.7. 성능 최적화
 
 #### 12.7.1. Flyweight Pattern
 
@@ -958,7 +1104,7 @@ After (With Flyweight):
 | Warm start (Cache hit) | ~50ms (File I/O only) |
 | **10배 빠름!** | |
 
-### 12.8. SOLID 원칙 준수
+### 13.8. SOLID 원칙 준수
 
 | 원칙 | 구현 |
 |------|------|
@@ -968,7 +1114,7 @@ After (With Flyweight):
 | **ISP** | Hot-reload 불필요 시 Register 단계 생략 가능 |
 | **DIP** | 구체적 구현이 아닌 추상화(FShaderKey)에 의존 |
 
-### 12.9. 주의사항
+### 13.9. 주의사항
 
 1. **포인터 수명**: ShaderManager에 등록한 포인터는 객체 생명 주기 동안 유효해야 함
    ```cpp
@@ -998,13 +1144,13 @@ After (With Flyweight):
    - Pool: ComPtr로 소유 (자동 Release)
    - RenderPass: Raw pointer로 참조 (수동 Release)
 
-### 12.10. 최근 개선 사항 (v3)
+### 13.10. 최근 개선 사항 (v3)
 
 - ✅ **Shader Folder Timestamp 추적**: `#include` 종속성 자동 감지
 - ✅ **Compile Flags 검증**: 빌드 설정 변경 시 자동 재컴파일
 - ✅ **Cache Version 3**: 폴더 기반 타임스탬프로 간소화 및 안정성 향상
 
-### 12.11. 향후 개선 방향
+### 13.11. 향후 개선 방향
 
 - [ ] Async Shader Compilation (백그라운드 스레드)
 - [ ] Shader Variant Precompilation (에디터 시작 시)

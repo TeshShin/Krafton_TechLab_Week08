@@ -8,6 +8,32 @@
 using namespace std;
 
 /**
+ * @brief Tracks metadata for a single shader file in Asset/Shader folder
+ *
+ * Stores both timestamp and MD5 hash to accurately detect file modifications.
+ * Any change to any tracked file triggers a full recompilation of all shaders.
+ */
+struct FShaderFileInfo
+{
+	wstring FilePath;                    ///< Relative path to the .hlsl file (e.g., "Asset/Shader/LightingFunctions.hlsl")
+	FILETIME LastWriteTime;              ///< Last modification timestamp from Win32 API
+	uint8 MD5Hash[16];                   ///< Content hash of the entire file
+
+	FShaderFileInfo()
+		: LastWriteTime{}
+		, MD5Hash{}
+	{
+		memset(MD5Hash, 0, sizeof(MD5Hash));
+	}
+
+	/// Check if this file info has been initialized with valid data
+	bool IsValid() const
+	{
+		return LastWriteTime.dwLowDateTime != 0 || LastWriteTime.dwHighDateTime != 0;
+	}
+};
+
+/**
  * @brief Represents a single compiled shader variant with all metadata needed for hot-reload
  *
  * A shader variant is created when a shader file is compiled with specific preprocessor defines.
@@ -271,14 +297,34 @@ private:
 	 */
 	bool IsFileTimeNewer(const FILETIME& Time1, const FILETIME& Time2) const;
 
+	/**
+	 * @brief Calculate MD5 hash of a file's contents
+	 * @param FilePath Path to the file to hash
+	 * @param OutHash Output buffer for 16-byte MD5 hash
+	 * @return True if hash calculation succeeded
+	 */
+	bool CalculateFileMD5(const wstring& FilePath, uint8 OutHash[16]) const;
+
+	/**
+	 * @brief Scan Asset/Shader folder and update tracked file information
+	 *
+	 * This function recursively scans the shader folder and updates TrackedShaderFiles
+	 * with current timestamp and MD5 hash for all .hlsl files.
+	 *
+	 * @param ShaderFolderPath Root path to scan (e.g., "Asset/Shader")
+	 */
+	void UpdateTrackedShaderFiles(const wstring& ShaderFolderPath);
+
 private:
 	FShaderPool Pool;                                         ///< Shared shader object pool (Flyweight pattern)
 	TArray<FShaderVariant> Variants;                          ///< All registered shader variants
 	TMap<wstring, TArray<size_t>> PathToVariantIndices;       ///< Fast lookup: file path -> variant indices
 
-	FILETIME LastShaderFolderTimestamp;                       ///< Cached shader folder timestamp for detecting include file changes
+	TMap<wstring, FShaderFileInfo> TrackedShaderFiles;        ///< All .hlsl files in Asset/Shader with their metadata
+	FILETIME LastShaderFolderTimestamp;                       ///< Cached shader folder timestamp (deprecated, kept for compatibility)
 
 	// TODO: Add mutex for thread-safety when file watcher runs on separate thread
 	// TODO: Add performance metrics (recompile time, etc.)
 	// TODO: Consider adding a compilation queue for batching multiple reloads
+	// TODO: Parse #include directives for dependency-aware recompilation (future enhancement)
 };

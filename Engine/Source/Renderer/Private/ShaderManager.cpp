@@ -3,6 +3,11 @@
 #include "Renderer/Public/RenderResourceFactory.h"
 #include "Renderer/Public/Renderer.h"
 #include <Windows.h>
+#include <wincrypt.h>
+#include <filesystem>
+#include <fstream>
+
+#pragma comment(lib, "crypt32.lib")
 
 FShaderManager& FShaderManager::Get()
 {
@@ -191,83 +196,143 @@ int32 FShaderManager::ReloadAllShaders()
 
 int32 FShaderManager::CheckAndReloadModifiedShaders()
 {
-	int32 ModifiedFileCount = 0;
-
-	// Check shader folder timestamp for include file changes
 	static const wstring ShaderFolderPath = L"Asset/Shader";
-	FILETIME CurrentFolderTimestamp = Pool.GetBinaryCache().GetShaderFolderTimestamp(ShaderFolderPath);
 
-	// Check if this is first time (LastShaderFolderTimestamp is zero)
-	bool bIsFirstCheck = (LastShaderFolderTimestamp.dwLowDateTime == 0 &&
-	                      LastShaderFolderTimestamp.dwHighDateTime == 0);
-
-	if (bIsFirstCheck)
+	// Check if this is first time (TrackedShaderFiles is empty)
+	if (TrackedShaderFiles.empty())
 	{
-		// First time - just cache the timestamp
-		LastShaderFolderTimestamp = CurrentFolderTimestamp;
-	}
-	else if (CurrentFolderTimestamp.dwLowDateTime != LastShaderFolderTimestamp.dwLowDateTime ||
-	         CurrentFolderTimestamp.dwHighDateTime != LastShaderFolderTimestamp.dwHighDateTime)
-	{
-		// Folder timestamp changed - some file in shader folder was modified (e.g., include files like LightingFunctions.hlsl)
-		UE_LOG("ShaderManager: Shader folder modified (include files may have changed) - reloading ALL shaders");
-
-		int32 ReloadedCount = ReloadAllShaders();
-		LastShaderFolderTimestamp = CurrentFolderTimestamp;
-
-		if (ReloadedCount > 0)
-		{
-			UE_LOG("===== Shader Auto-Reload: Folder change detected, %d variant(s) recompiled =====", ReloadedCount);
-			return 1; // Return 1 to indicate folder-level change
-		}
+		// First time - initialize tracking for all .hlsl files in Asset/Shader
+		UE_LOG("ShaderManager: Initializing shader file tracking for '%ls'", ShaderFolderPath.c_str());
+		UpdateTrackedShaderFiles(ShaderFolderPath);
+		UE_LOG("ShaderManager: Tracking %zu shader file(s)", TrackedShaderFiles.size());
+		return 0;
 	}
 
-	// Check individual shader files for modifications
-	for (const auto& Pair : PathToVariantIndices)
+	// Track which files have been modified
+	TArray<wstring> ModifiedFiles;
+
+	try
 	{
-		const wstring& FilePath = Pair.first;
-		const TArray<size_t>& VariantIndices = Pair.second;
-
-		if (VariantIndices.empty()) continue;
-
-		// Get current file timestamp
-		FILETIME CurrentFileTime = GetFileWriteTime(FilePath);
-
-		// Check if file exists (zero timestamp means file not found)
-		if (CurrentFileTime.dwLowDateTime == 0 && CurrentFileTime.dwHighDateTime == 0)
+		// Scan all .hlsl files and compare with tracked metadata
+		for (const auto& Entry : std::filesystem::recursive_directory_iterator(ShaderFolderPath))
 		{
-			// File doesn't exist or can't be accessed
-			continue;
-		}
-
-		// Compare against the first variant's cached timestamp
-		// (All variants from same file should have same timestamp)
-		size_t FirstVariantIndex = VariantIndices[0];
-		if (FirstVariantIndex >= Variants.size()) continue;
-
-		const FILETIME& CachedFileTime = Variants[FirstVariantIndex].LastWriteTime;
-
-		// Check if file was modified
-		if (IsFileTimeNewer(CurrentFileTime, CachedFileTime))
-		{
-			UE_LOG("ShaderManager: File modified detected: '%ls'", FilePath.c_str());
-
-			// Reload all variants from this file
-			int32 ReloadedCount = ReloadShader(FilePath);
-
-			if (ReloadedCount > 0)
+			if (Entry.is_regular_file())
 			{
-				ModifiedFileCount++;
+				wstring Extension = Entry.path().extension().wstring();
+				if (Extension == L".hlsl")
+				{
+					wstring FilePath = Entry.path().wstring();
+
+					// Get current file metadata
+					FILETIME CurrentTime = GetFileWriteTime(FilePath);
+					uint8 CurrentHash[16] = {};
+
+					if (!CalculateFileMD5(FilePath, CurrentHash))
+					{
+						UE_LOG_WARNING("ShaderManager: Failed to calculate MD5 for '%ls', skipping", FilePath.c_str());
+						continue;
+					}
+
+					// Check if file is tracked
+					auto It = TrackedShaderFiles.find(FilePath);
+					if (It == TrackedShaderFiles.end())
+					{
+						// New file detected (not previously tracked)
+						UE_LOG("ShaderManager: New shader file detected: '%ls'", FilePath.c_str());
+						ModifiedFiles.push_back(FilePath);
+
+						// Add to tracking
+						FShaderFileInfo& FileInfo = TrackedShaderFiles[FilePath];
+						FileInfo.FilePath = FilePath;
+						FileInfo.LastWriteTime = CurrentTime;
+						memcpy(FileInfo.MD5Hash, CurrentHash, 16);
+					}
+					else
+					{
+						const FShaderFileInfo& CachedInfo = It->second;
+
+						// Check timestamp first (fast check)
+						bool bTimestampChanged = IsFileTimeNewer(CurrentTime, CachedInfo.LastWriteTime) ||
+						                         IsFileTimeNewer(CachedInfo.LastWriteTime, CurrentTime);
+
+						// If timestamp changed, verify with MD5 (accurate check)
+						if (bTimestampChanged)
+						{
+							bool bContentChanged = (memcmp(CurrentHash, CachedInfo.MD5Hash, 16) != 0);
+
+							if (bContentChanged)
+							{
+								UE_LOG("ShaderManager: File content modified: '%ls'", FilePath.c_str());
+								ModifiedFiles.push_back(FilePath);
+
+								// Update tracked info
+								FShaderFileInfo& FileInfo = TrackedShaderFiles[FilePath];
+								FileInfo.LastWriteTime = CurrentTime;
+								memcpy(FileInfo.MD5Hash, CurrentHash, 16);
+							}
+							else
+							{
+								// Timestamp changed but content is same (e.g., file touched without edit)
+								// Update timestamp silently
+								TrackedShaderFiles[FilePath].LastWriteTime = CurrentTime;
+							}
+						}
+					}
+				}
 			}
 		}
-	}
 
-	if (ModifiedFileCount > 0)
+		// Check for deleted files (files in TrackedShaderFiles but no longer exist)
+		TArray<wstring> DeletedFiles;
+		for (const auto& Pair : TrackedShaderFiles)
+		{
+			if (!std::filesystem::exists(Pair.first))
+			{
+				UE_LOG_WARNING("ShaderManager: Shader file deleted: '%ls'", Pair.first.c_str());
+				DeletedFiles.push_back(Pair.first);
+			}
+		}
+
+		// Remove deleted files from tracking
+		for (const wstring& DeletedFile : DeletedFiles)
+		{
+			TrackedShaderFiles.erase(DeletedFile);
+		}
+
+		// If any file was modified or deleted, reload all shaders
+		if (!ModifiedFiles.empty() || !DeletedFiles.empty())
+		{
+			UE_LOG("===== Shader Auto-Reload: %zu file(s) modified, %zu file(s) deleted =====",
+				ModifiedFiles.size(), DeletedFiles.size());
+
+			// Log each modified file
+			for (const wstring& ModifiedFile : ModifiedFiles)
+			{
+				UE_LOG("  - Modified: '%ls'", ModifiedFile.c_str());
+			}
+			for (const wstring& DeletedFile : DeletedFiles)
+			{
+				UE_LOG("  - Deleted: '%ls'", DeletedFile.c_str());
+			}
+
+			// Clear binary cache to force recompilation from source
+			// This ensures that modified files are actually recompiled, not loaded from stale cache
+			UE_LOG("ShaderManager: Clearing binary cache to force recompilation");
+			Pool.GetBinaryCache().ClearCache();
+
+			// Reload all shader variants
+			int32 ReloadedCount = ReloadAllShaders();
+			UE_LOG("===== Shader Auto-Reload: %d shader variant(s) recompiled =====", ReloadedCount);
+
+			return static_cast<int32>(ModifiedFiles.size() + DeletedFiles.size());
+		}
+	}
+	catch (const std::exception& e)
 	{
-		UE_LOG("===== Shader Auto-Reload: %d file(s) detected and recompiled =====", ModifiedFileCount);
+		UE_LOG_ERROR("ShaderManager: Exception during shader file checking: %s", e.what());
 	}
 
-	return ModifiedFileCount;
+	return 0;
 }
 
 bool FShaderManager::HasVariants(const wstring& InFilePath) const
@@ -439,4 +504,94 @@ bool FShaderManager::IsFileTimeNewer(const FILETIME& Time1, const FILETIME& Time
 	t2.HighPart = Time2.dwHighDateTime;
 
 	return t1.QuadPart > t2.QuadPart;
+}
+
+bool FShaderManager::CalculateFileMD5(const wstring& FilePath, uint8 OutHash[16]) const
+{
+	// Read file content
+	std::ifstream File(FilePath, std::ios::binary);
+	if (!File.is_open())
+	{
+		UE_LOG_ERROR("ShaderManager: Cannot open file '%ls' for MD5 calculation", FilePath.c_str());
+		return false;
+	}
+
+	// Get file size
+	File.seekg(0, std::ios::end);
+	size_t FileSize = File.tellg();
+	File.seekg(0, std::ios::beg);
+
+	// Read entire file into memory
+	TArray<char> Content(FileSize);
+	File.read(Content.data(), FileSize);
+	File.close();
+
+	// Calculate MD5 using Windows Crypto API
+	HCRYPTPROV hProv = 0;
+	HCRYPTHASH hHash = 0;
+
+	if (!CryptAcquireContext(&hProv, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT))
+	{
+		UE_LOG_ERROR("ShaderManager: CryptAcquireContext failed");
+		return false;
+	}
+
+	if (!CryptCreateHash(hProv, CALG_MD5, 0, 0, &hHash))
+	{
+		CryptReleaseContext(hProv, 0);
+		UE_LOG_ERROR("ShaderManager: CryptCreateHash failed");
+		return false;
+	}
+
+	// Hash the file content
+	CryptHashData(hHash, reinterpret_cast<const BYTE*>(Content.data()), static_cast<DWORD>(Content.size()), 0);
+
+	// Get hash value
+	DWORD HashLen = 16;
+	CryptGetHashParam(hHash, HP_HASHVAL, OutHash, &HashLen, 0);
+
+	CryptDestroyHash(hHash);
+	CryptReleaseContext(hProv, 0);
+
+	return true;
+}
+
+void FShaderManager::UpdateTrackedShaderFiles(const wstring& ShaderFolderPath)
+{
+	try
+	{
+		// Recursively iterate all .hlsl files in the shader folder
+		for (const auto& Entry : std::filesystem::recursive_directory_iterator(ShaderFolderPath))
+		{
+			if (Entry.is_regular_file())
+			{
+				wstring Extension = Entry.path().extension().wstring();
+				if (Extension == L".hlsl")
+				{
+					wstring FilePath = Entry.path().wstring();
+
+					// Get current file metadata
+					FILETIME CurrentTime = GetFileWriteTime(FilePath);
+					uint8 CurrentHash[16] = {};
+
+					if (!CalculateFileMD5(FilePath, CurrentHash))
+					{
+						UE_LOG_WARNING("ShaderManager: Failed to calculate MD5 for '%ls'", FilePath.c_str());
+						continue;
+					}
+
+					// Update or insert tracked file info
+					FShaderFileInfo& FileInfo = TrackedShaderFiles[FilePath];
+					FileInfo.FilePath = FilePath;
+					FileInfo.LastWriteTime = CurrentTime;
+					memcpy(FileInfo.MD5Hash, CurrentHash, 16);
+				}
+			}
+		}
+	}
+	catch (const std::exception& e)
+	{
+		UE_LOG_ERROR("ShaderManager: Exception while scanning shader folder '%ls': %s",
+			ShaderFolderPath.c_str(), e.what());
+	}
 }
