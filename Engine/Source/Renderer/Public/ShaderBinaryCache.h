@@ -36,14 +36,16 @@ public:
 	 * @param Key Shader variant identifier
 	 * @param Bytecode Compiled shader bytecode
 	 * @param BytecodeSize Size of bytecode in bytes
-	 * @param SourceTimestamp Timestamp of source .hlsl file
+	 * @param ShaderFolderTimestamp Latest timestamp of any .hlsl file in shader folder
+	 * @param CompileFlags D3DCompile flags used during compilation
 	 * @return True if save succeeded
 	 */
 	bool SaveToCache(
 		const FShaderKey& Key,
 		const void* Bytecode,
 		size_t BytecodeSize,
-		const FILETIME& SourceTimestamp);
+		const FILETIME& ShaderFolderTimestamp,
+		uint32 CompileFlags);
 
 	/**
 	 * @brief Load compiled shader from cache file
@@ -60,12 +62,14 @@ public:
 	 * @brief Check if cache file exists and is valid for given key
 	 *
 	 * @param Key Shader variant identifier
-	 * @param SourceTimestamp Current timestamp of source .hlsl file
+	 * @param ShaderFolderTimestamp Latest timestamp of any .hlsl file in shader folder
+	 * @param CompileFlags D3DCompile flags used during compilation
 	 * @return True if cache exists and is up-to-date
 	 */
 	bool IsCacheValid(
 		const FShaderKey& Key,
-		const FILETIME& SourceTimestamp);
+		const FILETIME& ShaderFolderTimestamp,
+		uint32 CompileFlags);
 
 	/**
 	 * @brief Calculate MD5 hash of shader source + defines
@@ -96,6 +100,17 @@ public:
 	 * @brief Get cache directory path
 	 */
 	const wstring& GetCacheDirectory() const { return CacheDirectory; }
+
+	/**
+	 * @brief Get latest timestamp of all .hlsl files in shader folder
+	 *
+	 * Used for dependency tracking. If any .hlsl file in the folder changes,
+	 * all shaders should be recompiled due to potential #include dependencies.
+	 *
+	 * @param ShaderFolderPath Path to shader folder (e.g., "Asset/Shader")
+	 * @return Latest FILETIME of any .hlsl file in the folder
+	 */
+	FILETIME GetShaderFolderTimestamp(const wstring& ShaderFolderPath) const;
 
 private:
 	wstring CacheDirectory;  ///< Path to cache directory

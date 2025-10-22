@@ -190,7 +190,7 @@ struct FShaderKeyHasher
 struct FShaderCacheHeader
 {
 	static constexpr uint64 MAGIC_NUMBER = 0x4F53435F4C544B00; // "KTL_CSO\0"
-	static constexpr uint32 VERSION = 1;
+	static constexpr uint32 VERSION = 3;  // Version 3: Removed CompileTimestamp, use ShaderFolderTimestamp only
 
 	uint64 Magic;          ///< Magic number for validation
 	uint32 Version;        ///< File format version
@@ -218,14 +218,16 @@ struct FShaderCacheMetadata
 {
 	wstring SourcePath;                 ///< Original .hlsl file path
 	TArray<FShaderDefine> Defines;      ///< Preprocessor defines used
-	FILETIME CompileTimestamp;          ///< When this was compiled
+	FILETIME ShaderFolderTimestamp;     ///< Latest timestamp of any .hlsl file in shader folder (for dependency tracking)
 	uint32 BytecodeSize;                ///< Size of shader bytecode
+	uint32 CompileFlags;                ///< D3DCompile flags used during compilation
 
 	FShaderCacheMetadata()
 		: BytecodeSize(0)
+		, CompileFlags(0)
 	{
-		CompileTimestamp.dwLowDateTime = 0;
-		CompileTimestamp.dwHighDateTime = 0;
+		ShaderFolderTimestamp.dwLowDateTime = 0;
+		ShaderFolderTimestamp.dwHighDateTime = 0;
 	}
 };
 

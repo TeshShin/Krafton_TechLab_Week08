@@ -276,6 +276,8 @@ private:
 	TArray<FShaderVariant> Variants;                          ///< All registered shader variants
 	TMap<wstring, TArray<size_t>> PathToVariantIndices;       ///< Fast lookup: file path -> variant indices
 
+	FILETIME LastShaderFolderTimestamp;                       ///< Cached shader folder timestamp for detecting include file changes
+
 	// TODO: Add mutex for thread-safety when file watcher runs on separate thread
 	// TODO: Add performance metrics (recompile time, etc.)
 	// TODO: Consider adding a compilation queue for batching multiple reloads

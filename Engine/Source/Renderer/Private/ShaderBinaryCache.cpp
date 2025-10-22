@@ -26,7 +26,8 @@ bool FShaderBinaryCache::SaveToCache(
 	const FShaderKey& Key,
 	const void* Bytecode,
 	size_t BytecodeSize,
-	const FILETIME& SourceTimestamp)
+	const FILETIME& ShaderFolderTimestamp,
+	uint32 CompileFlags)
 {
 	// Build cache entry
 	FShaderCacheEntry Entry;
@@ -42,8 +43,9 @@ bool FShaderBinaryCache::SaveToCache(
 	// Fill metadata
 	Entry.Metadata.SourcePath = Key.SourcePath;
 	Entry.Metadata.Defines = Key.Defines;
-	Entry.Metadata.CompileTimestamp = SourceTimestamp;
+	Entry.Metadata.ShaderFolderTimestamp = ShaderFolderTimestamp;
 	Entry.Metadata.BytecodeSize = static_cast<uint32>(BytecodeSize);
+	Entry.Metadata.CompileFlags = CompileFlags;
 
 	// Copy bytecode
 	Entry.Bytecode.resize(BytecodeSize);
@@ -103,7 +105,8 @@ bool FShaderBinaryCache::LoadFromCache(
 
 bool FShaderBinaryCache::IsCacheValid(
 	const FShaderKey& Key,
-	const FILETIME& SourceTimestamp)
+	const FILETIME& ShaderFolderTimestamp,
+	uint32 CompileFlags)
 {
 	wstring FilePath = GetCacheFilePath(Key);
 
@@ -120,10 +123,18 @@ bool FShaderBinaryCache::IsCacheValid(
 		return false;
 	}
 
-	// Check if source file is newer than cached version
-	if (IsFileTimeNewer(SourceTimestamp, Entry.Metadata.CompileTimestamp))
+	// Check if any file in shader folder is newer than cached version
+	if (IsFileTimeNewer(ShaderFolderTimestamp, Entry.Metadata.ShaderFolderTimestamp))
 	{
-		UE_LOG("ShaderBinaryCache: Cache outdated for '%ls' (source file modified)", Key.SourcePath.c_str());
+		UE_LOG("ShaderBinaryCache: Cache outdated for '%ls' (shader folder modified)", Key.SourcePath.c_str());
+		return false;
+	}
+
+	// Check if compile flags changed
+	if (Entry.Metadata.CompileFlags != CompileFlags)
+	{
+		UE_LOG("ShaderBinaryCache: Cache outdated for '%ls' (compile flags changed: 0x%X -> 0x%X)",
+			Key.SourcePath.c_str(), Entry.Metadata.CompileFlags, CompileFlags);
 		return false;
 	}
 
@@ -222,6 +233,42 @@ void FShaderBinaryCache::ClearCache()
 	}
 }
 
+FILETIME FShaderBinaryCache::GetShaderFolderTimestamp(const wstring& ShaderFolderPath) const
+{
+	FILETIME LatestTimestamp = {};
+	LatestTimestamp.dwLowDateTime = 0;
+	LatestTimestamp.dwHighDateTime = 0;
+
+	try
+	{
+		// Iterate all .hlsl files in the folder
+		for (const auto& Entry : std::filesystem::recursive_directory_iterator(ShaderFolderPath))
+		{
+			if (Entry.is_regular_file())
+			{
+				wstring Extension = Entry.path().extension().wstring();
+				if (Extension == L".hlsl")
+				{
+					FILETIME FileTime = GetFileTimestamp(Entry.path().wstring());
+
+					// Update if this file is newer
+					if (IsFileTimeNewer(FileTime, LatestTimestamp))
+					{
+						LatestTimestamp = FileTime;
+					}
+				}
+			}
+		}
+	}
+	catch (const std::exception& e)
+	{
+		UE_LOG_ERROR("ShaderBinaryCache: Failed to scan shader folder '%ls': %s",
+			ShaderFolderPath.c_str(), e.what());
+	}
+
+	return LatestTimestamp;
+}
+
 bool FShaderBinaryCache::EnsureCacheDirectoryExists()
 {
 	try
@@ -309,11 +356,14 @@ bool FShaderBinaryCache::WriteEntryToFile(const wstring& FilePath, const FShader
 			File.write(Define.Definition.c_str(), DefLen);
 		}
 
-		// - Compile timestamp
-		File.write(reinterpret_cast<const char*>(&Entry.Metadata.CompileTimestamp), sizeof(FILETIME));
+		// - Shader folder timestamp
+		File.write(reinterpret_cast<const char*>(&Entry.Metadata.ShaderFolderTimestamp), sizeof(FILETIME));
 
 		// - Bytecode size
 		File.write(reinterpret_cast<const char*>(&Entry.Metadata.BytecodeSize), sizeof(uint32));
+
+		// - Compile flags
+		File.write(reinterpret_cast<const char*>(&Entry.Metadata.CompileFlags), sizeof(uint32));
 
 		// Write bytecode
 		File.write(reinterpret_cast<const char*>(Entry.Bytecode.data()), Entry.Bytecode.size());
@@ -372,11 +422,14 @@ bool FShaderBinaryCache::ReadEntryFromFile(const wstring& FilePath, FShaderCache
 			OutEntry.Metadata.Defines.push_back(Define);
 		}
 
-		// - Compile timestamp
-		File.read(reinterpret_cast<char*>(&OutEntry.Metadata.CompileTimestamp), sizeof(FILETIME));
+		// - Shader folder timestamp
+		File.read(reinterpret_cast<char*>(&OutEntry.Metadata.ShaderFolderTimestamp), sizeof(FILETIME));
 
 		// - Bytecode size
 		File.read(reinterpret_cast<char*>(&OutEntry.Metadata.BytecodeSize), sizeof(uint32));
+
+		// - Compile flags
+		File.read(reinterpret_cast<char*>(&OutEntry.Metadata.CompileFlags), sizeof(uint32));
 
 		// Read bytecode
 		OutEntry.Bytecode.resize(OutEntry.Metadata.BytecodeSize);

@@ -92,6 +92,13 @@ public:
 	size_t GetCachedShaderCount() const;
 
 	/**
+	 * @brief Get binary cache for direct access
+	 * @return Reference to the binary cache manager
+	 */
+	FShaderBinaryCache& GetBinaryCache() { return BinaryCache; }
+	const FShaderBinaryCache& GetBinaryCache() const { return BinaryCache; }
+
+	/**
 	 * @brief Precompile all known shader variants at engine startup
 	 *
 	 * Scans shader directory, loads from cache if available, compiles if needed.
@@ -109,13 +116,6 @@ private:
 	{
 		ComPtr<ID3D11VertexShader> Shader;
 		ComPtr<ID3D11InputLayout> InputLayout;
-		FILETIME LastCompileTime;
-
-		FCachedVertexShader()
-		{
-			LastCompileTime.dwLowDateTime = 0;
-			LastCompileTime.dwHighDateTime = 0;
-		}
 	};
 
 	/**
@@ -124,13 +124,6 @@ private:
 	struct FCachedPixelShader
 	{
 		ComPtr<ID3D11PixelShader> Shader;
-		FILETIME LastCompileTime;
-
-		FCachedPixelShader()
-		{
-			LastCompileTime.dwLowDateTime = 0;
-			LastCompileTime.dwHighDateTime = 0;
-		}
 	};
 
 	/**
@@ -139,13 +132,6 @@ private:
 	struct FCachedComputeShader
 	{
 		ComPtr<ID3D11ComputeShader> Shader;
-		FILETIME LastCompileTime;
-
-		FCachedComputeShader()
-		{
-			LastCompileTime.dwLowDateTime = 0;
-			LastCompileTime.dwHighDateTime = 0;
-		}
 	};
 
 	TMap<FShaderKey, FCachedVertexShader, FShaderKeyHasher> VSCache;   ///< Vertex shader cache
@@ -185,4 +171,16 @@ private:
 	 * @brief Get file timestamp
 	 */
 	FILETIME GetFileTimestamp(const wstring& FilePath) const;
+
+	/**
+	 * @brief Get D3DCompile flags based on build configuration
+	 */
+	uint32 GetCompileFlags() const;
+
+	/**
+	 * @brief Extract shader folder path from source file path
+	 * @param SourcePath Full path to shader file (e.g., "Asset/Shader/TextureVS.hlsl")
+	 * @return Folder path (e.g., "Asset/Shader")
+	 */
+	wstring GetShaderFolderPath(const wstring& SourcePath) const;
 };

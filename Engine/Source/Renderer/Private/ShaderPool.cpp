@@ -99,7 +99,6 @@ ID3D11VertexShader* FShaderPool::GetOrCompileVS(
 	FCachedVertexShader Cached;
 	Cached.Shader = VS;
 	Cached.InputLayout = InputLayout;
-	Cached.LastCompileTime = GetFileTimestamp(Key.SourcePath);
 
 	VSCache[Key] = Cached;
 
@@ -154,7 +153,6 @@ ID3D11PixelShader* FShaderPool::GetOrCompilePS(const FShaderKey& Key)
 	// Add to cache
 	FCachedPixelShader Cached;
 	Cached.Shader = PS;
-	Cached.LastCompileTime = GetFileTimestamp(Key.SourcePath);
 
 	PSCache[Key] = Cached;
 
@@ -212,7 +210,6 @@ ID3D11ComputeShader* FShaderPool::GetOrCompileCS(
 	// Add to cache
 	FCachedComputeShader Cached;
 	Cached.Shader = CS;
-	Cached.LastCompileTime = GetFileTimestamp(Key.SourcePath);
 
 	CSCache[Key] = Cached;
 
@@ -253,8 +250,11 @@ void* FShaderPool::RecompileShader(const FShaderKey& Key)
 			nullptr,
 			&NewVS);
 
-		FILETIME Timestamp = GetFileTimestamp(Key.SourcePath);
-		BinaryCache.SaveToCache(Key, Bytecode->GetBufferPointer(), Bytecode->GetBufferSize(), Timestamp);
+		wstring ShaderFolderPath = GetShaderFolderPath(Key.SourcePath);
+		FILETIME ShaderFolderTimestamp = BinaryCache.GetShaderFolderTimestamp(ShaderFolderPath);
+		uint32 CompileFlags = GetCompileFlags();
+		BinaryCache.SaveToCache(Key, Bytecode->GetBufferPointer(), Bytecode->GetBufferSize(),
+			ShaderFolderTimestamp, CompileFlags);
 		SafeRelease(Bytecode);
 
 		if (FAILED(hr))
@@ -265,7 +265,6 @@ void* FShaderPool::RecompileShader(const FShaderKey& Key)
 
 		// Update cache (ComPtr automatically releases old shader)
 		It->second.Shader = NewVS;
-		It->second.LastCompileTime = Timestamp;
 
 		UE_LOG("ShaderPool: Successfully recompiled VS '%ls'", Key.SourcePath.c_str());
 
@@ -298,8 +297,11 @@ void* FShaderPool::RecompileShader(const FShaderKey& Key)
 			nullptr,
 			&NewPS);
 
-		FILETIME Timestamp = GetFileTimestamp(Key.SourcePath);
-		BinaryCache.SaveToCache(Key, Bytecode->GetBufferPointer(), Bytecode->GetBufferSize(), Timestamp);
+		wstring ShaderFolderPath = GetShaderFolderPath(Key.SourcePath);
+		FILETIME ShaderFolderTimestamp = BinaryCache.GetShaderFolderTimestamp(ShaderFolderPath);
+		uint32 CompileFlags = GetCompileFlags();
+		BinaryCache.SaveToCache(Key, Bytecode->GetBufferPointer(), Bytecode->GetBufferSize(),
+			ShaderFolderTimestamp, CompileFlags);
 		SafeRelease(Bytecode);
 
 		if (FAILED(hr))
@@ -310,7 +312,6 @@ void* FShaderPool::RecompileShader(const FShaderKey& Key)
 
 		// Update cache
 		It->second.Shader = NewPS;
-		It->second.LastCompileTime = Timestamp;
 
 		UE_LOG("ShaderPool: Successfully recompiled PS '%ls'", Key.SourcePath.c_str());
 
@@ -342,8 +343,11 @@ void* FShaderPool::RecompileShader(const FShaderKey& Key)
 			nullptr,
 			&NewCS);
 
-		FILETIME Timestamp = GetFileTimestamp(Key.SourcePath);
-		BinaryCache.SaveToCache(Key, Bytecode->GetBufferPointer(), Bytecode->GetBufferSize(), Timestamp);
+		wstring ShaderFolderPath = GetShaderFolderPath(Key.SourcePath);
+		FILETIME ShaderFolderTimestamp = BinaryCache.GetShaderFolderTimestamp(ShaderFolderPath);
+		uint32 CompileFlags = GetCompileFlags();
+		BinaryCache.SaveToCache(Key, Bytecode->GetBufferPointer(), Bytecode->GetBufferSize(),
+			ShaderFolderTimestamp, CompileFlags);
 		SafeRelease(Bytecode);
 
 		if (FAILED(hr))
@@ -354,7 +358,6 @@ void* FShaderPool::RecompileShader(const FShaderKey& Key)
 
 		// Update cache
 		It->second.Shader = NewCS;
-		It->second.LastCompileTime = Timestamp;
 
 		UE_LOG("ShaderPool: Successfully recompiled CS '%ls'", Key.SourcePath.c_str());
 
@@ -381,19 +384,31 @@ int32 FShaderPool::PrecompileAllShaders()
 
 bool FShaderPool::CompileOrLoadShader(const FShaderKey& Key, ID3DBlob** OutBytecode)
 {
+	// Get compile flags and timestamps
+	uint32 CompileFlags = GetCompileFlags();
+	wstring ShaderFolderPath = GetShaderFolderPath(Key.SourcePath);
+	FILETIME ShaderFolderTimestamp = BinaryCache.GetShaderFolderTimestamp(ShaderFolderPath);
+
 	// Try load from binary cache first
-	FILETIME SourceTimestamp = GetFileTimestamp(Key.SourcePath);
 	FShaderCacheEntry CacheEntry;
 
 	if (BinaryCache.LoadFromCache(Key, CacheEntry))
 	{
-		// Create blob from cached bytecode
-		HRESULT hr = D3DCreateBlob(CacheEntry.Bytecode.size(), OutBytecode);
-		if (SUCCEEDED(hr))
+		// Validate cache with flags and timestamps
+		if (BinaryCache.IsCacheValid(Key, ShaderFolderTimestamp, CompileFlags))
 		{
-			memcpy((*OutBytecode)->GetBufferPointer(), CacheEntry.Bytecode.data(), CacheEntry.Bytecode.size());
-			UE_LOG("ShaderPool: Loaded shader from cache '%ls'", Key.SourcePath.c_str());
-			return true;
+			// Create blob from cached bytecode
+			HRESULT hr = D3DCreateBlob(CacheEntry.Bytecode.size(), OutBytecode);
+			if (SUCCEEDED(hr))
+			{
+				memcpy((*OutBytecode)->GetBufferPointer(), CacheEntry.Bytecode.data(), CacheEntry.Bytecode.size());
+				UE_LOG("ShaderPool: Loaded shader from cache '%ls'", Key.SourcePath.c_str());
+				return true;
+			}
+		}
+		else
+		{
+			UE_LOG("ShaderPool: Cache invalid for '%ls', recompiling", Key.SourcePath.c_str());
 		}
 	}
 
@@ -422,8 +437,9 @@ bool FShaderPool::CompileOrLoadShader(const FShaderKey& Key, ID3DBlob** OutBytec
 		return false;
 	}
 
-	// Save to cache
-	BinaryCache.SaveToCache(Key, (*OutBytecode)->GetBufferPointer(), (*OutBytecode)->GetBufferSize(), SourceTimestamp);
+	// Save to cache with flags and folder timestamp
+	BinaryCache.SaveToCache(Key, (*OutBytecode)->GetBufferPointer(), (*OutBytecode)->GetBufferSize(),
+		ShaderFolderTimestamp, CompileFlags);
 
 	return true;
 }
@@ -437,13 +453,10 @@ bool FShaderPool::CompileFromSource(
 	// Convert FShaderDefine to D3D_SHADER_MACRO
 	TArray<D3D_SHADER_MACRO> Macros = ConvertToD3DMacros(Key.Defines);
 
-	ID3DBlob* ErrorBlob = nullptr;
-	UINT Flags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if defined(DEBUG) || defined(_DEBUG)
-	Flags |= D3DCOMPILE_DEBUG;
-	Flags |= D3DCOMPILE_OPTIMIZATION_LEVEL0;  // 디버깅 편의성 위해, 최소 최적화 적용: 최적화를 완전히 끄면 물체가 빛을 받을 때, 이상한 artifacts가 생김
-#endif
+	// Get compile flags
+	UINT Flags = GetCompileFlags();
 
+	ID3DBlob* ErrorBlob = nullptr;
 	HRESULT hr = D3DCompileFromFile(
 		Key.SourcePath.c_str(),
 		Macros.data(),
@@ -507,4 +520,25 @@ FILETIME FShaderPool::GetFileTimestamp(const wstring& FilePath) const
 	}
 
 	return Result;
+}
+
+uint32 FShaderPool::GetCompileFlags() const
+{
+	UINT Flags = D3DCOMPILE_ENABLE_STRICTNESS;
+#if defined(DEBUG) || defined(_DEBUG)
+	Flags |= D3DCOMPILE_DEBUG;
+	Flags |= D3DCOMPILE_OPTIMIZATION_LEVEL1;  // 디버깅 편의성 위해, 최소 최적화 적용: 최적화를 완전히 끄면 물체가 빛을 받을 때, 이상한 artifacts가 생김
+#endif
+	return Flags;
+}
+
+wstring FShaderPool::GetShaderFolderPath(const wstring& SourcePath) const
+{
+	// Extract folder path from file path
+	size_t LastSlash = SourcePath.find_last_of(L"/\\");
+	if (LastSlash != wstring::npos)
+	{
+		return SourcePath.substr(0, LastSlash);
+	}
+	return L".";
 }
