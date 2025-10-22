@@ -4,7 +4,7 @@
 #include "Physics/Public/AABB.h"
 #include "Physics/Public/OBB.h"
 
-IMPLEMENT_CLASS(UPrimitiveComponent, USceneComponent)
+IMPLEMENT_ABSTRACT_CLASS(UPrimitiveComponent, USceneComponent)
 
 UPrimitiveComponent::UPrimitiveComponent()
 {

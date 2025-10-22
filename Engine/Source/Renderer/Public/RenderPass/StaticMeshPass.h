@@ -60,7 +60,7 @@ private:
 
 	uint32 TileSize = 16;
 	uint32 NumZSlices = 24;
-	uint32 MaxLightsPerCluster = 64;
+	uint32 MaxLightsPerCluster = 32;
 
     // Cached cluster dimensions to avoid reallocating every frame
     uint32 CachedNumTilesX = 0;
