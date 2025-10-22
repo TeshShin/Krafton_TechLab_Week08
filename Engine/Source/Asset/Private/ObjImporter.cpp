@@ -328,7 +328,7 @@ bool FObjImporter::LoadMaterial(const std::filesystem::path& FilePath, FObjInfo*
 		FString Prefix;
 
 		Tokenizer >> Prefix;
-
+		std::ranges::transform(Prefix, Prefix.begin(), ::tolower);
 		if (Prefix == "newmtl")
 		{
 			if (OptMaterialInfo)
@@ -343,7 +343,7 @@ bool FObjImporter::LoadMaterial(const std::filesystem::path& FilePath, FObjInfo*
 				return false;
 			}
 		}
-		else if (Prefix == "Ns")
+		else if (Prefix == "ns")
 		{
 			if (!OptMaterialInfo)
 			{
@@ -357,7 +357,7 @@ bool FObjImporter::LoadMaterial(const std::filesystem::path& FilePath, FObjInfo*
 				return false;
 			}
 		}
-		else if (Prefix == "Ka")
+		else if (Prefix == "ka")
 		{
 			if (!OptMaterialInfo)
 			{
@@ -371,7 +371,7 @@ bool FObjImporter::LoadMaterial(const std::filesystem::path& FilePath, FObjInfo*
 				return false;
 			}
 		}
-		else if (Prefix == "Kd")
+		else if (Prefix == "kd")
 		{
 			if (!OptMaterialInfo)
 			{
@@ -385,7 +385,7 @@ bool FObjImporter::LoadMaterial(const std::filesystem::path& FilePath, FObjInfo*
 				return false;
 			}
 		}
-		else if (Prefix == "Ks")
+		else if (Prefix == "ks")
 		{
 			if (!OptMaterialInfo)
 			{
@@ -399,11 +399,11 @@ bool FObjImporter::LoadMaterial(const std::filesystem::path& FilePath, FObjInfo*
 				return false;
 			}
 		}
-		else if (Prefix == "Ke")
+		else if (Prefix == "ke")
 		{
 			// Ke is not in FObjectMaterialInfo, skipping
 		}
-		else if (Prefix == "Ni")
+		else if (Prefix == "ni")
 		{
 			if (!OptMaterialInfo)
 			{
@@ -431,7 +431,7 @@ bool FObjImporter::LoadMaterial(const std::filesystem::path& FilePath, FObjInfo*
 				return false;
 			}
 		}
-		else if (Prefix == "Tr")
+		else if (Prefix == "tr")
 		{
 			if (!OptMaterialInfo)
 			{
@@ -446,7 +446,7 @@ bool FObjImporter::LoadMaterial(const std::filesystem::path& FilePath, FObjInfo*
 			}
 			OptMaterialInfo->D = 1.0f - Tr;
 		}
-		else if (Prefix == "Tf")
+		else if (Prefix == "tf")
 		{
 			// Tf is not in FObjectMaterialInfo, skipping
 		}
@@ -464,7 +464,7 @@ bool FObjImporter::LoadMaterial(const std::filesystem::path& FilePath, FObjInfo*
 				return false;
 			}
 		}
-		else if (Prefix == "map_Ka")
+		else if (Prefix == "map_ka")
 		{
 			if (!OptMaterialInfo)
 			{
@@ -478,7 +478,7 @@ bool FObjImporter::LoadMaterial(const std::filesystem::path& FilePath, FObjInfo*
 				return false;
 			}
 		}
-		else if (Prefix == "map_Kd")
+		else if (Prefix == "map_kd")
 		{
 			if (!OptMaterialInfo)
 			{
@@ -492,7 +492,7 @@ bool FObjImporter::LoadMaterial(const std::filesystem::path& FilePath, FObjInfo*
 				return false;
 			}
 		}
-		else if (Prefix == "map_Ks")
+		else if (Prefix == "map_ks")
 		{
 			if (!OptMaterialInfo)
 			{
@@ -506,7 +506,7 @@ bool FObjImporter::LoadMaterial(const std::filesystem::path& FilePath, FObjInfo*
 				return false;
 			}
 		}
-		else if (Prefix == "map_Ns")
+		else if (Prefix == "map_ns")
 		{
 			if (!OptMaterialInfo)
 			{
