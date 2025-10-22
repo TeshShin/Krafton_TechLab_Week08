@@ -38,6 +38,7 @@ FLightingResult CalculateBlinnPhongLighting(float3 LightDir, float3 Normal, floa
                                              float3 LightColor, float SpecularPower)
 {
     FLightingResult Result;
+	Result.Ambient = float3(0, 0, 0);
 
     // Diffuse (Lambertian)
     float NdotL = saturate(dot(Normal, LightDir));

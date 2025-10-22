@@ -527,7 +527,7 @@ uint32 FShaderPool::GetCompileFlags() const
 	UINT Flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DEBUG) || defined(_DEBUG)
 	Flags |= D3DCOMPILE_DEBUG;
-	Flags |= D3DCOMPILE_OPTIMIZATION_LEVEL1;  // 디버깅 편의성 위해, 최소 최적화 적용: 최적화를 완전히 끄면 물체가 빛을 받을 때, 이상한 artifacts가 생김
+	Flags |= D3DCOMPILE_SKIP_OPTIMIZATION;  // 쉐이더 디버깅 편의성 위해, 최적화 끔
 #endif
 	return Flags;
 }
