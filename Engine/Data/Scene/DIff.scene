@@ -1,0 +1,125 @@
+{
+  "Actors" : {
+    "105" : {
+      "Components" : [{
+          "AttenuationRadius" : 10.000000,
+          "Intensity" : 5.000000,
+          "IsEditorOnly" : "false",
+          "IsVisualizationComponent" : "false",
+          "LightColor" : [1.000000, 1.000000, 1.000000],
+          "LightFalloffExponent" : 2.000000,
+          "Location" : [-1.831416, 6.868645, 6.056798],
+          "Name" : "UPointLightComponent_0",
+          "ParentName" : "",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [1.430341, 1.430341, 1.430341],
+          "Type" : "UPointLightComponent",
+          "bVisible" : true
+        }, {
+          "IsEditorOnly" : "true",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UUUIDTextComponent_1",
+          "ParentName" : "UPointLightComponent_0",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [0.300000, 0.300000, 0.300000],
+          "Type" : "UUUIDTextComponent",
+          "bVisible" : "1"
+        }, {
+          "BillBoardScreenSize" : "5.000000",
+          "BillBoardScreenSizeScaled" : "true",
+          "BillBoardSprite" : "Data\\Icons\\PointLight_64x.png",
+          "IsEditorOnly" : "true",
+          "IsVisualizationComponent" : "true",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UBillBoardComponent_0",
+          "ParentName" : "UPointLightComponent_0",
+          "Rotation" : [-21.779684, -27.309807, 41.051899],
+          "Scale" : [0.300000, 0.300000, 0.300000],
+          "Type" : "UBillBoardComponent",
+          "bVisible" : "1"
+        }, {
+          "BillBoardScreenSize" : "5.000000",
+          "BillBoardScreenSizeScaled" : "true",
+          "BillBoardSprite" : "Data\\Icons\\PointLight_64x.png",
+          "IsEditorOnly" : "true",
+          "IsVisualizationComponent" : "true",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UBillBoardComponent_1",
+          "ParentName" : "UPointLightComponent_0",
+          "Rotation" : [-21.779684, -27.309807, 41.051899],
+          "Scale" : [0.300000, 0.300000, 0.300000],
+          "Type" : "UBillBoardComponent",
+          "bVisible" : "1"
+        }],
+      "Location" : [-1.831416, 6.868645, 6.056798],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "Scale" : [1.430341, 1.430341, 1.430341],
+      "Type" : "APointLightActor",
+      "bCanEverTick" : "false",
+      "bTickInEditor" : "false",
+      "bVisible" : "1"
+    },
+    "128" : {
+      "Components" : [{
+          "IsEditorOnly" : "false",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UStaticMeshComponent_1",
+          "ObjStaticMeshAsset" : "Data/Sphere_Rock.obj",
+          "ParentName" : "",
+          "Rotation" : [2.699480, 0.991139, 163.640213],
+          "Scale" : [5.252000, 5.252000, 5.252000],
+          "Type" : "UStaticMeshComponent",
+          "bVisible" : "1"
+        }, {
+          "IsEditorOnly" : "true",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UUUIDTextComponent_2",
+          "ParentName" : "UStaticMeshComponent_1",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [0.300000, 0.300000, 0.300000],
+          "Type" : "UUUIDTextComponent",
+          "bVisible" : "1"
+        }],
+      "Location" : [0.000000, 0.000000, 0.000000],
+      "Rotation" : [2.699480, 0.991139, 163.640213],
+      "Scale" : [5.252000, 5.252000, 5.252000],
+      "Type" : "ASphereActor",
+      "bCanEverTick" : "false",
+      "bTickInEditor" : "false",
+      "bVisible" : "1"
+    }
+  },
+  "NextUUID" : 0,
+  "PerspectiveCamera" : [{
+      "FOV" : [90.000000],
+      "FarClip" : [1000.000000],
+      "Location" : [-15.000000, 0.000000, 10.000000],
+      "NearClip" : [0.100000],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "ViewportCameraType" : 0
+    }, {
+      "FOV" : [90.000000],
+      "FarClip" : [1000.000000],
+      "Location" : [-15.000000, 0.000000, 10.000000],
+      "NearClip" : [0.100000],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "ViewportCameraType" : 0
+    }, {
+      "FOV" : [90.000000],
+      "FarClip" : [1000.000000],
+      "Location" : [-15.000000, 0.000000, 10.000000],
+      "NearClip" : [0.100000],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "ViewportCameraType" : 0
+    }, {
+      "FOV" : [90.000000],
+      "FarClip" : [1000.000000],
+      "Location" : [-8.701442, 9.454606, 8.394191],
+      "NearClip" : [0.100000],
+      "Rotation" : [0.000000, 34.400093, -35.699982],
+      "ViewportCameraType" : 0
+    }]
+}
