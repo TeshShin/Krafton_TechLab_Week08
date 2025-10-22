@@ -102,7 +102,7 @@ void UAssetManager::Release()
 	StaticMeshVertexBuffers.clear();
 	StaticMeshIndexBuffers.clear();
 
-	// Material Cache Release - unique_ptr이라서 자동으로 해제됨
+	// Material Cache Release - UObject 시스템이 자동으로 관리하므로 배열만 clear
 	MaterialCache.clear();
 
 	// TMap.Empty()
@@ -250,7 +250,7 @@ UMaterial* UAssetManager::GetMaterialFromCache(const FName& InMaterialName)
 	auto It = MaterialCache.find(InMaterialName);
 	if (It != MaterialCache.end())
 	{
-		return It->second.get();
+		return It->second;
 	}
 	return nullptr;
 }

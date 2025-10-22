@@ -42,7 +42,7 @@ public:
 	FAABB& GetAABB(EPrimitiveType InType);
 	FAABB& GetStaticMeshAABB(FName InName);
 
-	// Material Cache Accessors - 추가
+	// Material Cache Accessors - FName 사용
 	UMaterial* GetMaterialFromCache(const FName& InMaterialName);
 	void AddMaterialToCache(const FName& InMaterialName, UMaterial* InMaterial);
 
@@ -64,8 +64,8 @@ private:
 	TMap<FName, ID3D11Buffer*> StaticMeshVertexBuffers;
 	TMap<FName, ID3D11Buffer*> StaticMeshIndexBuffers;
 
-	// Material Resource - 추가
-	TMap<FName, std::unique_ptr<UMaterial>> MaterialCache;
+	// Material Resource - FName 키, raw pointer (UObject 시스템이 메모리 관리)
+	TMap<FName, UMaterial*> MaterialCache;
 
 	// Helper Functions
 	FAABB CalculateAABB(const TArray<FNormalVertex>& Vertices);
