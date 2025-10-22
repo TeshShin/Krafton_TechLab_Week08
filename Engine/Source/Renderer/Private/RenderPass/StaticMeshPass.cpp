@@ -406,12 +406,6 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 		UnifiedLights.push_back(UnifiedLight);
 	}
 
-	// When empty, upload one dummy light with Intensity=0 to maintain buffer validity
-	if (UnifiedLights.empty())
-	{
-		UnifiedLights.push_back(FUnifiedDynamicLight());  // All fields zero, Intensity=0
-	}
-
 	return UnifiedLights;
 }
 
