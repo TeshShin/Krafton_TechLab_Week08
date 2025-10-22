@@ -5,17 +5,29 @@
 
 FAxis::FAxis()
 {
-	// UE x(forward)
-	AxisVertices.push_back({ { 50000.0f,0.0f,.0f }, {}, { 1,0,0,1 }, {} });
+	// UE x(forward) - X축 양의 방향 (짙은 빨간색)
 	AxisVertices.push_back({ { 0.0f,0.0f,0.0f }, {}, { 1,0,0,1 }, {} });
+	AxisVertices.push_back({ { 50000.0f,0.0f,0.0f }, {}, { 1,0,0,1 }, {} });
 
-	// UE y(right)
-	AxisVertices.push_back({ { .0f,50000.0f,0.0f }, {}, { 0,1,0,1 }, {} });
+	// UE x(forward) - X축 음의 방향 (옅은 빨간색)
+	AxisVertices.push_back({ { 0.0f,0.0f,0.0f }, {}, { 1.0f,0.5f,0.5f,1 }, {} });
+	AxisVertices.push_back({ { -50000.0f,0.0f,0.0f }, {}, { 1.0f,0.5f,0.5f,1 }, {} });
+
+	// UE y(right) - Y축 양의 방향 (짙은 초록색)
 	AxisVertices.push_back({ { 0.0f,0.0f,0.0f }, {}, { 0,1,0,1 }, {} });
+	AxisVertices.push_back({ { 0.0f,50000.0f,0.0f }, {}, { 0,1,0,1 }, {} });
 
-	// UE z(up)
-	AxisVertices.push_back({ { 0.0f,.0f,50000.0f }, {}, { 0,0,1,1 }, {} });
+	// UE y(right) - Y축 음의 방향 (옅은 초록색)
+	AxisVertices.push_back({ { 0.0f,0.0f,0.0f }, {}, { 0.5f,1.0f,0.5f,1 }, {} });
+	AxisVertices.push_back({ { 0.0f,-50000.0f,0.0f }, {}, { 0.5f,1.0f,0.5f,1 }, {} });
+
+	// UE z(up) - Z축 양의 방향 (짙은 파란색)
 	AxisVertices.push_back({ { 0.0f,0.0f,0.0f }, {}, { 0,0,1,1 }, {} });
+	AxisVertices.push_back({ { 0.0f,0.0f,50000.0f }, {}, { 0,0,1,1 }, {} });
+
+	// UE z(up) - Z축 음의 방향 (옅은 파란색)
+	AxisVertices.push_back({ { 0.0f,0.0f,0.0f }, {}, { 0.5f,0.5f,1.0f,1 }, {} });
+	AxisVertices.push_back({ { 0.0f,0.0f,-50000.0f }, {}, { 0.5f,0.5f,1.0f,1 }, {} });
 
 	Primitive.NumVertices = static_cast<int>(AxisVertices.size());
 	Primitive.VertexBuffer = FRenderResourceFactory::CreateVertexBuffer(AxisVertices);
