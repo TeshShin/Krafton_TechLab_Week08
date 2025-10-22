@@ -245,6 +245,8 @@ void URenderer::RenderBegin() const
 	GetDeviceContext()->ClearRenderTargetView(GetSourceRTV(), ClearColor);
 	GetDeviceContext()->ClearRenderTargetView(GetNormalBufferRTV(), NormalClearColor);
 	GetDeviceContext()->ClearDepthStencilView(GetDepthBufferDSV(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+	DeviceResources->UpdateViewport();
 }
 
 void URenderer::RenderLevel(struct FRenderingContext& RenderingContext)

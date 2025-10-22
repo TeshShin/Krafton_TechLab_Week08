@@ -73,7 +73,8 @@ void UViewportMenuBarWidget::RenderWidget()
 			ImGuiWindowFlags_NoScrollbar |
 			ImGuiWindowFlags_NoScrollWithMouse |
 			ImGuiWindowFlags_NoSavedSettings |
-			ImGuiWindowFlags_NoFocusOnAppearing
+			ImGuiWindowFlags_NoFocusOnAppearing |
+			ImGuiWindowFlags_NoDocking
 		);
 
 		if (ImGui::BeginMenuBar())

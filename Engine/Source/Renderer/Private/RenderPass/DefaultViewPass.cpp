@@ -17,9 +17,7 @@ FDefaultViewPass::FDefaultViewPass(UPipeline* InPipeline, ID3D11DepthStencilStat
 
 bool FDefaultViewPass::CanRender(const FRenderingContext& Context)
 {
-	// ViewportClientWindow가 활성화되어 있으면 BackBuffer로 복사하지 않음
-	// (ViewportClientWindow가 FrameBuffer를 직접 표시)
-	return false;
+	return true;
 }
 
 void FDefaultViewPass::SetRenderTargets(class UDeviceResources* DeviceResources)

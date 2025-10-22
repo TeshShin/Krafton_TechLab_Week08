@@ -138,7 +138,8 @@ void UMainBarWidget::RenderWindowsMenu() const
 					continue;
 				}
 
-				if (Window->GetWindowTitle() == "MainMenuBar")
+				// MainMenuBar와 Editor는 메뉴에서 제외
+				if (Window->GetWindowTitle() == "MainMenuBar" || Window->GetWindowTitle() == "Editor")
 				{
 					continue;
 				}

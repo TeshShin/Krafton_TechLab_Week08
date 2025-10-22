@@ -35,8 +35,10 @@ void UImGuiHelper::Initialize(HWND InWindowHandle)
 	// Docking 활성화
 	IO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-	// imgui.ini 파일 생성 비활성화
-	IO.IniFilename = nullptr;
+	// imgui.ini 파일 경로 설정 (docking 정보 저장)
+	// Config 디렉토리에 저장
+	static std::string IniFilePath = (UPathManager::GetInstance().GetConfigPath() / "imgui.ini").string();
+	IO.IniFilename = IniFilePath.c_str();
 
 	path FontFilePath = UPathManager::GetInstance().GetFontPath() / "Pretendard-Regular.otf";
 	IO.Fonts->AddFontFromFileTTF((char*)FontFilePath.u8string().c_str(), 16.0f, nullptr, IO.Fonts->GetGlyphRangesKorean());
