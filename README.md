@@ -718,7 +718,9 @@ KTL 엔진의 Shader 시스템은 **Hot-Reload**와 **Binary Caching**을 지원
 ┌─────────────────────────────┐
 │ FShaderBinaryCache          │  .cso 파일 I/O
 │  - LoadFromCache()          │  ├─ MD5 해시 검증
-│  - SaveToCache()            │  └─ Timestamp 검증
+│  - SaveToCache()            │  ├─ Shader Folder Timestamp 검증
+│  - IsCacheValid()           │  └─ Compile Flags 검증
+│  - GetShaderFolderTimestamp │
 └─────────────────────────────┘
 
          ┌─────────────────────┐
@@ -845,7 +847,26 @@ if (TimeSinceLastCheck >= 0.5f) {
 }
 ```
 
-#### 12.5.2. 수동 리로드 (F4 키)
+#### 12.5.2. Shader Folder 기반 변경 감지
+
+셰이더 시스템은 **폴더 전체의 타임스탬프**를 추적하여 `#include`로 인한 종속성 변경을 자동으로 감지합니다:
+
+```cpp
+// 셰이더 폴더의 모든 .hlsl 파일 중 최신 타임스탬프 획득
+FILETIME GetShaderFolderTimestamp(const wstring& ShaderFolderPath);
+
+// 폴더 타임스탬프가 변경되면 모든 셰이더 재컴파일
+if (IsFileTimeNewer(CurrentFolderTimestamp, LastShaderFolderTimestamp)) {
+    ReloadAllShaders();
+}
+```
+
+**장점:**
+- ✅ `#include "LightingFunctions.hlsl"` 등 공통 파일 수정 시 자동 재컴파일
+- ✅ 개별 파일 추적보다 간단하고 안정적
+- ✅ 누락 없이 모든 종속성 변경 감지
+
+#### 12.5.3. 수동 리로드 (F4 키)
 
 ```cpp
 // 모든 등록된 셰이더 리컴파일
@@ -855,7 +876,7 @@ FShaderManager::Get().ReloadAllShaders();
 FShaderManager::Get().ReloadShader(L"Asset/Shader/MyShader.hlsl");
 ```
 
-#### 12.5.3. 안전한 리컴파일
+#### 12.5.4. 안전한 리컴파일
 
 - 컴파일 실패 시: Old shader 유지 (크래시 방지)
 - 성공 시: RenderPass의 포인터를 새 셰이더로 자동 교체
@@ -866,34 +887,50 @@ FShaderManager::Get().ReloadShader(L"Asset/Shader/MyShader.hlsl");
 #### 12.6.1. Cache 파일 구조
 
 ```
-.cso File Format:
+.cso File Format (Version 3):
 ┌──────────────────────────┐
 │ FShaderCacheHeader       │  Magic number + Version + MD5 hash
 ├──────────────────────────┤
-│ FShaderCacheMetadata     │  Source path + Defines + Timestamp
+│ FShaderCacheMetadata     │  Source path + Defines + ShaderFolderTimestamp + CompileFlags
 ├──────────────────────────┤
 │ Bytecode (variable size) │  Compiled shader bytecode
 └──────────────────────────┘
 ```
 
-#### 12.6.2. Cache Invalidation
+**Cache Version 3 변경사항:**
+- ✅ `ShaderFolderTimestamp` 추가: 폴더 내 모든 `.hlsl` 파일의 최신 타임스탬프 저장
+- ✅ `CompileFlags` 추가: 디버그/릴리스 빌드 또는 최적화 플래그 변경 시 캐시 무효화
+- ❌ `CompileTimestamp` 제거: 개별 파일 타임스탬프 대신 폴더 타임스탬프 사용
+
+#### 12.6.2. Cache Invalidation (캐시 무효화)
+
+캐시가 유효한지 검증하는 3가지 기준:
 
 ```cpp
-// MD5 hash comparison
+// 1. MD5 hash comparison (소스 코드 또는 Defines 변경 감지)
 bool IsValid = (CachedMD5 == CurrentMD5);
 
-// Timestamp comparison
-FILETIME CurrentTime = GetFileWriteTime(SourcePath);
-bool IsNewer = (CurrentTime > CachedTimestamp);
+// 2. Shader folder timestamp comparison (include 파일 변경 감지)
+FILETIME ShaderFolderTimestamp = GetShaderFolderTimestamp("Asset/Shader");
+bool IsFolderModified = IsFileTimeNewer(ShaderFolderTimestamp, CachedFolderTimestamp);
 
-// Load from cache only if valid
-if (IsValid && !IsNewer) {
+// 3. Compile flags comparison (빌드 설정 변경 감지)
+bool FlagsChanged = (CachedCompileFlags != CurrentCompileFlags);
+
+// Load from cache only if all checks pass
+if (IsValid && !IsFolderModified && !FlagsChanged) {
     LoadFromCache();
 } else {
     CompileFromSource();
     SaveToCache();
 }
 ```
+
+**무효화 트리거:**
+- 📝 **소스 코드 변경**: `.hlsl` 파일 수정 → MD5 해시 변경
+- 📝 **Defines 변경**: 전처리기 매크로 추가/수정 → MD5 해시 변경
+- 📝 **Include 파일 변경**: `LightingFunctions.hlsl` 등 공통 파일 수정 → 폴더 타임스탬프 변경
+- 🛠️ **빌드 설정 변경**: Debug ↔ Release, 최적화 플래그 변경 → CompileFlags 변경
 
 ### 12.7. 성능 최적화
 
@@ -961,10 +998,16 @@ After (With Flyweight):
    - Pool: ComPtr로 소유 (자동 Release)
    - RenderPass: Raw pointer로 참조 (수동 Release)
 
-### 12.10. 향후 개선 방향
+### 12.10. 최근 개선 사항 (v3)
+
+- ✅ **Shader Folder Timestamp 추적**: `#include` 종속성 자동 감지
+- ✅ **Compile Flags 검증**: 빌드 설정 변경 시 자동 재컴파일
+- ✅ **Cache Version 3**: 폴더 기반 타임스탬프로 간소화 및 안정성 향상
+
+### 12.11. 향후 개선 방향
 
 - [ ] Async Shader Compilation (백그라운드 스레드)
 - [ ] Shader Variant Precompilation (에디터 시작 시)
 - [ ] Shader Graph 시스템 (노드 기반 셰이더 에디터)
-- [ ] 더 정교한 Cache Invalidation (Dependency tracking)
+- [ ] Fine-grained Dependency Tracking (파일별 `#include` 그래프)
 - [ ] Shader Permutation Reduction (Uber shader 최적화)
