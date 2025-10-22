@@ -23,23 +23,23 @@ UUUIDTextComponent::~UUUIDTextComponent()
 
 void UUUIDTextComponent::OnSelected()
 {
-	SetVisibility(true);
+	SetVisible(true);
 }
 
 void UUUIDTextComponent::OnDeselected()
 {
-	SetVisibility(false);
+	SetVisible(false);
 }
 
 void UUUIDTextComponent::UpdateRotationMatrix(const FVector& InCameraForward)
-{	
+{
 	FVector Forward = InCameraForward;
 	FVector Right = Forward.Cross(FVector::UpVector()); Right.Normalize();
 	FVector Up = Right.Cross(Forward); Up.Normalize();
-    
+
 	// Construct the rotation matrix from the basis vectors
 	RTMatrix = FMatrix(Forward, Right, Up);
-	
+
 	const FVector& OwnerActorLocation = GetOwner()->GetActorLocation();
 	const FVector Translation = OwnerActorLocation + FVector(0.0f, 0.0f, ZOffset);
 	RTMatrix *= FMatrix::TranslationMatrix(Translation);

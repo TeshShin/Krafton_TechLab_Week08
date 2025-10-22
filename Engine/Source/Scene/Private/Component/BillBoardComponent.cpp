@@ -5,7 +5,7 @@
 #include "Physics/Public/AABB.h"
 #include "Asset/Public/Texture.h"
 #include "Asset/Public/JsonSerializer.h"
-#include "Editor/Public/UI/Widget/SpriteSelectionWidget.h"
+#include "Editor/Public/UI/Widget/Component/BillboardComponentWidget.h"
 
 IMPLEMENT_CLASS(UBillBoardComponent, UPrimitiveComponent)
 
@@ -85,7 +85,7 @@ void UBillBoardComponent::SetSprite(UTexture* InSprite)
 
 UClass* UBillBoardComponent::GetSpecificWidgetClass() const
 {
-    return USpriteSelectionWidget::StaticClass();
+    return UBillboardComponentWidget::StaticClass();
 }
 
 const FRenderState& UBillBoardComponent::GetClassDefaultRenderState()

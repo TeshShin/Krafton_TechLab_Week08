@@ -409,7 +409,7 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 
 	for (ULightComponentBase* Light : Context.Lights)
 	{
-		if (!Light || !Light->IsVisible()) continue;
+		if (!Light || !Light->IsVisibleInHierarchy()) continue;
 
 		// [UNIFIED FORWARD RENDERING] All light types (including Ambient) go through StructuredBuffer
 		FUnifiedDynamicLight UnifiedLight = Light->GetUnifiedLightData();

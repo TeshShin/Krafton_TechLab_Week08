@@ -260,8 +260,8 @@ void URenderer::RenderLevel(struct FRenderingContext& RenderingContext)
 	RenderingContext.AllPrimitives = FinalVisiblePrims;
 	for (const auto& Prim : FinalVisiblePrims)
 	{
-		// Filter by visibility before adding to RenderingContext
-		if (!Prim->IsVisible()) { continue; }
+		// Filter by hierarchical visibility before adding to RenderingContext
+		if (!Prim->IsVisibleInHierarchy()) { continue; }
 
 		if (auto StaticMesh = Cast<UStaticMeshComponent>(Prim))
 		{

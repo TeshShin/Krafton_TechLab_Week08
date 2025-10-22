@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Scene/Public/Component/SceneComponent.h"
 #include "Scene/Public/Component/PrimitiveComponent.h"
+#include "Scene/Public/Actor/Actor.h"
 #include "Manager/Public/AssetManager.h"
 #include "Asset/Public/JsonSerializer.h"
 
@@ -262,4 +263,33 @@ FVector USceneComponent::GetWorldUpVector() const
 {
 	const FQuaternion WorldRotation = GetWorldRotationAsQuaternion();
 	return WorldRotation.RotateVector(FVector::UpVector());
+}
+
+bool USceneComponent::IsVisibleInHierarchy() const
+{
+	// 1. 자신이 invisible이면 false
+	if (!bVisible)
+	{
+		return false;
+	}
+
+	// 2. 모든 상위 컴포넌트의 visibility 체크
+	const USceneComponent* CurrentParent = AttachParent;
+	while (CurrentParent)
+	{
+		if (!CurrentParent->IsVisible())
+		{
+			return false;
+		}
+		CurrentParent = CurrentParent->GetAttachParent();
+	}
+
+	// 3. 소유 Actor의 visibility 체크
+	AActor* OwnerActor = Cast<AActor>(GetOwner());
+	if (OwnerActor && !OwnerActor->IsVisible())
+	{
+		return false;
+	}
+
+	return true;
 }

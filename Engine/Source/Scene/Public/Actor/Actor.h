@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Public/Object/Object.h"
+#include "Core/Public/Object/Property.h"
 #include "Scene/Public/Component/ActorComponent.h"
 #include "Scene/Public/Component/SceneComponent.h"
 
@@ -112,12 +113,21 @@ public:
 	bool IsPendingDestroy() const { return bIsPendingDestroy; }
 	void SetIsPendingDestroy(bool bInIsPendingDestroy) { bIsPendingDestroy = bInIsPendingDestroy; }
 
+	// Visibility
+	bool IsVisible() const { return bVisible; }
+	void SetVisible(bool bInVisible) { bVisible = bInVisible; }
+
 protected:
 	bool bCanEverTick = false;
 	bool bTickInEditor = false;
 	bool bBegunPlay = false;
-	/** @brief True if the actor is marked for destruction. */  
+	/** @brief True if the actor is marked for destruction. */
 	bool bIsPendingDestroy = false;
+
+	UPROPERTY_INIT_WITHMETA(bool, bVisible, true, FPropertyMetadata({
+		.Flags = EPropertyFlags::SaveGame,
+		.DisplayName = "Visible"
+	}));
 
 private:
 	USceneComponent* RootComponent = nullptr;
