@@ -48,7 +48,6 @@ FLightingResult CalculateBlinnPhongLighting(float3 LightDir, float3 Normal, floa
     float NdotH = saturate(dot(Normal, HalfVec));
     float SpecularFactor = pow(NdotH, SpecularPower);
     Result.Specular = LightColor * SpecularFactor;
-
     return Result;
 }
 
@@ -113,7 +112,7 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
 
     float3 LightDir;
     float Attenuation = Light.Intensity;
-	
+
 
 	// Ambient Light: no direction or attenuation
 	if (Light.LightType == LIGHT_TYPE_AMBIENT)

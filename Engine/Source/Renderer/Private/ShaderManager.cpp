@@ -12,6 +12,11 @@ FShaderManager& FShaderManager::Get()
 	if (!bInitialized)
 	{
 		Instance.Pool.Initialize();
+
+		// Initialize shader folder timestamp to zero
+		Instance.LastShaderFolderTimestamp.dwLowDateTime = 0;
+		Instance.LastShaderFolderTimestamp.dwHighDateTime = 0;
+
 		bInitialized = true;
 		UE_LOG("ShaderManager: Initialized with FShaderPool");
 	}
@@ -188,7 +193,36 @@ int32 FShaderManager::CheckAndReloadModifiedShaders()
 {
 	int32 ModifiedFileCount = 0;
 
-	// Iterate through unique shader files (not variants)
+	// Check shader folder timestamp for include file changes
+	static const wstring ShaderFolderPath = L"Asset/Shader";
+	FILETIME CurrentFolderTimestamp = Pool.GetBinaryCache().GetShaderFolderTimestamp(ShaderFolderPath);
+
+	// Check if this is first time (LastShaderFolderTimestamp is zero)
+	bool bIsFirstCheck = (LastShaderFolderTimestamp.dwLowDateTime == 0 &&
+	                      LastShaderFolderTimestamp.dwHighDateTime == 0);
+
+	if (bIsFirstCheck)
+	{
+		// First time - just cache the timestamp
+		LastShaderFolderTimestamp = CurrentFolderTimestamp;
+	}
+	else if (CurrentFolderTimestamp.dwLowDateTime != LastShaderFolderTimestamp.dwLowDateTime ||
+	         CurrentFolderTimestamp.dwHighDateTime != LastShaderFolderTimestamp.dwHighDateTime)
+	{
+		// Folder timestamp changed - some file in shader folder was modified (e.g., include files like LightingFunctions.hlsl)
+		UE_LOG("ShaderManager: Shader folder modified (include files may have changed) - reloading ALL shaders");
+
+		int32 ReloadedCount = ReloadAllShaders();
+		LastShaderFolderTimestamp = CurrentFolderTimestamp;
+
+		if (ReloadedCount > 0)
+		{
+			UE_LOG("===== Shader Auto-Reload: Folder change detected, %d variant(s) recompiled =====", ReloadedCount);
+			return 1; // Return 1 to indicate folder-level change
+		}
+	}
+
+	// Check individual shader files for modifications
 	for (const auto& Pair : PathToVariantIndices)
 	{
 		const wstring& FilePath = Pair.first;
@@ -226,6 +260,11 @@ int32 FShaderManager::CheckAndReloadModifiedShaders()
 				ModifiedFileCount++;
 			}
 		}
+	}
+
+	if (ModifiedFileCount > 0)
+	{
+		UE_LOG("===== Shader Auto-Reload: %d file(s) detected and recompiled =====", ModifiedFileCount);
 	}
 
 	return ModifiedFileCount;
