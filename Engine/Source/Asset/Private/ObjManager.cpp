@@ -341,14 +341,19 @@ void FObjManager::CreateMaterialsFromMTL(UStaticMesh* StaticMesh, FStaticMesh* S
 	{
 		const FMaterial& MaterialInfo = StaticMeshAsset->MaterialInfo[i];
 
+		// Get only the filename from the path
+		std::filesystem::path PathObj = std::filesystem::path(StaticMeshAsset->PathFileName.ToString());
+		FString FileName = PathObj.filename().string();
+		FName MaterialName = FName(MaterialInfo.Name + "(" + FileName + ")");
+
 		// 1. 캐시에서 Material을 먼저 찾아본다
-		UMaterial* Material = AssetManager.GetMaterialFromCache(MaterialInfo.Name);
+		UMaterial* Material = AssetManager.GetMaterialFromCache(MaterialName);
 
 		// 2. 캐시에 없으면 새로 생성
 		if (!Material)
 		{
 			Material = NewObject<UMaterial>();
-			Material->SetName(MaterialInfo.Name);
+			Material->SetName(MaterialName);
 			Material->SetMaterialData(MaterialInfo);
 
 			// Diffuse 텍스처 로드 (map_Kd)
@@ -427,7 +432,7 @@ void FObjManager::CreateMaterialsFromMTL(UStaticMesh* StaticMesh, FStaticMesh* S
 			}
 
 			// 3. 캐시에 저장
-			AssetManager.AddMaterialToCache(MaterialInfo.Name, Material);
+			AssetManager.AddMaterialToCache(Material->GetName(), Material);
 		}
 
 		// 4. StaticMesh에 Material 설정 (캐시된 것 또는 새로 생성된 것)

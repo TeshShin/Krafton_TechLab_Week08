@@ -65,7 +65,7 @@ private:
 	TMap<FName, ID3D11Buffer*> StaticMeshIndexBuffers;
 
 	// Material Resource - 추가
-	TMap<FName, UMaterial*> MaterialCache;
+	TMap<FName, std::unique_ptr<UMaterial>> MaterialCache;
 
 	// Helper Functions
 	FAABB CalculateAABB(const TArray<FNormalVertex>& Vertices);
