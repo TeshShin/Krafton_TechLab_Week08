@@ -475,7 +475,7 @@ enum class EPropertyFlags : uint64
 
     // 에디터 표시
     EditAnywhere = 1ULL << 0,      // 에디터에서 편집 가능
-    VisibleAnywhere = 1ULL << 1,   // 에디터에서 읽기 전용 표시
+    VisibleAnywhere = 1ULL << 1,   // 에디터에서 표시됨됨
 
     // 직렬화/복제
     SaveGame = 1ULL << 2,           // JSON 저장 파일에 포함
@@ -655,9 +655,9 @@ public:
    UPROPERTY_INIT_WITHMETA(int32, Value, 42, ...)
    ```
 
-2. **세미콜론**: UPROPERTY 매크로는 반드시 세미콜론으로 끝나야 합니다
+2. **세미콜론**: UPROPERTY 매크로는 세미콜론으로 끝나지 않아도 됩니다.
    ```cpp
-   UPROPERTY_INIT_WITHMETA(float, Value, 1.0f, ...)  // ❌ 세미콜론 없음
+   UPROPERTY_INIT_WITHMETA(float, Value, 1.0f, ...)  // ✅ 세미콜론 없음
    UPROPERTY_INIT_WITHMETA(float, Value, 1.0f, ...); // ✅ 세미콜론 있음
    ```
 
