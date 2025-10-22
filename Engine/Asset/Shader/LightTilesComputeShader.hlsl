@@ -200,7 +200,7 @@ bool IntersectsConeFrustum(float3 apexVS, float3 axisVS, float angleRad, float l
     }
 
     // Precompute cone parameters
-    float sinTheta = sin(max(angleRad, 0.0f));
+    float sinTheta = tan(max(angleRad, 0.0f));
     float height = length; // base radius
     float R = length * sinTheta;
 
@@ -263,23 +263,29 @@ bool IntersectsUnifiedLightFrustum(FUnifiedDynamicLight Light, Frustum Frustum)
     return IntersectsSphereFrustum(CenterVS, Radius, Frustum);
 }
 
-// 1 thread per cluster (tileX,tileY,zSlice)
-[numthreads(1, 1, 1)]
+// Threadgroup size (must match CPU dispatch ceil-div)
+#define LIGHT_TILE_GROUP_SIZE_X 8
+#define LIGHT_TILE_GROUP_SIZE_Y 8
+#define LIGHT_TILE_GROUP_SIZE_Z 1
+
+// One thread per cluster (tileX,tileY,zSlice) using larger threadgroups
+[numthreads(LIGHT_TILE_GROUP_SIZE_X, LIGHT_TILE_GROUP_SIZE_Y, LIGHT_TILE_GROUP_SIZE_Z)]
 void main(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
-	uint3 gid = dispatchThreadID;
-	uint cid = (gid.z * NumTilesY + gid.y) * NumTilesX + gid.x;
-	ClusterCount[cid] = 0;
-
+    // Map thread to cluster coordinates
     uint tileX = dispatchThreadID.x;
     uint tileY = dispatchThreadID.y;
     uint zSlice = dispatchThreadID.z;
 
+    // Guard against over-dispatch when NumTiles* is not divisible by group size
     if (tileX >= NumTilesX || tileY >= NumTilesY || zSlice >= NumZSlices)
         return;
 
     uint clusterID = (zSlice * NumTilesY + tileY) * NumTilesX + tileX;
     if (clusterID >= TotalClusters) return;
+
+    // Clear count for this cluster before accumulation
+    ClusterCount[clusterID] = 0;
 
     Frustum clusterFrustum = BuildClusterFrustum(tileX, tileY, zSlice);
     uint base = clusterID * MaxLightsPerCluster;
