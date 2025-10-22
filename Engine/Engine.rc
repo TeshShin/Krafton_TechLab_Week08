@@ -1,4 +1,4 @@
-#include "Source/Core/Public/resource.h"
+﻿#include "Source/Core/Public/resource.h"
 #include "winres.h"
 
 // Korean Resource
@@ -8,7 +8,7 @@ LANGUAGE LANG_KOREAN, SUBLANG_DEFAULT
 //
 // Icon
 //
-IDI_ICON1               ICON                    "Asset\\Icon\\project_gtl.ico"
+IDI_ICON1               ICON                    "Asset\\Icon\\project_ktl.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -29,15 +29,15 @@ VS_VERSION_INFO VERSIONINFO
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
-        BLOCK "041204B0" // 한국어, 유니코드
+        BLOCK "041204B0"
         BEGIN
-            VALUE "CompanyName", "GTL Project"
-            VALUE "FileDescription", "GTL Engine"
+            VALUE "CompanyName", "KTL Project"
+            VALUE "FileDescription", "KTL Engine"
             VALUE "FileVersion", "1.0.0.1"
             VALUE "InternalName", "Engine.exe"
             VALUE "LegalCopyright", "Copyright (C) 2025"
             VALUE "OriginalFilename", "Engine.exe"
-            VALUE "ProductName", "GTL Engine"
+            VALUE "ProductName", "KTL Engine"
             VALUE "ProductVersion", "1.0.0.1"
         END
     END

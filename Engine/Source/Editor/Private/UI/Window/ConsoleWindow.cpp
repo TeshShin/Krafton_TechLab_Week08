@@ -18,7 +18,7 @@ UConsoleWindow::UConsoleWindow()
 {
 	// 콘솔 윈도우 기본 설정
 	FUIWindowConfig Config;
-	Config.WindowTitle = "GTL Console";
+	Config.WindowTitle = "KTL Console";
 	Config.DefaultSize = ImVec2(1000, 260);
 	Config.DefaultPosition = ImVec2(10, 770);
 	Config.MinSize = ImVec2(1000, 260);
