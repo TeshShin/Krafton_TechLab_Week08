@@ -237,7 +237,7 @@ void URenderer::Render()
 
 void URenderer::RenderBegin() const
 {
-	constexpr float ClearColor[4] = {0.025f, 0.025f, 0.025f, 1.0f};
+	constexpr float ClearColor[4] = {0.f, 0.f, 0.f, 1.0f};
 	constexpr float NormalClearColor[] = {0.5f, 0.5f, 0.5f, 1.0f};
 
 	GetDeviceContext()->ClearRenderTargetView(GetBackBufferRTV(), ClearColor);
