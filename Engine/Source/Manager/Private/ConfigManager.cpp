@@ -7,7 +7,12 @@
 IMPLEMENT_SINGLETON_CLASS(UConfigManager, UObject)
 
 UConfigManager::UConfigManager()
-	: EditorIniFileName("editor.ini")
+	: EditorIniFileName("editor.ini"),
+	  CellSize(1.0f),
+	  CameraSensitivity(UCamera::DEFAULT_SPEED),
+	  RootSplitterRatio(1.0f),   // 왼쪽만 표시 (단일 뷰포트)
+	  LeftSplitterRatio(1.0f),    // 왼쪽 상단만 표시
+	  RightSplitterRatio(0.5f)    // 사용 안 함
 {
 	LoadEditorSetting();
 }
@@ -20,9 +25,12 @@ UConfigManager::~UConfigManager()
 void UConfigManager::LoadEditorSetting()
 {
 	const FString& FileNameStr = EditorIniFileName.ToString();
+	UE_LOG("ConfigManager: Loading from %s", FileNameStr.c_str());
+
 	std::ifstream Ifs(FileNameStr);
 	if (!Ifs.is_open())
 	{
+		UE_LOG("ConfigManager: File not found, using defaults");
 		CellSize = 1.0f;
 		CameraSensitivity = UCamera::DEFAULT_SPEED;
 		return; // 파일이 없으면 기본값 유지
@@ -48,6 +56,9 @@ void UConfigManager::LoadEditorSetting()
 		}
 		catch (const std::exception&) {}
 	}
+
+	UE_LOG("ConfigManager: Loaded splitter ratios: Root=%.2f, Left=%.2f, Right=%.2f",
+		RootSplitterRatio, LeftSplitterRatio, RightSplitterRatio);
 }
 
 void UConfigManager::SaveEditorSetting()

@@ -2,6 +2,7 @@
 #include "Editor/Public/UI/Window/UIWindow.h"
 
 class USplitterDebugWidget;
+class UViewportMenuBarWidget;
 
 /**
  * @brief Editor의 전반적인 UI를 담당하는 Window
@@ -15,7 +16,11 @@ public:
 	virtual ~UEditorWindow() override = default;
 
 	void Initialize() override;
+	void RenderWindow() override;
+
+	UViewportMenuBarWidget* GetViewportMenuBarWidget() const { return ViewportMenuBarWidget; }
 
 private:
 	USplitterDebugWidget* SplitterDebugWidget = nullptr;
+	UViewportMenuBarWidget* ViewportMenuBarWidget = nullptr;
 };

@@ -153,7 +153,7 @@ protected:
 	void UpdateWindowInfo();
 
 	// Render
-	void RenderWindow();
+	virtual void RenderWindow();
 	void RenderWidget();
 	void Update() const;
 

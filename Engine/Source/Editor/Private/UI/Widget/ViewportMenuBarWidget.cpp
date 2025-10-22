@@ -17,9 +17,19 @@ UViewportMenuBarWidget::~UViewportMenuBarWidget()
 
 void UViewportMenuBarWidget::RenderWidget()
 {
-	if (!Viewport) { return; }
+	if (!Viewport)
+	{
+		return;
+	}
 
 	TArray<FViewportClient>& ViewportClients = Viewport->GetViewports();
+
+	// Editor의 TargetViewportLayoutState를 기준으로 단일/다중 뷰포트 상태 결정
+	// (애니메이션 중에도 목표 상태를 표시하기 위해)
+	if (Editor)
+	{
+		bIsSingleViewportClient = (Editor->GetTargetViewportLayoutState() == EViewportLayoutState::Single);
+	}
 
 	for (int Index = 0; Index < ViewportClients.size(); ++Index)
 	{
@@ -47,13 +57,13 @@ void UViewportMenuBarWidget::RenderWidget()
 		ImGui::PushStyleColor(ImGuiCol_SliderGrab, FImGuiStyleHelper::BackgroundActive());
 		ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, FImGuiStyleHelper::BackgroundHovered());
 
-		// 1. 독립 윈도우 위치와 크기 지정
-		ImGui::SetNextWindowPos(ImVec2(ViewportInfo.TopLeftX, ViewportInfo.TopLeftY));
-		ImGui::SetNextWindowSize(ImVec2(ViewportInfo.Width, 22.0f));
+		// 1. 독립 윈도우 위치와 크기 지정 (모든 윈도우 위에 렌더링)
+		ImGui::SetNextWindowPos(ImVec2(ViewportInfo.TopLeftX, ViewportInfo.TopLeftY), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(ViewportInfo.Width, 22.0f), ImGuiCond_Always);
 
-		std::string WindowName = "ViewportMenuBarContainer_" + std::to_string(Index);
+		std::string WindowName = "ViewportMenuBar_" + std::to_string(Index);
 
-		// 2. 투명한 윈도우 생성 (메뉴바 전용)
+		// 2. 투명한 윈도우 생성 (메뉴바 전용) - 모든 윈도우 위에 표시
 		ImGui::Begin(WindowName.c_str(),
 			nullptr,
 			ImGuiWindowFlags_NoTitleBar |
@@ -62,9 +72,8 @@ void UViewportMenuBarWidget::RenderWidget()
 			ImGuiWindowFlags_MenuBar |
 			ImGuiWindowFlags_NoScrollbar |
 			ImGuiWindowFlags_NoScrollWithMouse |
-			ImGuiWindowFlags_NoBackground |   // 배경 제거
-			ImGuiWindowFlags_NoDecoration |   // 테두리 제거 (NoTitleBar, NoResize, NoMove 포함)
-			ImGuiWindowFlags_NoBringToFrontOnFocus
+			ImGuiWindowFlags_NoSavedSettings |
+			ImGuiWindowFlags_NoFocusOnAppearing
 		);
 
 		if (ImGui::BeginMenuBar())
@@ -118,9 +127,15 @@ void UViewportMenuBarWidget::RenderWidget()
 				{
 					if (Editor)
 					{
-						bIsSingleViewportClient = !bIsSingleViewportClient;
+						// 현재 상태에 따라 반대 동작 수행
 						if (bIsSingleViewportClient)
 						{
+							// 단일 뷰포트 -> 다중 뷰포트로 전환
+							Editor->RestoreMultiViewportLayout();
+						}
+						else
+						{
+							// 다중 뷰포트 -> 단일 뷰포트로 전환
 							FViewportClient* ActiveClient = Viewport->GetActiveViewportClient();
 							int ActiveIndex = Index;
 							if (ActiveClient)
@@ -131,10 +146,6 @@ void UViewportMenuBarWidget::RenderWidget()
 								}
 							}
 							Editor->SetSingleViewportLayout(ActiveIndex);
-						}
-						else
-						{
-							Editor->RestoreMultiViewportLayout();
 						}
 					}
 				}
@@ -147,7 +158,7 @@ void UViewportMenuBarWidget::RenderWidget()
 			ImGui::EndMenuBar();
 		}
 
-		ImGui::End(); // End of ViewportMenuBarContainer 윈도우
+		ImGui::End(); // End of ViewportMenuBar 윈도우
 
 		ImGui::PopStyleColor(14);
 		ImGui::PopID();

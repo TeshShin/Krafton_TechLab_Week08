@@ -13,7 +13,7 @@
 #include "Editor/Public/Line/BatchLineManager.h"
 #include "Editor/Public/UI/StatOverlay.h"
 #include "Scene/Public/Component/LightComponentBase.h"
-#include "Editor/Public/UI/Window/ViewportClientWindow.h"
+#include "ImGui/imgui.h"
 
 UEditor::UEditor()
 {
@@ -21,6 +21,36 @@ UEditor::UEditor()
 	RootSplitter.SetRatio(SplitterRatio[0]);
 	LeftSplitter.SetRatio(SplitterRatio[1]);
 	RightSplitter.SetRatio(SplitterRatio[2]);
+
+	UE_LOG("Editor: Loaded splitter ratios from config: %.2f, %.2f, %.2f",
+		SplitterRatio[0], SplitterRatio[1], SplitterRatio[2]);
+
+	// 초기 레이아웃 상태 설정 (splitter ratio 기반)
+	if (SplitterRatio[0] >= 0.99f && SplitterRatio[1] >= 0.99f)
+	{
+		ViewportLayoutState = EViewportLayoutState::Single;
+		TargetViewportLayoutState = EViewportLayoutState::Single;
+
+		// 단일 뷰포트로 시작할 때, 4분할 복원을 위한 기본값 저장
+		SavedRootRatio = 0.5f;
+		SavedLeftRatio = 0.5f;
+		SavedRightRatio = 0.5f;
+
+		UE_LOG("Editor: Starting in SINGLE viewport mode, SavedRatio=(0.5, 0.5, 0.5)");
+	}
+	else
+	{
+		ViewportLayoutState = EViewportLayoutState::Multi;
+		TargetViewportLayoutState = EViewportLayoutState::Multi;
+
+		// 다중 뷰포트로 시작할 때, 현재 비율 저장
+		SavedRootRatio = SplitterRatio[0];
+		SavedLeftRatio = SplitterRatio[1];
+		SavedRightRatio = SplitterRatio[2];
+
+		UE_LOG("Editor: Starting in MULTI viewport mode, SavedRatio=(%.2f, %.2f, %.2f)",
+			SavedRootRatio, SavedLeftRatio, SavedRightRatio);
+	}
 
 	InitializeLayout();
 }
@@ -48,26 +78,28 @@ void UEditor::Update()
 
 	URenderer& Renderer = URenderer::GetInstance();
 	FViewport* Viewport = Renderer.GetViewportClient();
-
-	// ViewportClientWindow에서 마우스 좌표 가져오기
-	UUIWindow* ViewportWindow = UUIManager::GetInstance().FindUIWindow("Viewport");
-	UViewportClientWindow* ViewportClientWindow = dynamic_cast<UViewportClientWindow*>(ViewportWindow);
+	UUIManager& UIManager = UUIManager::GetInstance();
 
 	FVector MousePositionForViewport = UInputManager::GetInstance().GetMousePosition();
 	bool bShouldProcessInput = true;
 
-	// 뷰포트가 ImGui 윈도우로 표시되는 경우
-	if (ViewportClientWindow)
+	// 마우스가 중앙 노드 영역 내에 있는지만 확인 (좌표 변환 없음)
+	// UpdateLayout()에서 설정한 각 뷰포트의 위치는 이미 화면 절대 좌표
+	if (UIManager.HasCentralNode())
 	{
-		if (ViewportClientWindow->IsViewportHovered() || ViewportClientWindow->IsViewportFocused())
+		ImVec2 CentralPos = UIManager.GetCentralNodePos();
+		ImVec2 CentralSize = UIManager.GetCentralNodeSize();
+		ImVec2 GlobalMousePos = ImGui::GetMousePos();
+
+		// 마우스가 중앙 노드 영역 내에 있는지 확인
+		if (GlobalMousePos.x >= CentralPos.x && GlobalMousePos.x <= CentralPos.x + CentralSize.x &&
+			GlobalMousePos.y >= CentralPos.y && GlobalMousePos.y <= CentralPos.y + CentralSize.y)
 		{
-			// 뷰포트가 호버되거나 포커스되면 로컬 좌표 사용
-			MousePositionForViewport = ViewportClientWindow->GetViewportMousePosition();
 			bShouldProcessInput = true;
 		}
 		else
 		{
-			// 뷰포트가 호버/포커스되지 않으면 입력 무시
+			// 중앙 노드 밖에서는 입력 무시
 			bShouldProcessInput = false;
 		}
 	}
@@ -182,6 +214,10 @@ void UEditor::RestoreMultiViewportLayout()
 	TargetLeftRatio = SavedLeftRatio;
 	TargetRightRatio = SavedRightRatio;
 
+	UE_LOG("RestoreMultiViewportLayout: Source(%.2f, %.2f, %.2f) -> Target(%.2f, %.2f, %.2f)",
+		SourceRootRatio, SourceLeftRatio, SourceRightRatio,
+		TargetRootRatio, TargetLeftRatio, TargetRightRatio);
+
 	ViewportLayoutState = EViewportLayoutState::Animating;
 	TargetViewportLayoutState = EViewportLayoutState::Multi;
 	AnimationStartTime = UTimeManager::GetInstance().GetGameTime();
@@ -191,15 +227,12 @@ void UEditor::InitializeLayout()
 {
 	// 1. 루트 스플리터의 자식으로 2개의 수평 스플리터를 '주소'로 연결합니다.
 	RootSplitter.SetChildren(&LeftSplitter, &RightSplitter);
-	RootSplitter.SetRatio(0);
 
 	// 2. 각 수평 스플리터의 자식으로 뷰포트 윈도우들을 '주소'로 연결합니다.
 	LeftSplitter.SetChildren(&ViewportWindows[0], &ViewportWindows[1]);
-	LeftSplitter.SetRatio(0);
 	RightSplitter.SetChildren(&ViewportWindows[2], &ViewportWindows[3]);
-	RightSplitter.SetRatio(0);
 
-	// 3. 초기 레이아웃 계산
+	// 3. 초기 레이아웃 계산 (비율은 생성자에서 설정된 값 유지)
 	const D3D11_VIEWPORT& ViewportInfo = URenderer::GetInstance().GetDeviceResources()->GetViewportInfo();
 	FRect FullScreenRect = { ViewportInfo.TopLeftX, ViewportInfo.TopLeftY, ViewportInfo.Width, ViewportInfo.Height };
 	RootSplitter.Resize(FullScreenRect);
@@ -250,6 +283,7 @@ void UEditor::UpdateLayout()
 {
 	URenderer& Renderer = URenderer::GetInstance();
 	UInputManager& Input = UInputManager::GetInstance();
+	UUIManager& UIManager = UUIManager::GetInstance();
 	const FPoint MousePosition = { Input.GetMousePosition().X, Input.GetMousePosition().Y };
 	bool bIsHoveredOnSplitter = false;
 
@@ -298,8 +332,10 @@ void UEditor::UpdateLayout()
 	// 3. 드래그 상태라면 스플리터 기능을 이행합니다.
 	if (DraggedSplitter)
 	{
-		const ImGuiViewport* Viewport = ImGui::GetMainViewport();
-		FRect WorkableRect = { Viewport->WorkPos.x, Viewport->WorkPos.y, Viewport->WorkSize.x, Viewport->WorkSize.y };
+		// 중앙 노드 영역을 기준으로 사용
+		ImVec2 CentralPos = UIManager.GetCentralNodePos();
+		ImVec2 CentralSize = UIManager.GetCentralNodeSize();
+		FRect WorkableRect = { CentralPos.x, CentralPos.y, CentralSize.x, CentralSize.y };
 
 		FRect ParentRect;
 
@@ -347,8 +383,10 @@ void UEditor::UpdateLayout()
 	}
 
 	// 4. 매 프레임 현재 비율에 맞게 전체 레이아웃 크기를 다시 계산하고, 그 결과를 실제 FViewport에 반영합니다.
-	const ImGuiViewport* Viewport = ImGui::GetMainViewport(); // 사용자에게만 보이는 영역의 정보를 가져옵니다.
-	FRect WorkableRect = { Viewport->WorkPos.x, Viewport->WorkPos.y, Viewport->WorkSize.x, Viewport->WorkSize.y };
+	// 중앙 노드 영역을 기준으로 사용
+	ImVec2 CentralPos = UIManager.GetCentralNodePos();
+	ImVec2 CentralSize = UIManager.GetCentralNodeSize();
+	FRect WorkableRect = { CentralPos.x, CentralPos.y, CentralSize.x, CentralSize.y };
 	RootSplitter.Resize(WorkableRect);
 
 	if (FViewport* ViewportClient = URenderer::GetInstance().GetViewportClient())

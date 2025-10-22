@@ -5,6 +5,9 @@
 #include "Editor/Public/UI/ImGuiHelper.h"
 #include "Editor/Public/UI/Widget/Widget.h"
 #include "Editor/Public/UI/Window/MainMenuWindow.h"
+#include "Editor/Public/UI/Window/EditorWindow.h"
+#include "Editor/Public/UI/Widget/ViewportMenuBarWidget.h"
+#include "ImGui/imgui_internal.h"
 
 IMPLEMENT_SINGLETON_CLASS(UUIManager, UObject)
 
@@ -154,6 +157,17 @@ void UUIManager::Render()
 		if (Window && Window != MainMenuWindow)
 		{
 			Window->RenderWindow();
+		}
+	}
+
+	// EditorWindow의 ViewportMenuBar를 별도로 렌더링 (모든 윈도우 위에)
+	UUIWindow* EditorWindowPtr = FindUIWindow("Editor");
+	if (EditorWindowPtr)
+	{
+		UEditorWindow* EditorWnd = dynamic_cast<UEditorWindow*>(EditorWindowPtr);
+		if (EditorWnd && EditorWnd->GetViewportMenuBarWidget())
+		{
+			EditorWnd->GetViewportMenuBarWidget()->RenderWidget();
 		}
 	}
 
@@ -596,6 +610,25 @@ void UUIManager::CreateDockSpace()
 	// DockSpace 생성
 	ImGuiID DockSpaceID = ImGui::GetID("MyDockSpace");
 	ImGui::DockSpace(DockSpaceID, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
+
+	// 중앙 노드(Central Node) 정보 추적
+	ImGuiDockNode* CentralNode = ImGui::DockBuilderGetCentralNode(DockSpaceID);
+	if (CentralNode && CentralNode->IsEmpty())
+	{
+		// 중앙 노드가 비어있을 때만 (PassthruCentralNode)
+		bHasCentralNode = true;
+		CentralNodePos = CentralNode->Pos;
+		CentralNodeSize = CentralNode->Size;
+	}
+	else if (CentralNode)
+	{
+		// 중앙 노드에 창이 도킹되어 있으면 viewport 비활성화
+		bHasCentralNode = false;
+	}
+	else
+	{
+		bHasCentralNode = false;
+	}
 
 	ImGui::End();
 }

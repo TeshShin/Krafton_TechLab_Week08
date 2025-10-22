@@ -237,6 +237,9 @@ void URenderer::Render()
 
 void URenderer::RenderBegin() const
 {
+	// Editor::UpdateLayout()에서 설정한 viewport 레이아웃 유지
+	// (스플릿터에 따라 4개의 뷰포트가 이미 설정되어 있음)
+
 	// Match BackgroundPrimary color from ImGuiStyleHelper (Midnight theme)
 	// sRGB to Linear conversion applied: {0.08, 0.09, 0.12} sRGB → {0.0099, 0.0132, 0.0228} Linear
 	// Linear buffer에서 의도한 sRGB 색상으로 올바르게 표시되도록 변환됨
@@ -248,8 +251,6 @@ void URenderer::RenderBegin() const
 	GetDeviceContext()->ClearRenderTargetView(GetSourceRTV(), ClearColor);
 	GetDeviceContext()->ClearRenderTargetView(GetNormalBufferRTV(), NormalClearColor);
 	GetDeviceContext()->ClearDepthStencilView(GetDepthBufferDSV(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-
-	DeviceResources->UpdateViewport();
 }
 
 void URenderer::RenderLevel(struct FRenderingContext& RenderingContext)

@@ -17,6 +17,10 @@ void SSplitter::SetChildren(SWindow* InSideLT, SWindow* InSideRB)
 
 void SSplitter::SetRatio(float NewRatio)
 {
+	// 항상 Ratio 값을 저장 (CollapseState와 무관하게)
+	Ratio = NewRatio;
+
+	// CollapseState 업데이트
 	if (NewRatio < CollapseThreshold)
 	{
 		CollapseState = ECollapseState::SideLT;
@@ -28,7 +32,6 @@ void SSplitter::SetRatio(float NewRatio)
 	else
 	{
 		CollapseState = ECollapseState::Normal;
-		Ratio = NewRatio;
 	}
 }
 

@@ -38,6 +38,9 @@ public:
 	void SetSingleViewportLayout(int InActiveIndex);
 	void RestoreMultiViewportLayout();
 
+	EViewportLayoutState GetViewportLayoutState() const { return ViewportLayoutState; }
+	EViewportLayoutState GetTargetViewportLayoutState() const { return TargetViewportLayoutState; }
+
 	void SelectActor(AActor* InActor);
 	AActor* GetSelectedActor() const { return SelectedActor; }
 	void SelectComponent(UActorComponent* InComponent);

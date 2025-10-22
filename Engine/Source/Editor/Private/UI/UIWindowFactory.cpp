@@ -81,7 +81,6 @@ void UUIWindowFactory::CreateDefaultUILayout()
 	UIManager.RegisterUIWindow(CreateOutlinerWindow(EUIDockDirection::Center));
 	UIManager.RegisterUIWindow(CreateDetailWindow(EUIDockDirection::Right));
 	UIManager.RegisterUIWindow(CreateExperimentalFeatureWindow(EUIDockDirection::Right));
-	UIManager.RegisterUIWindow(CreateEditorWindow(EUIDockDirection::None));
-	UIManager.RegisterUIWindow(CreateViewportClientWindow(EUIDockDirection::None));
+	UIManager.RegisterUIWindow(CreateEditorWindow(EUIDockDirection::Center));
 	UE_LOG_SUCCESS("UIWindowFactory: UI 생성이 성공적으로 완료되었습니다");
 }

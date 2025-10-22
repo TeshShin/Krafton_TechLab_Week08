@@ -80,7 +80,18 @@ private:
 	// Main Menu Window
 	UMainMenuWindow* MainMenuWindow = nullptr;
 
+	// Central DockNode tracking (for viewport rendering)
+	ImVec2 CentralNodePos = ImVec2(0, 0);
+	ImVec2 CentralNodeSize = ImVec2(0, 0);
+	bool bHasCentralNode = false;
+
 	void SortUIWindowsByPriority();
 	void UpdateFocusState();
 	void CreateDockSpace();
+
+public:
+	// Central Node getters (for Renderer)
+	ImVec2 GetCentralNodePos() const { return CentralNodePos; }
+	ImVec2 GetCentralNodeSize() const { return CentralNodeSize; }
+	bool HasCentralNode() const { return bHasCentralNode; }
 };
