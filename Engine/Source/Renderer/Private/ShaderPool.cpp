@@ -441,7 +441,7 @@ bool FShaderPool::CompileFromSource(
 	UINT Flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DEBUG) || defined(_DEBUG)
 	Flags |= D3DCOMPILE_DEBUG;
-	Flags |= D3DCOMPILE_SKIP_OPTIMIZATION;
+	Flags |= D3DCOMPILE_OPTIMIZATION_LEVEL0;  // 최소 최적화 (완전히 끄지는 않음)
 #endif
 
 	HRESULT hr = D3DCompileFromFile(

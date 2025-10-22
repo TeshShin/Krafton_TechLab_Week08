@@ -1,0 +1,112 @@
+{
+  "Actors" : {
+    "120" : {
+      "Components" : [{
+          "IsEditorOnly" : "false",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UStaticMeshComponent_0",
+          "ObjStaticMeshAsset" : "Data/Shapes/Cube.obj",
+          "ParentName" : "",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [7.880000, 7.880000, 7.880000],
+          "Type" : "UStaticMeshComponent",
+          "bVisible" : "1"
+        }, {
+          "IsEditorOnly" : "true",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UUUIDTextComponent_0",
+          "ParentName" : "UStaticMeshComponent_0",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [0.300000, 0.300000, 0.300000],
+          "Type" : "UUUIDTextComponent",
+          "bVisible" : "1"
+        }],
+      "Location" : [0.000000, 0.000000, 0.000000],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "Scale" : [7.880000, 7.880000, 7.880000],
+      "Type" : "ACubeActor",
+      "bCanEverTick" : "false",
+      "bTickInEditor" : "false",
+      "bVisible" : "1"
+    },
+    "124" : {
+      "Components" : [{
+          "AttenuationRadius" : 10.000000,
+          "Intensity" : 5.000000,
+          "IsEditorOnly" : "false",
+          "IsVisualizationComponent" : "false",
+          "LightColor" : [1.000000, 1.000000, 1.000000],
+          "LightFalloffExponent" : 2.000000,
+          "Location" : [-6.109500, -0.567949, -3.298104],
+          "Name" : "UPointLightComponent_0",
+          "ParentName" : "",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [1.956420, 1.956420, 1.956420],
+          "Type" : "UPointLightComponent",
+          "bVisible" : true
+        }, {
+          "IsEditorOnly" : "true",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UUUIDTextComponent_1",
+          "ParentName" : "UPointLightComponent_0",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [0.300000, 0.300000, 0.300000],
+          "Type" : "UUUIDTextComponent",
+          "bVisible" : "1"
+        }, {
+          "BillBoardScreenSize" : "5.000000",
+          "BillBoardScreenSizeScaled" : "true",
+          "BillBoardSprite" : "Data\\Icons\\PointLight_64x.png",
+          "IsEditorOnly" : "true",
+          "IsVisualizationComponent" : "true",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UBillBoardComponent_0",
+          "ParentName" : "UPointLightComponent_0",
+          "Rotation" : [21.755489, -33.016323, -36.219193],
+          "Scale" : [0.300000, 0.300000, 0.300000],
+          "Type" : "UBillBoardComponent",
+          "bVisible" : "1"
+        }],
+      "Location" : [-6.109500, -0.567949, -3.298104],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "Scale" : [1.956420, 1.956420, 1.956420],
+      "Type" : "APointLightActor",
+      "bCanEverTick" : "false",
+      "bTickInEditor" : "false",
+      "bVisible" : "1"
+    }
+  },
+  "NextUUID" : 0,
+  "PerspectiveCamera" : [{
+      "FOV" : [90.000000],
+      "FarClip" : [1000.000000],
+      "Location" : [-15.000000, 0.000000, 10.000000],
+      "NearClip" : [0.100000],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "ViewportCameraType" : 0
+    }, {
+      "FOV" : [90.000000],
+      "FarClip" : [1000.000000],
+      "Location" : [-15.000000, 0.000000, 10.000000],
+      "NearClip" : [0.100000],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "ViewportCameraType" : 0
+    }, {
+      "FOV" : [90.000000],
+      "FarClip" : [1000.000000],
+      "Location" : [-15.000000, 0.000000, 10.000000],
+      "NearClip" : [0.100000],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "ViewportCameraType" : 0
+    }, {
+      "FOV" : [90.000000],
+      "FarClip" : [1000.000000],
+      "Location" : [-10.744233, -6.362959, 4.432334],
+      "NearClip" : [0.100000],
+      "Rotation" : [0.000000, 38.849953, 29.699993],
+      "ViewportCameraType" : 0
+    }]
+}
