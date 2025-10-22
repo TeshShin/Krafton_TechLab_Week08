@@ -79,6 +79,9 @@ void UAssetManager::Initialize()
 
 void UAssetManager::Release()
 {
+	// StaticMeshCache가 Material을 삭제하므로 여기서는 배열만 clear
+	MaterialCache.clear();
+
 	// TMap.Value()
 	for (auto& Pair : VertexBuffers)
 	{
@@ -101,9 +104,6 @@ void UAssetManager::Release()
 	StaticMeshCache.clear();	// unique ptr 이라서 자동으로 해제됨
 	StaticMeshVertexBuffers.clear();
 	StaticMeshIndexBuffers.clear();
-
-	// Material Cache Release - UObject 시스템이 자동으로 관리하므로 배열만 clear
-	MaterialCache.clear();
 
 	// TMap.Empty()
 	VertexBuffers.clear();
