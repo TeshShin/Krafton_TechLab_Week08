@@ -3,6 +3,7 @@
 #include "Editor/Public/Camera.h"
 #include "Editor/Public/Gizmo.h"
 #include "Scene/Public/Component/PrimitiveComponent.h"
+#include "Scene/Public/Component/BillBoardComponent.h"
 #include "Core/Public/Container/Octree.h"
 #include "Physics/Public/AABB.h"
 #include "Scene/Public/Component/StaticMeshComponent.h"
@@ -152,12 +153,27 @@ void UObjectPicker::PickGizmo(UCamera* InActiveCamera, const FRay& WorldRay, FGi
 }
 
 //개별 primitive와 ray 충돌 검사
-bool UObjectPicker::IsRayPrimitiveCollided(UCamera* InActiveCamera, const FRay& WorldRay, UPrimitiveComponent* Primitive, const FMatrix& ModelMatrix, float* ShortestDistance)
+bool UObjectPicker::IsRayPrimitiveCollided(UCamera* InActiveCamera, const FRay& WorldRay,
+	UPrimitiveComponent* Primitive, const FMatrix& ModelMatrix, float* ShortestDistance)
 {
-	// 1. World Bounding Box를 통해 rough한 충돌 체크
-	FVector Min, Max;
-	Primitive->GetWorldAABB(Min, Max);
-	FAABB WorldAABB(Min, Max);
+	// 1. Build an effective world matrix and AABB (special-case billboards)
+	FMatrix EffectiveWorld = ModelMatrix;
+	FRay ModelRay;
+	FAABB WorldAABB;
+
+	if (Primitive->IsA(UBillBoardComponent::StaticClass()))
+	{
+		ScaleWorldToBillboard(WorldRay, Primitive, EffectiveWorld, ModelRay, WorldAABB);
+	}
+	else
+	{
+		// Non-billboard path unchanged
+		FVector Min, Max; Primitive->GetWorldAABB(Min, Max);
+		WorldAABB = FAABB(Min, Max);
+		ModelRay = GetModelRay(WorldRay, Primitive);
+	}
+
+	// Rough AABB test
 	if (!CheckIntersectionRayBox(WorldRay, WorldAABB))
 	{
 		return false; //AABB와 충돌하지 않으면 false반환
@@ -166,12 +182,10 @@ bool UObjectPicker::IsRayPrimitiveCollided(UCamera* InActiveCamera, const FRay& 
 	// 2. 삼각형 단위로 정밀 충돌 체크
 	float Distance = D3D11_FLOAT32_MAX; //Distance 초기화
 	bool bIsHit = false;
-	
+
 	const TArray<FNormalVertex>* Vertices = Primitive->GetVerticesData();
 	const TArray<uint32>* Indices = Primitive->GetIndicesData();
 
-	FRay ModelRay = GetModelRay(WorldRay, Primitive);
-	
 	// 충돌 가능성 있는 삼각형 인덱스 수집
 	// Triangle Ordinal(인덱스 버퍼를 3개 단위로 묶었을 때의 삼각형 번호)로 반환
 	TArray<int32> CandidateTriangleIndices;
@@ -193,7 +207,7 @@ bool UObjectPicker::IsRayPrimitiveCollided(UCamera* InActiveCamera, const FRay& 
 			V2 = (*Vertices)[TriIndex * 3 + 2].Position;
 		}
 
-		if (IsRayTriangleCollided(InActiveCamera, ModelRay, V0, V1, V2, ModelMatrix, &Distance))
+		if (IsRayTriangleCollided(InActiveCamera, ModelRay, V0, V1, V2, EffectiveWorld, &Distance))
 		{
 			bIsHit = true;
 			*ShortestDistance = std::min(*ShortestDistance, Distance);
@@ -201,6 +215,65 @@ bool UObjectPicker::IsRayPrimitiveCollided(UCamera* InActiveCamera, const FRay& 
 	}
 
 	return bIsHit;
+}
+
+void UObjectPicker::ScaleWorldToBillboard(const FRay& WorldRay, UPrimitiveComponent* Primitive,
+	FMatrix& OutEffectiveWorld, FRay& OutModelRay, FAABB& OutWorldAABB)
+{
+	UBillBoardComponent* Billboard = Cast<UBillBoardComponent>(Primitive);
+
+	// Recreate the same world matrix used by BillboardPass when screen-size scaling is enabled
+	if (Billboard->IsScreenSizeScaled())
+	{
+		const FVector Location = Billboard->GetWorldLocation();
+		const FQuaternion Rotation = Billboard->GetWorldRotationAsQuaternion();
+		const FVector FixedWorldScale = Billboard->GetRelativeScale3D() * Billboard->GetScreenSize();
+		OutEffectiveWorld = FMatrix::GetModelMatrix(Location, Rotation, FixedWorldScale);
+
+		// Model-space ray under the effective transform
+		const FMatrix EffectiveInverse = FMatrix::GetModelMatrixInverse(Location, Rotation, FixedWorldScale);
+		OutModelRay.Origin = WorldRay.Origin * EffectiveInverse;
+		OutModelRay.Direction = WorldRay.Direction * EffectiveInverse;
+		OutModelRay.Direction.Normalize();
+
+		// Compute world AABB by transforming local AABB with OutEffectiveWorld
+		const FAABB* LocalAABB = static_cast<const FAABB*>(Primitive->GetBoundingBox());
+		FVector LocalCorners[8] =
+		{
+			{ LocalAABB->Min.X, LocalAABB->Min.Y, LocalAABB->Min.Z }, { LocalAABB->Max.X, LocalAABB->Min.Y, LocalAABB->Min.Z },
+			{ LocalAABB->Min.X, LocalAABB->Max.Y, LocalAABB->Min.Z }, { LocalAABB->Max.X, LocalAABB->Max.Y, LocalAABB->Min.Z },
+			{ LocalAABB->Min.X, LocalAABB->Min.Y, LocalAABB->Max.Z }, { LocalAABB->Max.X, LocalAABB->Min.Y, LocalAABB->Max.Z },
+			{ LocalAABB->Min.X, LocalAABB->Max.Y, LocalAABB->Max.Z }, { LocalAABB->Max.X, LocalAABB->Max.Y, LocalAABB->Max.Z }
+		};
+
+		FVector WMin(+FLT_MAX, +FLT_MAX, +FLT_MAX);
+		FVector WMax(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+		for (int i = 0; i < 8; ++i)
+		{
+			FVector4 WC = FVector4(LocalCorners[i].X, LocalCorners[i].Y, LocalCorners[i].Z, 1.0f) * OutEffectiveWorld;
+			WMin.X = min(WMin.X, WC.X); WMin.Y = min(WMin.Y, WC.Y); WMin.Z = min(WMin.Z, WC.Z);
+			WMax.X = max(WMax.X, WC.X); WMax.Y = max(WMax.Y, WC.Y); WMax.Z = max(WMax.Z, WC.Z);
+		}
+
+		// Pad AABB to give the ray some thickness tolerance and match on-screen size better
+		// Scale padding lightly with requested screen size
+		const float BasePad = 0.02f; // base world-units padding
+		const float PadScale = max(1.0f, Billboard->GetScreenSize());
+		const float Pad = BasePad * PadScale;
+		OutWorldAABB.Min = WMin - FVector(Pad, Pad, Pad);
+		OutWorldAABB.Max = WMax + FVector(Pad, Pad, Pad);
+	}
+	else
+	{
+		// Not screen-size scaled: use default world matrix and lightly expand the AABB to avoid zero-thickness misses
+		FVector Min, Max; Primitive->GetWorldAABB(Min, Max);
+		const float Pad = 0.02f;
+		OutWorldAABB.Min = Min - FVector(Pad, Pad, Pad);
+		OutWorldAABB.Max = Max + FVector(Pad, Pad, Pad);
+
+		// Model-space ray from default inverse
+		OutModelRay = GetModelRay(WorldRay, Primitive);
+	}
 }
 
 bool UObjectPicker::IsRayTriangleCollided(UCamera* InActiveCamera, const FRay& Ray, const FVector& Vertex1, const FVector& Vertex2, const FVector& Vertex3,
