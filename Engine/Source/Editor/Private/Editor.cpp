@@ -13,6 +13,7 @@
 #include "Editor/Public/Line/BatchLineManager.h"
 #include "Editor/Public/UI/StatOverlay.h"
 #include "Scene/Public/Component/LightComponentBase.h"
+#include "Editor/Public/UI/Window/ViewportClientWindow.h"
 
 UEditor::UEditor()
 {
@@ -48,17 +49,43 @@ void UEditor::Update()
 	URenderer& Renderer = URenderer::GetInstance();
 	FViewport* Viewport = Renderer.GetViewportClient();
 
-	// 1. 마우스 위치를 기반으로 활성 뷰포트를 결정합니다.
-	Viewport->UpdateActiveViewportClient(UInputManager::GetInstance().GetMousePosition());
+	// ViewportClientWindow에서 마우스 좌표 가져오기
+	UUIWindow* ViewportWindow = UUIManager::GetInstance().FindUIWindow("Viewport");
+	UViewportClientWindow* ViewportClientWindow = dynamic_cast<UViewportClientWindow*>(ViewportWindow);
 
-	// 2. 활성 뷰포트의 카메라의 제어만 업데이트합니다.
-	if (UCamera* ActiveCamera = Viewport->GetActiveCamera())
+	FVector MousePositionForViewport = UInputManager::GetInstance().GetMousePosition();
+	bool bShouldProcessInput = true;
+
+	// 뷰포트가 ImGui 윈도우로 표시되는 경우
+	if (ViewportClientWindow)
 	{
-		// 만약 이동량이 있고, 직교 카메라라면 ViewportClient에 알립니다.
-		const FVector MovementDelta = ActiveCamera->UpdateInput();
-		if (MovementDelta.LengthSquared() > 0.f && ActiveCamera->GetCameraType() == ECameraType::ECT_Orthographic)
+		if (ViewportClientWindow->IsViewportHovered() || ViewportClientWindow->IsViewportFocused())
 		{
-			Viewport->UpdateOrthoFocusPointByDelta(MovementDelta);
+			// 뷰포트가 호버되거나 포커스되면 로컬 좌표 사용
+			MousePositionForViewport = ViewportClientWindow->GetViewportMousePosition();
+			bShouldProcessInput = true;
+		}
+		else
+		{
+			// 뷰포트가 호버/포커스되지 않으면 입력 무시
+			bShouldProcessInput = false;
+		}
+	}
+
+	// 1. 마우스 위치를 기반으로 활성 뷰포트를 결정합니다.
+	if (bShouldProcessInput)
+	{
+		Viewport->UpdateActiveViewportClient(MousePositionForViewport);
+
+		// 2. 활성 뷰포트의 카메라의 제어만 업데이트합니다.
+		if (UCamera* ActiveCamera = Viewport->GetActiveCamera())
+		{
+			// 만약 이동량이 있고, 직교 카메라라면 ViewportClient에 알립니다.
+			const FVector MovementDelta = ActiveCamera->UpdateInput();
+			if (MovementDelta.LengthSquared() > 0.f && ActiveCamera->GetCameraType() == ECameraType::ECT_Orthographic)
+			{
+				Viewport->UpdateOrthoFocusPointByDelta(MovementDelta);
+			}
 		}
 	}
 

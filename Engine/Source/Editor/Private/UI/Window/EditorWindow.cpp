@@ -50,6 +50,6 @@ void UEditorWindow::Initialize()
 {
 	UE_LOG("EditorWindow: Window가 성공적으로 생성되었습니다.");
 
-	// 요청하신 대로, 기본 상태를 Hidden으로 설정합니다.
-	SetWindowState(EUIWindowState::Visible);
+	// ViewportClientWindow와 충돌 방지를 위해 임시로 비활성화
+	SetWindowState(EUIWindowState::Hidden);
 }
