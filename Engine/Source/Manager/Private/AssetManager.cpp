@@ -240,6 +240,30 @@ void UAssetManager::AddStaticMeshToCache(const FName& InObjPath, UStaticMesh* In
 }
 
 /**
+ * @brief Material Cache Accessors
+ */
+UMaterial* UAssetManager::GetMaterialFromCache(const FName& InMaterialName)
+{
+	auto It = MaterialCache.find(InMaterialName);
+	if (It != MaterialCache.end())
+	{
+		return It->second;
+	}
+	return nullptr;
+}
+
+void UAssetManager::AddMaterialToCache(const FName& InMaterialName, UMaterial* InMaterial)
+{
+	if (!InMaterial)
+		return;
+
+	if (MaterialCache.find(InMaterialName) == MaterialCache.end())
+	{
+		MaterialCache.emplace(InMaterialName, InMaterial);
+	}
+}
+
+/**
  * @brief Vertex 배열로부터 AABB(Axis-Aligned Bounding Box)를 계산하는 헬퍼 함수
  * @param Vertices 정점 데이터 배열
  * @return 계산된 FAABB 객체
