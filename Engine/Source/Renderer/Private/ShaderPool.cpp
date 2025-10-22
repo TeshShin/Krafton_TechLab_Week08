@@ -441,6 +441,7 @@ bool FShaderPool::CompileFromSource(
 	UINT Flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DEBUG) || defined(_DEBUG)
 	Flags |= D3DCOMPILE_DEBUG;
+	Flags |= D3DCOMPILE_OPTIMIZATION_LEVEL0;  // 디버깅 편의성 위해, 최소 최적화 적용: 최적화를 완전히 끄면 물체가 빛을 받을 때, 이상한 artifacts가 생김
 #endif
 
 	HRESULT hr = D3DCompileFromFile(
