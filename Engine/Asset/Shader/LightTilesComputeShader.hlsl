@@ -6,7 +6,7 @@
 // ================================================================
 
 // Camera and tiling parameters
-cbuffer CameraCB : register(b0)
+cbuffer CameraCB : register(b10)
 {
     row_major float4x4 View;
     row_major float4x4 Proj;
@@ -21,7 +21,7 @@ cbuffer CameraCB : register(b0)
 };
 
 // Forward+ control parameters
-cbuffer ForwardPlusCB : register(b1)
+cbuffer ForwardPlusCB : register(b11)
 {
     uint NumLights;                // number of entries in DynamicLights
     uint MaxLightsPerCluster;      // capacity per cluster
@@ -200,8 +200,9 @@ bool IntersectsConeFrustum(float3 apexVS, float3 axisVS, float angleRad, float l
     }
 
     // Precompute cone parameters
-    float tanTheta = tan(max(angleRad, 0.0f));
-    float R = length * tanTheta; // base radius
+    float sinTheta = sin(max(angleRad, 0.0f));
+    float height = length; // base radius
+    float R = length * sinTheta;
 
     // Reject against the 4 side planes (planes pass through origin => d = 0)
     [unroll]
@@ -214,7 +215,7 @@ bool IntersectsConeFrustum(float3 apexVS, float3 axisVS, float angleRad, float l
         float s = sqrt(saturate(1.0f - k * k));
 
         float da = dot(n, apexVS) + d;          // apex distance
-        float db = da + length * k;             // base center distance
+        float db = da + height * k;             // base center distance
         float maxPlane = max(da, db + R * s);   // furthest point on cone along n
 
         // If furthest point is still outside (negative), cone is completely outside this plane
@@ -223,7 +224,7 @@ bool IntersectsConeFrustum(float3 apexVS, float3 axisVS, float angleRad, float l
     }
 
     // Z slab rejection (axis-aligned planes zNear <= z <= zFar)
-    float3 baseCenter = apexVS + axisVS * length;
+    float3 baseCenter = apexVS + axisVS * height;
     float az = axisVS.z;
     float sZ = sqrt(saturate(1.0f - az * az));
 

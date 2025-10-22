@@ -1,6 +1,8 @@
 #pragma once
 #include "Core/Public/Object/Object.h"
 
+class UPropertyBase;
+
 /**
  * @brief UI의 기능 단위인 위젯 클래스의 Interface Class
  * 위젯이라면 필수적인 공통 인터페이스와 기능을 제공
@@ -26,5 +28,5 @@ public:
 
 	// Special Member Function
 	UWidget() = default;
-	~UWidget() override = default;
+	virtual ~UWidget() = default;
 };

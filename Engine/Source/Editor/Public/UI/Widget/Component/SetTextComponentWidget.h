@@ -1,13 +1,13 @@
 #pragma once
-#include "Editor/Public/UI/Widget/Widget.h"
+#include "Editor/Public/UI/Widget/Component/ComponentWidget.h"
 
 class UClass;
 class UTextComponent;
 
-class USetTextComponentWidget : public UWidget
+class USetTextComponentWidget : public UComponentWidget
 {
 	GENERATED_BODY()
-	DECLARE_CLASS(USetTextComponentWidget, UWidget)
+	DECLARE_CLASS(USetTextComponentWidget, UComponentWidget)
 public:
 	USetTextComponentWidget() = default;
 	~USetTextComponentWidget() override = default;

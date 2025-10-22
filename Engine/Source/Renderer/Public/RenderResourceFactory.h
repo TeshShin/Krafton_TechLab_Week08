@@ -4,8 +4,33 @@
 class FRenderResourceFactory
 {
 public:
-	static void CreateVertexShaderAndInputLayout(const wstring& InFilePath,
-		const TArray<D3D11_INPUT_ELEMENT_DESC>& InInputLayoutDescs, ID3D11VertexShader** OutVertexShader, ID3D11InputLayout** OutInputLayout, const D3D_SHADER_MACRO* InDefines = nullptr);
+	/**
+	 * @brief Compile a vertex shader from HLSL file and create input layout
+	 *
+	 * This function compiles a vertex shader using D3DCompileFromFile and creates
+	 * the corresponding input layout for vertex attributes.
+	 *
+	 * @param InFilePath Path to .hlsl file (e.g., L"Asset/Shader/TextureVS.hlsl")
+	 * @param InInputLayoutDescs Vertex input element descriptors (position, normal, texcoord, etc.)
+	 * @param OutVertexShader Output pointer for compiled vertex shader
+	 * @param OutInputLayout Output pointer for input layout (can be nullptr if not needed)
+	 * @param InDefines Preprocessor macro array for conditional compilation (e.g., LIGHTING_MODEL_PHONG)
+	 * @param bEnableHotReload If true, registers shader with ShaderManager for hot-reload support (default: true)
+	 *
+	 * @note Entry point: "mainVS", Profile: "vs_5_0"
+	 * @note Compilation errors are output to debug console via OutputDebugStringA
+	 * @note When bEnableHotReload=true, shader will automatically recompile when file changes
+	 *
+	 * TODO: Consider migrating to newer LoadVS() API for better readability (see ShaderManager)
+	 * TODO: Add support for custom entry points and shader models
+	 */
+	static void CreateVertexShaderAndInputLayout(
+		const wstring& InFilePath,
+		const TArray<D3D11_INPUT_ELEMENT_DESC>& InInputLayoutDescs,
+		ID3D11VertexShader** OutVertexShader,
+		ID3D11InputLayout** OutInputLayout,
+		const D3D_SHADER_MACRO* InDefines = nullptr,
+		bool bEnableHotReload = true);
 
 
 	template<typename T>
@@ -38,7 +63,28 @@ public:
 	}
 
 	static ID3D11Buffer* CreateIndexBuffer(const void* InIndices, uint32 InByteWidth);
-	static void CreatePixelShader(const wstring& InFilePath, ID3D11PixelShader** OutPixelShader, const D3D_SHADER_MACRO* InDefines = nullptr);
+
+	/**
+	 * @brief Compile a pixel shader from HLSL file
+	 *
+	 * This function compiles a pixel shader using D3DCompileFromFile.
+	 *
+	 * @param InFilePath Path to .hlsl file (e.g., L"Asset/Shader/TexturePS.hlsl")
+	 * @param OutPixelShader Output pointer for compiled pixel shader
+	 * @param InDefines Preprocessor macro array for conditional compilation (can be nullptr)
+	 * @param bEnableHotReload If true, registers shader with ShaderManager for hot-reload support (default: true)
+	 *
+	 * @note Entry point: "mainPS", Profile: "ps_5_0"
+	 * @note Compilation errors are output to debug console via OutputDebugStringA
+	 * @note When bEnableHotReload=true, shader will automatically recompile when file changes
+	 *
+	 * TODO: Consider migrating to newer LoadPS() API for better readability (see ShaderManager)
+	 */
+	static void CreatePixelShader(
+		const wstring& InFilePath,
+		ID3D11PixelShader** OutPixelShader,
+		const D3D_SHADER_MACRO* InDefines = nullptr,
+		bool bEnableHotReload = true);
 	static ID3D11SamplerState* CreateSamplerState(D3D11_FILTER InFilter, D3D11_TEXTURE_ADDRESS_MODE InAddressMode);
 	static ID3D11RasterizerState* GetRasterizerState(const FRenderState& InRenderState);
 	static void ReleaseRasterizerState();
@@ -209,11 +255,33 @@ public:
 	// Compute Shader & UAV utilities
 	// ===============================
 
-	static ID3D11ComputeShader* CreateComputeShader(
+	/**
+	 * @brief Compile a compute shader from HLSL file
+	 *
+	 * This function compiles a compute shader using D3DCompileFromFile.
+	 * Compute shaders are used for GPU parallelization (e.g., light culling, post-processing).
+	 *
+	 * @param InFilePath Path to .hlsl file (e.g., L"Asset/Shader/LightTilesComputeShader.hlsl")
+	 * @param OutComputeShader Output pointer for compiled compute shader
+	 * @param InDefines Preprocessor macro array for conditional compilation (can be nullptr)
+	 * @param Entry Entry point function name (default: "main")
+	 * @param Profile Shader model profile (default: "cs_5_0")
+	 * @param bEnableHotReload If true, registers shader with ShaderManager for hot-reload support (default: true)
+	 *
+	 * @note Compilation errors are output to debug console
+	 * @note When bEnableHotReload=true, shader will automatically recompile when file changes
+	 * @note Signature changed from return value to output parameter for hot-reload consistency
+	 *
+	 * TODO: Consider migrating to newer LoadCS() API for better readability (see ShaderManager)
+	 * TODO: Add support for cs_6_0+ features (wave intrinsics, etc.)
+	 */
+	static void CreateComputeShader(
 		const std::wstring& InFilePath,
+		ID3D11ComputeShader** OutComputeShader,
 		const D3D_SHADER_MACRO* InDefines = nullptr,
 		const char* Entry = "main",
-		const char* Profile = "cs_5_0");
+		const char* Profile = "cs_5_0",
+		bool bEnableHotReload = true);
 
 	// Structured buffer with UAV (no CPU access; DEFAULT usage)
 	static ID3D11Buffer* CreateStructuredBufferWithUAV(

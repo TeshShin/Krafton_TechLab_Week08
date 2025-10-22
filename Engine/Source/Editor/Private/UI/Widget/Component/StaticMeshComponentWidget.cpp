@@ -8,10 +8,13 @@
 #include "Editor/Public/Editor.h"
 #include "Core/Public/Object/ObjectIterator.h"
 
-IMPLEMENT_CLASS(UStaticMeshComponentWidget, UWidget)
+IMPLEMENT_CLASS(UStaticMeshComponentWidget, UComponentWidget)
 
 void UStaticMeshComponentWidget::RenderWidget()
 {
+	// 먼저 부모 클래스의 RenderWidget을 호출하여 UPROPERTY 자동 렌더링
+	Super::RenderWidget();
+
 	ULevel* CurrentLevel = GWorld->GetLevel();
 
 	if (!CurrentLevel)

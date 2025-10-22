@@ -3,10 +3,13 @@
 #include "Editor/Public/Editor.h"
 #include "Scene/Public/Component/ProjectileMovementComponent.h"
 
-IMPLEMENT_CLASS(UProjectileMovementComponentWidget, UWidget)
+IMPLEMENT_CLASS(UProjectileMovementComponentWidget, UComponentWidget)
 
 void UProjectileMovementComponentWidget::RenderWidget()
 {
+    // 먼저 부모 클래스의 RenderWidget을 호출하여 UPROPERTY 자동 렌더링
+    Super::RenderWidget();
+
     ULevel* CurrentLevel = GWorld->GetLevel();
 
     if (!CurrentLevel)

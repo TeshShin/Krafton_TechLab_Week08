@@ -1,6 +1,7 @@
 #pragma once
 
 #include "LightComponent.h"
+#include "Core/Public/Object/Property.h"
 
 UCLASS()
 class UPointLightComponent : public ULightComponentBase
@@ -73,5 +74,5 @@ private:
     float LightFalloffExponent = 2.0f;
 
     /** Radius of light source shape. */
-    float AttenuationRadius = 10.0f;
+	float AttenuationRadius = 10.0f;
 };

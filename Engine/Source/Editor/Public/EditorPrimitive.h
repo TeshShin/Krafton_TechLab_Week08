@@ -1,11 +1,7 @@
 #pragma once
-#include <d3d11.h>
 
 struct FEditorPrimitive
 {
-	ID3D11VertexShader* VertexShader =  nullptr;
-	ID3D11PixelShader* PixelShader = nullptr;
-	ID3D11InputLayout* InputLayout = nullptr;
 	ID3D11Buffer* VertexBuffer = nullptr;
 	ID3D11Buffer* IndexBuffer = nullptr;
 	uint32 NumVertices;
@@ -15,6 +11,11 @@ struct FEditorPrimitive
 	FVector Location;
 	FQuaternion Rotation;
 	FVector Scale;
-	FRenderState RenderState;
-	bool bShouldAlwaysVisible = false;
+};
+
+class IEditorPrimitive
+{
+public:
+	virtual ~IEditorPrimitive() = default;
+	virtual TArray<const FEditorPrimitive*> GetEditorPrimitive() const = 0;
 };

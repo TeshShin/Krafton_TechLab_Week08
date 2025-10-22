@@ -3,10 +3,8 @@
 #include "Renderer/Public/Renderer.h"
 #include "Renderer/Public/RenderResourceFactory.h"
 
-UAxis::UAxis()
+FAxis::FAxis()
 {
-	URenderer& Renderer = URenderer::GetInstance();
-
 	// UE x(forward)
 	AxisVertices.push_back({ { 50000.0f,0.0f,.0f }, {}, { 1,0,0,1 }, {} });
 	AxisVertices.push_back({ { 0.0f,0.0f,0.0f }, {}, { 1,0,0,1 }, {} });
@@ -28,13 +26,12 @@ UAxis::UAxis()
 	Primitive.Scale = FVector(1, 1, 1);
 }
 
-UAxis::~UAxis()
+FAxis::~FAxis()
 {
 	SafeRelease(Primitive.VertexBuffer);
 }
 
-void UAxis::Render()
+TArray<const FEditorPrimitive*> FAxis::GetEditorPrimitive() const
 {
-	URenderer& Renderer = URenderer::GetInstance();
-	Renderer.RenderEditorPrimitive(Primitive, Primitive.RenderState);
+	return { &Primitive };
 }

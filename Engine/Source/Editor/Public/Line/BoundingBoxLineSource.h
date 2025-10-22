@@ -2,7 +2,6 @@
 
 #include "ILineSource.h"
 #include "Physics/Public/BoundingVolume.h"
-#include "LineVertex.h"
 
 class FBoundingBoxLineSource : public ILineSource
 {

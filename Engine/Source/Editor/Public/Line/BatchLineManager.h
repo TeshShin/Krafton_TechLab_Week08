@@ -12,18 +12,23 @@ public:
     void Init();
     void Release();
 
+// Debug Line Section
     void AddDebugLine(const FName& InLabel, const FVector& InStart, const FVector& InEnd, const FVector4& InColor);
 	void RemoveDebugLine(const FName& InLabel);
 	void AddDebugCircle(const FName& BaseLabel, const FVector& Center, float Radius, const FVector4& Color, TArray<FName>& OutLabels);
 	void AddDebugArrow(const FName& InLabel, const FVector& InStart, const FVector& InEnd, const FVector4& InColor, float InHeadSize, TArray<FName>& OutLabels);
 	void AddDebugCone(const FName& BaseLabel, const FVector& TipLocation, const FVector& Direction, float Radius,
 		float ConeAngleDegrees, const FVector4& Color, TArray<FName>& OutLabels);
-    void UpdateGrid(float InCellSize);
+
+// Grid Section
+	void UpdateGrid(float InCellSize);
+	float GetGridCellSize() const;
+
+// Bounding Box Section
     void UpdateBoundingBox(const class IBoundingVolume* InBoundingVolume);
-    float GetGridCellSize() const;
 
     void Update();
-    void Render();
+	const struct FEditorPrimitive* GetBatchLinePrimitive() const;
 
 private:
     struct FBatchLineManagerData* Data = nullptr;

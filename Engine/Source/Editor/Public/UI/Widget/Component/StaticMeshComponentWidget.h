@@ -1,14 +1,14 @@
 #pragma once
-#include "Editor/Public/UI/Widget/Widget.h"
+#include "Editor/Public/UI/Widget/Component/ComponentWidget.h"
 
 class UStaticMeshComponent;
 class UMaterial;
 
 UCLASS()
-class UStaticMeshComponentWidget : public UWidget
+class UStaticMeshComponentWidget : public UComponentWidget
 {
 	GENERATED_BODY()
-	DECLARE_CLASS(UStaticMeshComponentWidget, UWidget)
+	DECLARE_CLASS(UStaticMeshComponentWidget, UComponentWidget)
 
 public:
 	void Initialize() override {}

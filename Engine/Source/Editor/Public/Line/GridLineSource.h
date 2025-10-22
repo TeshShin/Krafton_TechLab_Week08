@@ -1,6 +1,5 @@
 #pragma once
 #include "ILineSource.h"
-#include "LineVertex.h"
 
 class FGridLineSource : public ILineSource
 {

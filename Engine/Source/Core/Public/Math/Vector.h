@@ -353,3 +353,79 @@ struct alignas(16) FVector4
 };
 
 FArchive& operator<<(FArchive& Ar, FVector4& Vector);
+
+/**
+ * @brief Linear Color structure (RGB only)
+ * Represents a linear color with 3 floating-point components
+ */
+struct FLinearColor3
+{
+	float R;
+	float G;
+	float B;
+
+	FLinearColor3() : R(1.0f), G(1.0f), B(1.0f) {}
+	FLinearColor3(float InR, float InG, float InB) : R(InR), G(InG), B(InB) {}
+	FLinearColor3(const FLinearColor3& Other) : R(Other.R), G(Other.G), B(Other.B) {}
+
+	bool operator==(const FLinearColor3& Other) const
+	{
+		return R == Other.R && G == Other.G && B == Other.B;
+	}
+
+	bool operator!=(const FLinearColor3& Other) const
+	{
+		return !(*this == Other);
+	}
+
+	FLinearColor3 operator*(float Scale) const
+	{
+		return FLinearColor3(R * Scale, G * Scale, B * Scale);
+	}
+
+	FLinearColor3 operator+(const FLinearColor3& Other) const
+	{
+		return FLinearColor3(R + Other.R, G + Other.G, B + Other.B);
+	}
+};
+
+/**
+ * @brief Linear Color structure (RGBA)
+ * Represents a linear color with 4 floating-point components
+ */
+struct FLinearColor
+{
+	float R;
+	float G;
+	float B;
+	float A;
+
+	FLinearColor() : R(1.0f), G(1.0f), B(1.0f), A(1.0f) {}
+	FLinearColor(float InR, float InG, float InB) : R(InR), G(InG), B(InB), A(1.0f) {}
+	FLinearColor(float InR, float InG, float InB, float InA) : R(InR), G(InG), B(InB), A(InA) {}
+	FLinearColor(const FLinearColor& Other) : R(Other.R), G(Other.G), B(Other.B), A(Other.A) {}
+
+	explicit FLinearColor(const FVector4& V) : R(V.X), G(V.Y), B(V.Z), A(V.W) {}
+
+	FVector4 ToFVector4() const { return FVector4(R, G, B, A); }
+
+	bool operator==(const FLinearColor& Other) const
+	{
+		return R == Other.R && G == Other.G && B == Other.B && A == Other.A;
+	}
+
+	bool operator!=(const FLinearColor& Other) const
+	{
+		return !(*this == Other);
+	}
+
+	FLinearColor operator*(float Scale) const
+	{
+		return FLinearColor(R * Scale, G * Scale, B * Scale, A * Scale);
+	}
+
+	FLinearColor operator+(const FLinearColor& Other) const
+	{
+		return FLinearColor(R + Other.R, G + Other.G, B + Other.B, A + Other.A);
+	}
+};

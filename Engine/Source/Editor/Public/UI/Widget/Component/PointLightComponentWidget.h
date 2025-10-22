@@ -1,19 +1,20 @@
 #pragma once
+#include "ComponentWidget.h"
 #include "Editor/Public/UI/Widget/Widget.h"
 
 class UClass;
 class UPointLightComponent;
 
 UCLASS()
-class UPointLightComponentWidget : public UWidget
+class UPointLightComponentWidget : public UComponentWidget
 {
     GENERATED_BODY()
-    DECLARE_CLASS(UPointLightComponentWidget, UWidget)
-    
+    DECLARE_CLASS(UPointLightComponentWidget, UComponentWidget)
+
 public:
     UPointLightComponentWidget() = default;
     virtual ~UPointLightComponentWidget() = default;
-    
+
     /*-----------------------------------------------------------------------------
         UWidget Features
      -----------------------------------------------------------------------------*/

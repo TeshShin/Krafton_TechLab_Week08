@@ -1,9 +1,9 @@
 ﻿#pragma once
-#include "Editor/Public/UI/Widget/Widget.h"
+#include "Editor/Public/UI/Widget/Component/ComponentWidget.h"
 
-class UProjectileMovementComponentWidget : public UWidget
+class UProjectileMovementComponentWidget : public UComponentWidget
 {
-    DECLARE_CLASS(UProjectileMovementComponentWidget, UWidget)
+    DECLARE_CLASS(UProjectileMovementComponentWidget, UComponentWidget)
 
 public:
     void Initialize() override {}

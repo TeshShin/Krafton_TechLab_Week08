@@ -358,6 +358,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Core\Public\Object\NewObject.h" />
     <ClInclude Include="Source\Core\Public\Object\Object.h" />
     <ClInclude Include="Source\Core\Public\Object\ObjectIterator.h" />
+    <ClInclude Include="Source\Core\Public\Object\Property.h" />
     <ClInclude Include="Source\Core\Public\Types.h" />
     <ClInclude Include="Source\Editor\Public\EditorEngine.h" />
     <ClInclude Include="Source\Editor\Public\Line\BatchLineManager.h" />
@@ -373,6 +374,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Editor\Public\UI\Widget\ActorSpawnWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\ActorTerminationWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\CameraControlWidget.h" />
+    <ClInclude Include="Source\Editor\Public\UI\Widget\Component\ComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\DecalTextureSelectionWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\HeightFogComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\LightComponentWidget.h" />
@@ -438,6 +440,8 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Renderer\Public\Renderer.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\BillboardPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\DecalPass.h" />
+    <ClInclude Include="Source\Renderer\Public\RenderPass\EditorDepthPass.h" />
+    <ClInclude Include="Source\Renderer\Public\RenderPass\EditorOverlayPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\FogPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\FXAAPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\NormalMapPass.h" />
@@ -449,6 +453,11 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Renderer\Public\RenderPass\StaticMeshUnlitPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderPass\TextPass.h" />
     <ClInclude Include="Source\Renderer\Public\RenderResourceFactory.h" />
+    <ClInclude Include="Source\Renderer\Public\ShaderCache.h" />
+    <ClInclude Include="Source\Renderer\Public\ShaderBinaryCache.h" />
+    <ClInclude Include="Source\Renderer\Public\ShaderPool.h" />
+    <ClInclude Include="Source\Renderer\Public\ShaderFactory.h" />
+    <ClInclude Include="Source\Renderer\Public\ShaderManager.h" />
     <ClInclude Include="Source\Scene\Public\Actor\Actor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\AmbientLightActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\BillBoardActor.h" />
@@ -505,8 +514,15 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     </ClCompile>
     <ClCompile Include="Source\Editor\Private\Line\GridLineSource.cpp">
     </ClCompile>
+    <ClCompile Include="Source\Editor\Private\UI\Widget\Component\ComponentWidget.cpp" />
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\SpotLightComponentWidget.cpp" />
+    <ClCompile Include="Source\Renderer\Private\RenderPass\EditorDepthPass.cpp" />
+    <ClCompile Include="Source\Renderer\Private\RenderPass\EditorOverlayPass.cpp" />
     <ClCompile Include="Source\Renderer\Private\RenderPass\StaticMeshUnlitPass.cpp" />
+    <ClCompile Include="Source\Renderer\Private\ShaderBinaryCache.cpp" />
+    <ClCompile Include="Source\Renderer\Private\ShaderPool.cpp" />
+    <ClCompile Include="Source\Renderer\Private\ShaderFactory.cpp" />
+    <ClCompile Include="Source\Renderer\Private\ShaderManager.cpp" />
     <ClCompile Include="Source\Scene\Private\Actor\SpotLightActor.cpp" />
     <ClCompile Include="Source\Scene\Private\Component\SpotLightComponent.cpp" />
     <FxCompile Include="Asset\Shader\HeightFogShader.hlsl">
@@ -793,9 +809,6 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Asset\Shader\SampleShader.hlsl">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\BatchLineShader.hlsl">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Asset\Shader\ShaderFont.hlsl">

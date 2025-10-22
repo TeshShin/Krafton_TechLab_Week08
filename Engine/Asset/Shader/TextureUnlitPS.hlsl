@@ -64,7 +64,7 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
     // 4. Output to render targets
     // -----------------------
 	Output.SceneColor = FinalColor;
-	Output.NormalData = float4(0.0f, 0.0f, 0.0f, 0.0f);
+	Output.NormalData = float4(Input.WorldNormal, 1.0f);
 
 	return Output;
 }

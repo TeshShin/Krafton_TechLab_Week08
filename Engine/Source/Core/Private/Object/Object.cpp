@@ -1,7 +1,9 @@
 #include "pch.h"
 #include "Core/Public/Object/Object.h"
+#include "Core/Public/Object/Property.h"
 #include "Core/Public/EngineStatics.h"
 #include "Core/Public/Container/Name.h"
+#include "json.hpp"
 
 
 uint32 UEngineStatics::NextUUID = 0;
@@ -18,7 +20,7 @@ UObject::UObject()
 	: Name(FName::GetNone()), Outer(nullptr)
 {
 	UUID = UEngineStatics::GenUUID();
-	
+
 	GetUObjectArray().emplace_back(this);
 	InternalIndex = static_cast<uint32>(GetUObjectArray().size()) - 1;
 }
@@ -36,18 +38,122 @@ UObject::~UObject()
 
 void UObject::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
+	// UPROPERTY 시스템을 사용한 자동 직렬화
+	// GetClass()는 virtual이므로 실제 인스턴스 타입의 모든 프로퍼티를 가져옴
+	UClass* Class = GetClass();
+	if (!Class)
+		return;
+
+	// 이 클래스와 모든 부모 클래스의 프로퍼티 수집
+	TArray<UPropertyBase*> AllProperties;
+	Class->GetAllProperties(AllProperties);
+
+	for (UPropertyBase* Prop : AllProperties)
+	{
+		if (!Prop)
+			continue;
+
+		// SaveGame 플래그가 있는 프로퍼티만 직렬화
+		if (!Prop->HasAnyFlags(EPropertyFlags::SaveGame))
+			continue;
+
+		const char* PropName = Prop->GetName();
+
+		if (bInIsLoading)
+		{
+			// 로딩: JSON에서 값을 읽어 프로퍼티에 설정
+			try
+			{
+				// JSON 키가 존재하는지 확인 (hasKey 또는 예외 처리)
+				// 키가 없으면 기본값 유지
+				if (InOutHandle.hasKey(PropName))
+				{
+					// JSON 값을 문자열로 변환
+					std::string jsonValue = InOutHandle[PropName].ToString();
+					FString valueStr(jsonValue.c_str());
+
+					// FromString으로 프로퍼티에 설정
+					if (!Prop->FromString(this, valueStr))
+					{
+						UE_LOG("UObject::Serialize: Failed to deserialize property '%s' of class '%s'",
+							PropName, Class->GetName().ToString().data());
+					}
+				}
+			}
+			catch (...)
+			{
+				UE_LOG("UObject::Serialize: Exception while deserializing property '%s' of class '%s'",
+					PropName, Class->GetName().ToString().data());
+			}
+		}
+		else
+		{
+			// 저장: 프로퍼티 값을 JSON에 쓰기
+			try
+			{
+				FString valueStr = Prop->ToString(this);
+				InOutHandle[PropName] = valueStr.c_str();
+			}
+			catch (...)
+			{
+				UE_LOG("UObject::Serialize: Exception while serializing property '%s' of class '%s'",
+					PropName, Class->GetName().ToString().data());
+			}
+		}
+	}
 }
 
 UObject* UObject::Duplicate()
 {
-	UObject* Object = NewObject(GetClass());
-	DuplicateSubObjects(Object);
-	return Object;
+	// 새 인스턴스 생성 (GetClass()는 virtual이므로 실제 타입으로 생성)
+	UObject* NewObj = NewObject(GetClass());
+	if (!NewObj)
+		return nullptr;
+
+	// UPROPERTY 시스템을 사용한 자동 복제
+	UClass* Class = GetClass();
+	if (!Class)
+		return NewObj;
+
+	// 이 클래스와 모든 부모 클래스의 프로퍼티 수집
+	TArray<UPropertyBase*> AllProperties;
+	Class->GetAllProperties(AllProperties);
+
+	for (UPropertyBase* Prop : AllProperties)
+	{
+		if (!Prop)
+			continue;
+
+		// DuplicateTransient 플래그가 있으면 복제하지 않음 (기본값 유지)
+		if (Prop->HasAnyFlags(EPropertyFlags::DuplicateTransient))
+			continue;
+
+		try
+		{
+			// ToString/FromString으로 안전하게 복제
+			FString valueStr = Prop->ToString(this);
+			if (!Prop->FromString(NewObj, valueStr))
+			{
+				UE_LOG("UObject::Duplicate: Failed to copy property '%s' of class '%s'",
+					Prop->GetName(), Class->GetName().ToString().data());
+			}
+		}
+		catch (...)
+		{
+			UE_LOG("UObject::Duplicate: Exception while copying property '%s' of class '%s'",
+				Prop->GetName(), Class->GetName().ToString().data());
+		}
+	}
+
+	// 하위 객체 복제 (하위 클래스가 오버라이드 가능)
+	DuplicateSubObjects(NewObj);
+
+	return NewObj;
 }
 
 void UObject::DuplicateSubObjects(UObject* DuplicatedObject)
 {
-	
+
 }
 
 void UObject::SetOuter(UObject* InObject)

@@ -2,6 +2,7 @@
 #include "Core/Public/Container/Name.h"
 
 class UObject;
+class UPropertyBase;
 /**
  * @brief UClass Metadata System
  * Runtime에 컴파일 시에 다양한 클래스 정보를 제공하기 위해 만들어진 클래스
@@ -21,7 +22,7 @@ public:
     static TArray<UClass*> FindClasses(UClass* SuperClass);
 private:
     static TArray<UClass*>& GetAllClasses();
-    
+
 public:
     UClass(const FName& InName, UClass* InSuperClass, size_t InClassSize, ClassConstructorType InConstructor, bool InIsAbstract = false);
 
@@ -29,11 +30,24 @@ public:
     const FName& GetName() const { return ClassName; }
     UClass* GetSuperClass() const { return SuperClass; }
     size_t GetClassSize() const { return ClassSize; }
-    
+
     bool IsChildOf(UClass* InClass) const;
     UObject* CreateDefaultObject() const;
 
     bool IsAbstract() const { return bIsAbstract; }
+
+    // Property System
+    void AddProperty(UPropertyBase* Property);
+    const TArray<UPropertyBase*>& GetProperties() const { return Properties; }
+    UPropertyBase* FindProperty(const FName& PropertyName) const;
+    UPropertyBase* FindProperty(const char* PropertyName) const;
+
+    /**
+     * @brief 이 클래스와 모든 부모 클래스의 프로퍼티를 재귀적으로 수집합니다.
+     * Serialize/Duplicate에서 상속된 프로퍼티까지 처리하기 위해 사용됩니다.
+     * @param OutProperties 수집된 프로퍼티 목록
+     */
+    void GetAllProperties(TArray<UPropertyBase*>& OutProperties) const;
 
 private:
     FName ClassName;
@@ -41,6 +55,7 @@ private:
     size_t ClassSize;
     ClassConstructorType Constructor;
     bool bIsAbstract;
+    TArray<UPropertyBase*> Properties;
 };
 
 /**

@@ -52,7 +52,7 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstant
 	UnifiedLightStructuredBuffer = FRenderResourceFactory::CreateStructuredBuffer<FUnifiedDynamicLight>(UnifiedLightCapacity);
 	UnifiedLightSRV = FRenderResourceFactory::CreateBufferSRV(UnifiedLightStructuredBuffer, UnifiedLightCapacity);
 
-	LightTilesCS = FRenderResourceFactory::CreateComputeShader(L"Asset/Shader/LightTilesComputeShader.hlsl");
+	FRenderResourceFactory::CreateComputeShader(L"Asset/Shader/LightTilesComputeShader.hlsl", &LightTilesCS);
 
     FP_CameraCB = FRenderResourceFactory::CreateConstantBuffer<FForwardPlusCameraConstants>();
     FP_ParamsCB = FRenderResourceFactory::CreateConstantBuffer<FForwardPlusConstants>();
@@ -153,7 +153,7 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 
 	// CS constant buffers (slots b0,b1 to match LightTilesComputeShader.hlsl)
 	ID3D11Buffer* csCBs[2] = { FP_CameraCB, FP_ParamsCB };
-	ctx->CSSetConstantBuffers(0, 2, csCBs);
+	ctx->CSSetConstantBuffers(10, 2, csCBs);
 
 	// CS SRV (t0 = unified dynamic lights; you already filled/grew this)
 	ID3D11ShaderResourceView* csSRVs[1] = { UnifiedLightSRV };
