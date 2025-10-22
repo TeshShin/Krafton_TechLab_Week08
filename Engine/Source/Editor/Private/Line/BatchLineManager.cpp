@@ -200,36 +200,65 @@ void UBatchLineManager::AddDebugCone(const FName& BaseLabel, const FVector& TipL
 		OutLabels.emplace_back(EdgeLabel);
 	}
 
-	// 밑면에서 기존 원 -Angle ~ +Angle 선 그리기
-	for (int32 i = 0; i < CircleSegments; ++i)
-	{
-		const float t1 = static_cast<float>(i) / CircleSegments;
-		const float t2 = static_cast<float>(i + 1) / CircleSegments;
+    FVector Right; // 로컬 +Y축
+    FVector Up;    // 로컬 +Z축
 
-		// 0~2PI 대신, StartAngleRad부터 AngleRangeRad 범위 내에서 각도를 계산
-		const float Angle1 = -AngleRad + 2 * t1 * AngleRad;
-		const float Angle2 = -AngleRad + 2 * t2 * AngleRad;
+    // 월드 Z축 (사용자님의 엔진은 Z-Up이므로)
+    const FVector WorldZ = FVector(0.0f, 0.0f, 1.0f);
 
-		FVector P1, P2;
-		for (uint32 Axis = 0; Axis < 2; ++Axis)
-		{
-			if (Axis == 0) // XY 평면
-			{
-				P1 = FVector(cos(Angle1) * Radius, sin(Angle1) * Radius, 0.f);
-				P2 = FVector(cos(Angle2) * Radius, sin(Angle2) * Radius, 0.f);
-			}
-			else // XZ 평면
-			{
-				P1 = FVector(cos(Angle1) * Radius, 0.f, sin(Angle1) * Radius);
-				P2 = FVector(cos(Angle2) * Radius, 0.f, sin(Angle2) * Radius);
-			}
+    // 짐벌락(Gimbal Lock) 방지: Direction이 WorldZ와 거의 평행할 때
+    if (abs(Direction.Dot(WorldZ)) > 0.999f)
+    {
+        // Direction이 Z축과 같으면, 로컬 Right(+Y)를 월드 +X로 설정
+        Right = FVector(1.0f, 0.0f, 0.0f);
+        // 로컬 Up(+Z) 계산
+        Up = Direction.Cross(Right); // (0,0,1).Cross(1,0,0) = (0,1,0) (월드 Y)
+    }
+    else
+    {
+        // 일반적인 경우
+        // 로컬 Right(+Y) 계산 (LH, Z-Up 기준)
+        Right = WorldZ.Cross(Direction).GetNormalized();
+        // 로컬 Up(+Z) 계산
+        Up = Direction.Cross(Right);
+    }
 
-			const FName Label = FName(std::format("{}_Circle_{}_{}", BaseLabel.ToString(), Axis, i));
+    // --- 2. 로컬 좌표축을 이용해 호 그리기 ---
 
-			Data->DebugSource->AddLine(Label, TipLocation + P1, TipLocation + P2, Color);
-			OutLabels.emplace_back(Label);
-		}
-	}
+    for (int32 i = 0; i < CircleSegments; ++i)
+    {
+        const float t1 = static_cast<float>(i) / CircleSegments;
+        const float t2 = static_cast<float>(i + 1) / CircleSegments;
+
+        // [-AngleRad ~ +AngleRad] 범위로 각도 계산
+        const float Angle1 = -AngleRad + 2 * t1 * AngleRad;
+        const float Angle2 = -AngleRad + 2 * t2 * AngleRad;
+
+        FVector P1, P2;
+        // Axis 0: 로컬 X-Y 평면 (Direction-Right 평면)
+        // Axis 1: 로컬 X-Z 평면 (Direction-Up 평면)
+        for (uint32 Axis = 0; Axis < 2; ++Axis)
+        {
+           if (Axis == 0) // 로컬 X-Y 평면
+           {
+              // P1 = cos(Angle1) * Radius * (로컬 X축) + sin(Angle1) * Radius * (로컬 Y축)
+              P1 = (Direction * cos(Angle1) + Right * sin(Angle1)) * Radius;
+              P2 = (Direction * cos(Angle2) + Right * sin(Angle2)) * Radius;
+           }
+           else // 로컬 X-Z 평면
+           {
+              // P1 = cos(Angle1) * Radius * (로컬 X축) + sin(Angle1) * Radius * (로컬 Z축)
+              P1 = (Direction * cos(Angle1) + Up * sin(Angle1)) * Radius;
+              P2 = (Direction * cos(Angle2) + Up * sin(Angle2)) * Radius;
+           }
+
+           const FName Label = FName(std::format("{}_Circle_{}_{}", BaseLabel.ToString(), Axis, i));
+
+           // TipLocation(원점)을 기준으로 라인 추가
+           Data->DebugSource->AddLine(Label, TipLocation + P1, TipLocation + P2, Color);
+           OutLabels.emplace_back(Label);
+        }
+    }
 }
 
 void UBatchLineManager::UpdateGrid(float InCellSize)
