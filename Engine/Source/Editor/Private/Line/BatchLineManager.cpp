@@ -199,6 +199,37 @@ void UBatchLineManager::AddDebugCone(const FName& BaseLabel, const FVector& TipL
 		Data->DebugSource->AddLine(EdgeLabel, TipLocation, BaseCenter + EdgePointOffset * BottomCircleRadius, Color);
 		OutLabels.emplace_back(EdgeLabel);
 	}
+
+	// 밑면에서 기존 원 -Angle ~ +Angle 선 그리기
+	for (int32 i = 0; i < CircleSegments; ++i)
+	{
+		const float t1 = static_cast<float>(i) / CircleSegments;
+		const float t2 = static_cast<float>(i + 1) / CircleSegments;
+
+		// 0~2PI 대신, StartAngleRad부터 AngleRangeRad 범위 내에서 각도를 계산
+		const float Angle1 = -AngleRad + 2 * t1 * AngleRad;
+		const float Angle2 = -AngleRad + 2 * t2 * AngleRad;
+
+		FVector P1, P2;
+		for (uint32 Axis = 0; Axis < 2; ++Axis)
+		{
+			if (Axis == 0) // XY 평면
+			{
+				P1 = FVector(cos(Angle1) * Radius, sin(Angle1) * Radius, 0.f);
+				P2 = FVector(cos(Angle2) * Radius, sin(Angle2) * Radius, 0.f);
+			}
+			else // XZ 평면
+			{
+				P1 = FVector(cos(Angle1) * Radius, 0.f, sin(Angle1) * Radius);
+				P2 = FVector(cos(Angle2) * Radius, 0.f, sin(Angle2) * Radius);
+			}
+
+			const FName Label = FName(std::format("{}_Circle_{}_{}", BaseLabel.ToString(), Axis, i));
+
+			Data->DebugSource->AddLine(Label, TipLocation + P1, TipLocation + P2, Color);
+			OutLabels.emplace_back(Label);
+		}
+	}
 }
 
 void UBatchLineManager::UpdateGrid(float InCellSize)
