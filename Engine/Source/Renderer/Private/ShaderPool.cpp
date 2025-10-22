@@ -390,29 +390,23 @@ bool FShaderPool::CompileOrLoadShader(const FShaderKey& Key, ID3DBlob** OutBytec
 	FILETIME ShaderFolderTimestamp = BinaryCache.GetShaderFolderTimestamp(ShaderFolderPath);
 
 	// Try load from binary cache first
+	// REFACTORED: Single call now handles both reading AND validation (SOLID: DRY principle)
 	FShaderCacheEntry CacheEntry;
-
-	if (BinaryCache.LoadFromCache(Key, CacheEntry))
+	if (BinaryCache.LoadFromCache(Key, ShaderFolderTimestamp, CompileFlags, CacheEntry))
 	{
-		// Validate cache with flags and timestamps
-		if (BinaryCache.IsCacheValid(Key, ShaderFolderTimestamp, CompileFlags))
+		// Cache valid - use cached bytecode
+		HRESULT hr = D3DCreateBlob(CacheEntry.Bytecode.size(), OutBytecode);
+		if (SUCCEEDED(hr))
 		{
-			// Create blob from cached bytecode
-			HRESULT hr = D3DCreateBlob(CacheEntry.Bytecode.size(), OutBytecode);
-			if (SUCCEEDED(hr))
-			{
-				memcpy((*OutBytecode)->GetBufferPointer(), CacheEntry.Bytecode.data(), CacheEntry.Bytecode.size());
-				UE_LOG("ShaderPool: Loaded shader from cache '%ls'", Key.SourcePath.c_str());
-				return true;
-			}
-		}
-		else
-		{
-			UE_LOG("ShaderPool: Cache invalid for '%ls', recompiling", Key.SourcePath.c_str());
+			memcpy((*OutBytecode)->GetBufferPointer(), CacheEntry.Bytecode.data(), CacheEntry.Bytecode.size());
+			UE_LOG("ShaderPool: Loaded shader from cache '%ls'", Key.SourcePath.c_str());
+			return true;
 		}
 	}
 
 	// Cache miss or invalid - compile from source
+	UE_LOG("ShaderPool: Cache miss or invalid for '%ls', compiling from source", Key.SourcePath.c_str());
+
 	const char* EntryPoint = "main";
 	const char* Profile = "vs_5_0";
 

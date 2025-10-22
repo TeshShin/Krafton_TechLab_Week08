@@ -64,6 +64,8 @@ bool FShaderBinaryCache::SaveToCache(
 
 bool FShaderBinaryCache::LoadFromCache(
 	const FShaderKey& Key,
+	const FILETIME& ShaderFolderTimestamp,
+	uint32 CompileFlags,
 	FShaderCacheEntry& OutEntry)
 {
 	wstring FilePath = GetCacheFilePath(Key);
@@ -74,80 +76,22 @@ bool FShaderBinaryCache::LoadFromCache(
 		return false;
 	}
 
-	// Read entry
+	// Step 1: Read cache file (ONLY ONCE - DRY principle)
 	if (!ReadEntryFromFile(FilePath, OutEntry))
 	{
 		UE_LOG_WARNING("ShaderBinaryCache: Failed to read '%ls'", FilePath.c_str());
 		return false;
 	}
 
-	// Validate header
-	if (!OutEntry.Header.IsValid())
+	// Step 2: Validate cache entry (Single validation point - SRP principle)
+	if (!ValidateCacheEntry(OutEntry, Key, ShaderFolderTimestamp, CompileFlags))
 	{
-		UE_LOG_WARNING("ShaderBinaryCache: Invalid header in '%ls'", FilePath.c_str());
+		// Validation method already logs specific reason
 		return false;
 	}
 
-	// Validate hash
-	uint8 CurrentHash[16];
-	if (CalculateSourceHash(Key, CurrentHash))
-	{
-		if (memcmp(CurrentHash, OutEntry.Header.MD5Hash, 16) != 0)
-		{
-			UE_LOG_WARNING("ShaderBinaryCache: Hash mismatch for '%ls' (source or defines changed)", FilePath.c_str());
-			return false;
-		}
-	}
-
-	UE_LOG("ShaderBinaryCache: Loaded '%ls' (%u bytes)", FilePath.c_str(), OutEntry.Metadata.BytecodeSize);
-	return true;
-}
-
-bool FShaderBinaryCache::IsCacheValid(
-	const FShaderKey& Key,
-	const FILETIME& ShaderFolderTimestamp,
-	uint32 CompileFlags)
-{
-	wstring FilePath = GetCacheFilePath(Key);
-
-	// Check if file exists
-	if (!std::filesystem::exists(FilePath))
-	{
-		return false;
-	}
-
-	// Load entry for timestamp comparison
-	FShaderCacheEntry Entry;
-	if (!ReadEntryFromFile(FilePath, Entry))
-	{
-		return false;
-	}
-
-	// Check if any file in shader folder is newer than cached version
-	if (IsFileTimeNewer(ShaderFolderTimestamp, Entry.Metadata.ShaderFolderTimestamp))
-	{
-		UE_LOG("ShaderBinaryCache: Cache outdated for '%ls' (shader folder modified)", Key.SourcePath.c_str());
-		return false;
-	}
-
-	// Check if compile flags changed
-	if (Entry.Metadata.CompileFlags != CompileFlags)
-	{
-		UE_LOG("ShaderBinaryCache: Cache outdated for '%ls' (compile flags changed: 0x%X -> 0x%X)",
-			Key.SourcePath.c_str(), Entry.Metadata.CompileFlags, CompileFlags);
-		return false;
-	}
-
-	// Validate hash
-	uint8 CurrentHash[16];
-	if (CalculateSourceHash(Key, CurrentHash))
-	{
-		if (memcmp(CurrentHash, Entry.Header.MD5Hash, 16) != 0)
-		{
-			return false;
-		}
-	}
-
+	UE_LOG("ShaderBinaryCache: Successfully loaded and validated '%ls' (%u bytes)",
+		FilePath.c_str(), OutEntry.Metadata.BytecodeSize);
 	return true;
 }
 
@@ -443,4 +387,78 @@ bool FShaderBinaryCache::ReadEntryFromFile(const wstring& FilePath, FShaderCache
 		UE_LOG_ERROR("ShaderBinaryCache: Exception reading file: %s", e.what());
 		return false;
 	}
+}
+
+// ===== Validation Methods (SOLID: Single Responsibility Principle) =====
+
+bool FShaderBinaryCache::ValidateCacheEntry(
+	const FShaderCacheEntry& Entry,
+	const FShaderKey& Key,
+	const FILETIME& ShaderFolderTimestamp,
+	uint32 CompileFlags) const
+{
+	// Early-return pattern: Fast failure on first invalid check
+
+	if (!ValidateHeader(Entry.Header))
+		return false;
+
+	if (!ValidateSourceHash(Entry, Key))
+		return false;
+
+	if (!ValidateTimestamp(Entry, ShaderFolderTimestamp))
+		return false;
+
+	if (!ValidateCompileFlags(Entry, CompileFlags))
+		return false;
+
+	return true;
+}
+
+bool FShaderBinaryCache::ValidateHeader(const FShaderCacheHeader& Header) const
+{
+	if (!Header.IsValid())
+	{
+		UE_LOG_WARNING("ShaderBinaryCache: Invalid cache header (magic/version mismatch)");
+		return false;
+	}
+	return true;
+}
+
+bool FShaderBinaryCache::ValidateSourceHash(const FShaderCacheEntry& Entry, const FShaderKey& Key) const
+{
+	uint8 CurrentHash[16];
+	if (!const_cast<FShaderBinaryCache*>(this)->CalculateSourceHash(Key, CurrentHash))
+	{
+		UE_LOG_WARNING("ShaderBinaryCache: Failed to calculate source hash for validation");
+		return false;
+	}
+
+	if (memcmp(CurrentHash, Entry.Header.MD5Hash, 16) != 0)
+	{
+		UE_LOG("ShaderBinaryCache: Hash mismatch for '%ls' (source or defines changed)", Key.SourcePath.c_str());
+		return false;
+	}
+
+	return true;
+}
+
+bool FShaderBinaryCache::ValidateTimestamp(const FShaderCacheEntry& Entry, const FILETIME& ShaderFolderTimestamp) const
+{
+	if (IsFileTimeNewer(ShaderFolderTimestamp, Entry.Metadata.ShaderFolderTimestamp))
+	{
+		UE_LOG("ShaderBinaryCache: Cache outdated (shader folder modified since cache creation)");
+		return false;
+	}
+	return true;
+}
+
+bool FShaderBinaryCache::ValidateCompileFlags(const FShaderCacheEntry& Entry, uint32 CompileFlags) const
+{
+	if (Entry.Metadata.CompileFlags != CompileFlags)
+	{
+		UE_LOG("ShaderBinaryCache: Compile flags changed (cached: 0x%X, current: 0x%X)",
+			Entry.Metadata.CompileFlags, CompileFlags);
+		return false;
+	}
+	return true;
 }
