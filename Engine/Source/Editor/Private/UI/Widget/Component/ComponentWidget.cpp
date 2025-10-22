@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Editor/Public/UI/Widget/Component/ComponentWidget.h"
+#include "Editor/Public/UI/ImGuiStyleHelper.h"
 #include "Editor/Public/Editor.h"
 #include "Scene/Public/Component/ActorComponent.h"
 #include "Core/Public/Object/Property.h"
@@ -384,13 +385,13 @@ void UComponentWidget::RenderProperties(UObject* TargetObject, bool bShowHeader)
 		if (Prop->HasAnyFlags(EPropertyFlags::SaveGame))
 		{
 			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "[Saved]");
+			ImGui::TextColored(FImGuiStyleHelper::LogSuccess(), "[Saved]");
 		}
 
 		if (bIsEditable)
 		{
 			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.5f, 1.0f), "[Editable]");
+			ImGui::TextColored(FImGuiStyleHelper::LogWarning(), "[Editable]");
 		}
 	}
 

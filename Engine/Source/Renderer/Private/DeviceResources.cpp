@@ -43,7 +43,7 @@ void UDeviceResources::CreateDeviceAndSwapChain(HWND InWindowHandle)
 	DXGI_SWAP_CHAIN_DESC SwapChainDescription = {};
 	SwapChainDescription.BufferDesc.Width = 0; // 창 크기에 맞게 자동으로 설정
 	SwapChainDescription.BufferDesc.Height = 0; // 창 크기에 맞게 자동으로 설정
-	SwapChainDescription.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // 색상 포맷
+	SwapChainDescription.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // 선형 색상 포맷
 	SwapChainDescription.SampleDesc.Count = 1; // 멀티 샘플링 비활성화
 	SwapChainDescription.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_SHADER_INPUT; // 렌더 타겟으로 사용
 	SwapChainDescription.BufferCount = 2; // 더블 버퍼링

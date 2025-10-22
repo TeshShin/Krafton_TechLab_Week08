@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Editor/Public/UI/Widget/ConsoleWidget.h"
+#include "Editor/Public/UI/ImGuiStyleHelper.h"
 #include "Editor/Public/UI/StatOverlay.h"
 #include "Core/Public/Misc/UELogParser.h"
 
@@ -165,25 +166,25 @@ ImVec4 UConsoleWidget::GetColorByLogType(ELogType InType)
 	switch (InType)
 	{
 	case ELogType::Info:
-		return {1.0f, 1.0f, 1.0f, 1.0f}; // 흰색
+		return FImGuiStyleHelper::LogNormal();
 	case ELogType::Warning:
-		return {1.0f, 1.0f, 0.4f, 1.0f}; // 노란색
+		return FImGuiStyleHelper::LogWarning();
 	case ELogType::Error:
 	case ELogType::TerminalError:
-		return {1.0f, 0.4f, 0.4f, 1.0f}; // 빨간색
+		return FImGuiStyleHelper::LogError();
 	case ELogType::Success:
 	case ELogType::UELog:
-		return {0.4f, 1.0f, 0.4f, 1.0f}; // 초록색
+		return FImGuiStyleHelper::LogSuccess();
 	case ELogType::System:
-		return {0.7f, 0.7f, 0.7f, 1.0f}; // 회색
+		return FImGuiStyleHelper::TextSecondary();
 	case ELogType::Debug:
-		return {0.4f, 0.6f, 1.0f, 1.0f}; // 파란색
+		return FImGuiStyleHelper::Info();
 	case ELogType::Terminal:
-		return {0.6f, 0.8f, 1.0f, 1.0f}; // 하늘색
+		return FImGuiStyleHelper::InfoHovered();
 	case ELogType::Command:
-		return {1.0f, 0.8f, 0.6f, 1.0f}; // 주황색
+		return ImVec4(1.0f, 0.8f, 0.6f, 1.0f); // 주황색 (특수 케이스)
 	default:
-		return {1.0f, 1.0f, 1.0f, 1.0f}; // 기본 흰색
+		return FImGuiStyleHelper::TextPrimary();
 	}
 }
 

@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Editor/Public/UI/Widget/SceneHierarchyWidget.h"
+#include "Editor/Public/UI/ImGuiStyleHelper.h"
 #include "Scene/Public/Level/Level.h"
 #include "Scene/Public/Actor/Actor.h"
 #include "Editor/Public/Camera.h"
@@ -146,7 +147,7 @@ void USceneHierarchyWidget::RenderActorInfo(AActor* InActor, int32 InIndex)
 	// 선택된 Actor는 하이라이트
 	if (bIsSelected)
 	{
-		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 1.0f)); // 노란색
+		ImGui::PushStyleColor(ImGuiCol_Text, FImGuiStyleHelper::Warning());
 	}
 
 	FName ActorName = InActor->GetName();

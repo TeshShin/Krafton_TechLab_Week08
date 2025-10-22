@@ -142,6 +142,9 @@ void UUIManager::Render()
 		MainMenuWindow->RenderWidget();
 	}
 
+	// DockSpace 생성 (MainMenuBar 아래 전체 영역)
+	CreateDockSpace();
+
 	// 우선순위에 따라 정렬
 	SortUIWindowsByPriority();
 
@@ -560,4 +563,39 @@ void UUIManager::OnSelectedComponentChanged(UActorComponent* InSelectedComponent
 	{
 		UIWindow->OnSelectedComponentChanged(InSelectedComponent);
 	}
+}
+
+/**
+ * @brief DockSpace를 생성하여 UI 윈도우들이 docking 가능하도록 함
+ */
+void UUIManager::CreateDockSpace()
+{
+	// MainMenuBar 높이를 고려하여 DockSpace 위치 계산
+	const float MenuBarHeight = GetMainMenuBarHeight();
+
+	ImGuiViewport* Viewport = ImGui::GetMainViewport();
+	ImGui::SetNextWindowPos(ImVec2(Viewport->Pos.x, Viewport->Pos.y + MenuBarHeight));
+	ImGui::SetNextWindowSize(ImVec2(Viewport->Size.x, Viewport->Size.y - MenuBarHeight));
+	ImGui::SetNextWindowViewport(Viewport->ID);
+
+	// DockSpace 윈도우 플래그 설정
+	ImGuiWindowFlags WindowFlags = ImGuiWindowFlags_NoDocking;
+	WindowFlags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse;
+	WindowFlags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+	WindowFlags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+	WindowFlags |= ImGuiWindowFlags_NoBackground;
+
+	// 패딩 제거
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+
+	ImGui::Begin("MainDockSpace", nullptr, WindowFlags);
+	ImGui::PopStyleVar(3);
+
+	// DockSpace 생성
+	ImGuiID DockSpaceID = ImGui::GetID("MyDockSpace");
+	ImGui::DockSpace(DockSpaceID, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
+
+	ImGui::End();
 }

@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Editor/Public/UI/Widget/ActorDetailWidget.h"
+#include "Editor/Public/UI/ImGuiStyleHelper.h"
 #include "Editor/Public/Editor.h"
 #include "Scene/Public/Level/Level.h"
 #include "Scene/Public/Actor/Actor.h"
@@ -37,7 +38,7 @@ void UActorDetailWidget::RenderWidget()
 	if (!SelectedActor)
 	{
 		ImGui::TextUnformatted("No Object Selected");
-		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Detail 확인을 위해 Object를 선택해주세요");
+		ImGui::TextColored(FImGuiStyleHelper::TextSecondary(), "Detail 확인을 위해 Object를 선택해주세요");
 		SelectedComponent = nullptr;
 		CachedSelectedActor = nullptr;
 		return;

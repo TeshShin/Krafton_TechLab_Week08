@@ -82,4 +82,5 @@ private:
 
 	void SortUIWindowsByPriority();
 	void UpdateFocusState();
+	void CreateDockSpace();
 };

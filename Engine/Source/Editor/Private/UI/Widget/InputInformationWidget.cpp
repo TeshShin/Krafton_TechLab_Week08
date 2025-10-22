@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Editor/Public/UI/Widget/InputInformationWidget.h"
+#include "Editor/Public/UI/ImGuiStyleHelper.h"
 #include "Manager/Public/InputManager.h"
 
 IMPLEMENT_CLASS(UInputInformationWidget, UWidget)
@@ -115,14 +116,14 @@ void UInputInformationWidget::RenderKeyList(const TArray<EKeyInput>& InPressedKe
 
 	if (InPressedKeys.empty())
 	{
-		ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "(No Input)");
+		ImGui::TextColored(FImGuiStyleHelper::TextSecondary(), "(No Input)");
 	}
 	else
 	{
 		for (const EKeyInput& Key : InPressedKeys)
 		{
 			FString KeyString = UInputManager::GetInstance().KeyInputToString(Key);
-			ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "- %s", KeyString.c_str());
+			ImGui::TextColored(FImGuiStyleHelper::LogSuccess(), "- %s", KeyString.c_str());
 		}
 
 		ImGui::Separator();
@@ -171,7 +172,7 @@ void UInputInformationWidget::RenderKeyStatistics()
 
 	if (KeyPressCount.empty())
 	{
-		ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "No statistics yet");
+		ImGui::TextColored(FImGuiStyleHelper::TextSecondary(), "No statistics yet");
 	}
 	else
 	{

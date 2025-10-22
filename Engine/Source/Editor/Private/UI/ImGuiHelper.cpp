@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Editor/Public/UI/ImGuiHelper.h"
+#include "Editor/Public/UI/ImGuiStyleHelper.h"
 #include "Renderer/Public/Renderer.h"
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_dx11.h"
@@ -26,14 +27,20 @@ void UImGuiHelper::Initialize(HWND InWindowHandle)
 	ImGui::CreateContext();
 	ImGui_ImplWin32_Init(InWindowHandle);
 
+	// Apply Custom Dark Theme
+	FImGuiStyleHelper::ApplyDarkTheme();
+
 	ImGuiIO& IO = ImGui::GetIO();
+
+	// Docking 활성화
+	IO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
 	// imgui.ini 파일 생성 비활성화
 	IO.IniFilename = nullptr;
-	
+
 	path FontFilePath = UPathManager::GetInstance().GetFontPath() / "Pretendard-Regular.otf";
 	IO.Fonts->AddFontFromFileTTF((char*)FontFilePath.u8string().c_str(), 16.0f, nullptr, IO.Fonts->GetGlyphRangesKorean());
-	
+
 	auto& Renderer = URenderer::GetInstance();
 	ImGui_ImplDX11_Init(Renderer.GetDevice(), Renderer.GetDeviceContext());
 

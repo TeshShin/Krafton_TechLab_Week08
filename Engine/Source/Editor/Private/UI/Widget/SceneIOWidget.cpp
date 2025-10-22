@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Editor/Public/UI/Widget/SceneIOWidget.h"
+#include "Editor/Public/UI/ImGuiStyleHelper.h"
 #include <shobjidl.h>
 
 IMPLEMENT_CLASS(USceneIOWidget, UWidget)
@@ -53,7 +54,7 @@ void USceneIOWidget::RenderWidget()
 	// Status Message
 	if (StatusMessageTimer > 0.0f)
 	{
-		ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), StatusMessage.c_str());
+		ImGui::TextColored(FImGuiStyleHelper::LogSuccess(), StatusMessage.c_str());
 		StatusMessageTimer -= DT;
 	}
 	// Reserve Space

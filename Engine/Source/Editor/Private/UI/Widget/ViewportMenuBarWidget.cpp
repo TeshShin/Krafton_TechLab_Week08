@@ -1,24 +1,9 @@
 #include "pch.h"
 #include "Editor/Public/UI/Widget/ViewportMenuBarWidget.h"
+#include "Editor/Public/UI/ImGuiStyleHelper.h"
 #include "Editor/Public/Viewport.h"
 #include "Editor/Public/ViewportClient.h"
 #include "Editor/Public/Editor.h"
-
-/* *
-* @brief UI에 적용할 색상을 정의합니다.
-*/
-// 카메라 모드 제어 위젯
-const ImVec4 MenuBarBg = ImVec4(pow(0.12f, 2.2f), pow(0.12f, 2.2f), pow(0.12f, 2.2f), 1.00f);
-const ImVec4 PopupBg = ImVec4(pow(0.09f, 2.2f), pow(0.09f, 2.2f), pow(0.09f, 2.2f), 1.00f);
-const ImVec4 Header = ImVec4(pow(0.20f, 2.2f), pow(0.20f, 2.2f), pow(0.20f, 2.2f), 1.00f);
-const ImVec4 HeaderHovered = ImVec4(pow(0.35f, 2.2f), pow(0.35f, 2.2f), pow(0.35f, 2.2f), 1.00f);
-const ImVec4 HeaderActive = ImVec4(pow(0.50f, 2.2f), pow(0.50f, 2.2f), pow(0.50f, 2.2f), 1.00f);
-const ImVec4 TextColor = ImVec4(pow(0.92f, 2.2f), pow(0.92f, 2.2f), pow(0.92f, 2.2f), 1.00f);
-// 카메라 변수 제어 위젯
-const ImVec4 FrameBg = ImVec4(pow(0.1f, 2.2f), pow(0.1f, 2.2f), pow(0.1f, 2.2f), 1.00f);
-const ImVec4 FrameBgHovered = ImVec4(pow(0.25f, 2.2f), pow(0.25f, 2.2f), pow(0.25f, 2.2f), 1.00f);
-const ImVec4 SliderGrab = ImVec4(pow(0.6f, 2.2f), pow(0.6f, 2.2f), pow(0.6f, 2.2f), 1.00f);
-const ImVec4 SliderGrabActive = ImVec4(pow(0.8f, 2.2f), pow(0.8f, 2.2f), pow(0.8f, 2.2f), 1.00f);
 
 UViewportMenuBarWidget::UViewportMenuBarWidget()
 {
@@ -46,21 +31,21 @@ void UViewportMenuBarWidget::RenderWidget()
 
 		// 0. 고유 ID 부여 및 스타일 적용
 		ImGui::PushID(Index);
-		ImGui::PushStyleColor(ImGuiCol_MenuBarBg, MenuBarBg);
-		ImGui::PushStyleColor(ImGuiCol_PopupBg, PopupBg);
-		ImGui::PushStyleColor(ImGuiCol_Header, Header);
-		ImGui::PushStyleColor(ImGuiCol_HeaderHovered, HeaderHovered);
-		ImGui::PushStyleColor(ImGuiCol_HeaderActive, HeaderActive);
-		ImGui::PushStyleColor(ImGuiCol_Button, Header);
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, HeaderHovered);
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, HeaderActive);
-		ImGui::PushStyleColor(ImGuiCol_Text, TextColor);
+		ImGui::PushStyleColor(ImGuiCol_MenuBarBg, FImGuiStyleHelper::BackgroundSecondary());
+		ImGui::PushStyleColor(ImGuiCol_PopupBg, FImGuiStyleHelper::BackgroundPrimary());
+		ImGui::PushStyleColor(ImGuiCol_Header, FImGuiStyleHelper::BackgroundTertiary());
+		ImGui::PushStyleColor(ImGuiCol_HeaderHovered, FImGuiStyleHelper::BackgroundHovered());
+		ImGui::PushStyleColor(ImGuiCol_HeaderActive, FImGuiStyleHelper::BackgroundActive());
+		ImGui::PushStyleColor(ImGuiCol_Button, FImGuiStyleHelper::BackgroundTertiary());
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, FImGuiStyleHelper::BackgroundHovered());
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, FImGuiStyleHelper::BackgroundActive());
+		ImGui::PushStyleColor(ImGuiCol_Text, FImGuiStyleHelper::TextPrimary());
 
-		ImGui::PushStyleColor(ImGuiCol_FrameBg, FrameBg);
-		ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, FrameBgHovered);
-		ImGui::PushStyleColor(ImGuiCol_FrameBgActive, FrameBg);
-		ImGui::PushStyleColor(ImGuiCol_SliderGrab, SliderGrab);
-		ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, SliderGrabActive);
+		ImGui::PushStyleColor(ImGuiCol_FrameBg, FImGuiStyleHelper::BackgroundSecondary());
+		ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, FImGuiStyleHelper::BackgroundHovered());
+		ImGui::PushStyleColor(ImGuiCol_FrameBgActive, FImGuiStyleHelper::BackgroundSecondary());
+		ImGui::PushStyleColor(ImGuiCol_SliderGrab, FImGuiStyleHelper::BackgroundActive());
+		ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, FImGuiStyleHelper::BackgroundHovered());
 
 		// 1. 독립 윈도우 위치와 크기 지정
 		ImGui::SetNextWindowPos(ImVec2(ViewportInfo.TopLeftX, ViewportInfo.TopLeftY));

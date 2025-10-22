@@ -237,7 +237,10 @@ void URenderer::Render()
 
 void URenderer::RenderBegin() const
 {
-	constexpr float ClearColor[4] = {0.025f, 0.025f, 0.025f, 1.0f};
+	// Match BackgroundPrimary color from ImGuiStyleHelper (Midnight theme)
+	// sRGB to Linear conversion applied: {0.08, 0.09, 0.12} sRGB → {0.0099, 0.0132, 0.0228} Linear
+	// Linear buffer에서 의도한 sRGB 색상으로 올바르게 표시되도록 변환됨
+	constexpr float ClearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 	constexpr float NormalClearColor[] = {0.5f, 0.5f, 0.5f, 1.0f};
 
 	GetDeviceContext()->ClearRenderTargetView(GetBackBufferRTV(), ClearColor);
