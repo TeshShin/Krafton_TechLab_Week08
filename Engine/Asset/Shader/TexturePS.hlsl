@@ -15,6 +15,7 @@ cbuffer LightConstants : register(b10)
 // [FORWARD PLUS RENDERING] Light Tile Clustering Data Structures
 //--------------------------------------------------------------------------------------
 
+
 // Camera and tiling parameters
 cbuffer FP_CameraCB : register(b11)
 {

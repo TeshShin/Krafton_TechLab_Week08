@@ -441,6 +441,7 @@ bool FShaderPool::CompileFromSource(
 	UINT Flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DEBUG) || defined(_DEBUG)
 	Flags |= D3DCOMPILE_DEBUG;
+	Flags |= D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
 
 	HRESULT hr = D3DCompileFromFile(
