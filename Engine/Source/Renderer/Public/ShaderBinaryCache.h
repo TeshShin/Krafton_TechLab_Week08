@@ -48,28 +48,31 @@ public:
 		uint32 CompileFlags);
 
 	/**
-	 * @brief Load compiled shader from cache file
+	 * @brief Load compiled shader from cache file with validation
 	 *
-	 * @param Key Shader variant identifier
-	 * @param OutEntry Loaded cache entry (header + metadata + bytecode)
-	 * @return True if load succeeded and cache is valid
-	 */
-	bool LoadFromCache(
-		const FShaderKey& Key,
-		FShaderCacheEntry& OutEntry);
-
-	/**
-	 * @brief Check if cache file exists and is valid for given key
+	 * This method performs atomic read-and-validate operation:
+	 * 1. Read cache file (once)
+	 * 2. Validate header integrity
+	 * 3. Validate source hash (MD5)
+	 * 4. Validate shader folder timestamp
+	 * 5. Validate compile flags
+	 *
+	 * SOLID Principles:
+	 * - Single Responsibility: One method for complete cache loading
+	 * - Don't Repeat Yourself: File read happens only once
+	 * - Command-Query Separation: Returns bool + fills OutEntry on success
 	 *
 	 * @param Key Shader variant identifier
 	 * @param ShaderFolderTimestamp Latest timestamp of any .hlsl file in shader folder
 	 * @param CompileFlags D3DCompile flags used during compilation
-	 * @return True if cache exists and is up-to-date
+	 * @param OutEntry Loaded cache entry (header + metadata + bytecode)
+	 * @return True if cache exists, is valid, and loaded successfully
 	 */
-	bool IsCacheValid(
+	bool LoadFromCache(
 		const FShaderKey& Key,
 		const FILETIME& ShaderFolderTimestamp,
-		uint32 CompileFlags);
+		uint32 CompileFlags,
+		FShaderCacheEntry& OutEntry);
 
 	/**
 	 * @brief Calculate MD5 hash of shader source + defines
@@ -115,10 +118,68 @@ public:
 private:
 	wstring CacheDirectory;  ///< Path to cache directory
 
+	// ===== File I/O Operations =====
+
 	/**
 	 * @brief Ensure cache directory exists, create if needed
 	 */
 	bool EnsureCacheDirectoryExists();
+
+	/**
+	 * @brief Write cache entry to file
+	 */
+	bool WriteEntryToFile(const wstring& FilePath, const FShaderCacheEntry& Entry);
+
+	/**
+	 * @brief Read cache entry from file
+	 */
+	bool ReadEntryFromFile(const wstring& FilePath, FShaderCacheEntry& OutEntry);
+
+	// ===== Validation Operations (SRP: Each method has single responsibility) =====
+
+	/**
+	 * @brief Validate entire cache entry against current state
+	 *
+	 * Aggregates all validation checks in correct order.
+	 * Early-return on first validation failure for performance.
+	 *
+	 * @param Entry Cache entry to validate
+	 * @param Key Shader key for hash validation
+	 * @param ShaderFolderTimestamp Current shader folder timestamp
+	 * @param CompileFlags Current compile flags
+	 * @return True if all validations pass
+	 */
+	bool ValidateCacheEntry(
+		const FShaderCacheEntry& Entry,
+		const FShaderKey& Key,
+		const FILETIME& ShaderFolderTimestamp,
+		uint32 CompileFlags) const;
+
+	/**
+	 * @brief Validate cache header integrity
+	 * @return True if header magic number and version are valid
+	 */
+	bool ValidateHeader(const FShaderCacheHeader& Header) const;
+
+	/**
+	 * @brief Validate source file hash
+	 * @return True if current hash matches cached hash
+	 */
+	bool ValidateSourceHash(const FShaderCacheEntry& Entry, const FShaderKey& Key) const;
+
+	/**
+	 * @brief Validate shader folder timestamp
+	 * @return True if no .hlsl file is newer than cached version
+	 */
+	bool ValidateTimestamp(const FShaderCacheEntry& Entry, const FILETIME& ShaderFolderTimestamp) const;
+
+	/**
+	 * @brief Validate compile flags
+	 * @return True if compile flags match
+	 */
+	bool ValidateCompileFlags(const FShaderCacheEntry& Entry, uint32 CompileFlags) const;
+
+	// ===== Utility Operations =====
 
 	/**
 	 * @brief Read file timestamp
@@ -130,14 +191,4 @@ private:
 	 * @return True if Time1 is newer than Time2
 	 */
 	bool IsFileTimeNewer(const FILETIME& Time1, const FILETIME& Time2) const;
-
-	/**
-	 * @brief Write cache entry to file
-	 */
-	bool WriteEntryToFile(const wstring& FilePath, const FShaderCacheEntry& Entry);
-
-	/**
-	 * @brief Read cache entry from file
-	 */
-	bool ReadEntryFromFile(const wstring& FilePath, FShaderCacheEntry& OutEntry);
 };

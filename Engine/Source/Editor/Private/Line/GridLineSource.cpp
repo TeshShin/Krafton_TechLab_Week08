@@ -26,22 +26,28 @@ void FGridLineSource::GenerateGrid()
     const float LineLength = CellSize * static_cast<float>(NumLines) / 2.f;
     const FVector4 Color(0.5f, 0.5f, 0.5f, 1.0f);
 
-    // Z-axis lines
+    // Z-axis lines (x=0 라인 제외)
     for (int32 LineCount = -NumLines / 2; LineCount < NumLines / 2; ++LineCount)
     {
-        FVector Start = { static_cast<float>(LineCount) * CellSize, -LineLength, 0.0f };
-        FVector End = { static_cast<float>(LineCount) * CellSize, LineLength, 0.0f };
-        Vertices.push_back({Start, Color});
-        Vertices.push_back({End, Color});
+        if (LineCount != 0)
+        {
+            FVector Start = { static_cast<float>(LineCount) * CellSize, -LineLength, 0.0f };
+            FVector End = { static_cast<float>(LineCount) * CellSize, LineLength, 0.0f };
+            Vertices.push_back({Start, Color});
+            Vertices.push_back({End, Color});
+        }
     }
 
-    // X-axis lines
+    // X-axis lines (y=0 라인 제외)
     for (int32 LineCount = -NumLines / 2; LineCount < NumLines / 2; ++LineCount)
     {
-        FVector Start = { -LineLength, static_cast<float>(LineCount) * CellSize, 0.0f };
-        FVector End = { LineLength, static_cast<float>(LineCount) * CellSize, 0.0f };
-        Vertices.push_back({Start, Color});
-        Vertices.push_back({End, Color});
+        if (LineCount != 0)
+        {
+            FVector Start = { -LineLength, static_cast<float>(LineCount) * CellSize, 0.0f };
+            FVector End = { LineLength, static_cast<float>(LineCount) * CellSize, 0.0f };
+            Vertices.push_back({Start, Color});
+            Vertices.push_back({End, Color});
+        }
     }
 
     for (uint32 i = 0; i < Vertices.size(); ++i)

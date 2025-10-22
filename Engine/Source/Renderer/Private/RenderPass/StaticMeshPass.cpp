@@ -104,6 +104,10 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 		SafeRelease(ClusterIndexUAV);
 		SafeRelease(ClusterIndexBuffer);
 
+		SafeRelease(LocalLightCountForHeatmapSRV);
+		SafeRelease(LocalLightCountForHeatmapUAV);
+		SafeRelease(LocalLightCountForHeatmapBuffer);
+
 		// Create Count buffer (TotalClusters uints)
 		const uint32 CountElements = TotalClusters;
 		ClusterCountBuffer = FRenderResourceFactory::CreateStructuredBufferWithUAV(
@@ -119,6 +123,13 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 			IndexElements,
 			&ClusterIndexSRV,
 			&ClusterIndexUAV);
+
+		// Create LocalLightCountForHeatmap buffer (TotalClusters uints)
+		LocalLightCountForHeatmapBuffer = FRenderResourceFactory::CreateStructuredBufferWithUAV(
+			sizeof(uint32),
+			CountElements,
+			&LocalLightCountForHeatmapSRV,
+			&LocalLightCountForHeatmapUAV);
 
 	        // Cache
 	        CachedNumTilesX = NumTilesX;
@@ -159,10 +170,10 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 	ID3D11ShaderResourceView* csSRVs[1] = { UnifiedLightSRV };
 	ctx->CSSetShaderResources(0, 1, csSRVs);
 
-	// CS UAVs (u0 = counts, u1 = indices)
-	ID3D11UnorderedAccessView* csUAVs[2] = { ClusterCountUAV, ClusterIndexUAV };
-	UINT initialCounts[2] = { 0, 0 }; // ignored for structured UAVs
-	ctx->CSSetUnorderedAccessViews(0, 2, csUAVs, initialCounts);
+	// CS UAVs (u0 = counts, u1 = indices, u2 = local light counts for heatmap)
+	ID3D11UnorderedAccessView* csUAVs[3] = { ClusterCountUAV, ClusterIndexUAV, LocalLightCountForHeatmapUAV };
+	UINT initialCounts[3] = { 0, 0, 0 }; // ignored for structured UAVs
+	ctx->CSSetUnorderedAccessViews(0, 3, csUAVs, initialCounts);
 
 	// Set compute shader
 	ctx->CSSetShader(LightTilesCS, nullptr, 0);
@@ -180,8 +191,8 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
     ctx->Dispatch(GroupsX, GroupsY, GroupsZ);
 
 	// Unbind CS UAVs/SRVs to avoid hazards when we rebinding as PS SRVs later
-	ID3D11UnorderedAccessView* nullUAVs[2] = { nullptr, nullptr };
-	ctx->CSSetUnorderedAccessViews(0, 2, nullUAVs, initialCounts);
+	ID3D11UnorderedAccessView* nullUAVs[3] = { nullptr, nullptr, nullptr };
+	ctx->CSSetUnorderedAccessViews(0, 3, nullUAVs, initialCounts);
 
 	ID3D11ShaderResourceView* nullSRVs[1] = { nullptr };
 	ctx->CSSetShaderResources(0, 1, nullSRVs);
@@ -394,7 +405,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 		FPipelineInfo HeatPipe = { nullptr, HeatVS, RS, DS_Disabled ? DS_Disabled : DS, HeatPS, BS };
 		Pipeline->UpdatePipeline(HeatPipe);
 		// Ensure SRV t7 and CBs b11,b12 are bound to PS
-		Pipeline->SetSRV(7, false /*PS*/, ClusterCountSRV);
+		Pipeline->SetSRV(7, false /*PS*/, LocalLightCountForHeatmapSRV);
 		Pipeline->SetConstantBuffer(11, false /*PS*/, FP_CameraCB);
 		Pipeline->SetConstantBuffer(12, false /*PS*/, FP_ParamsCB);
 		Pipeline->Draw(3, 0);
@@ -433,7 +444,9 @@ void FStaticMeshPass::Release()
 	SafeRelease(ClusterIndexSRV);
 	SafeRelease(ClusterIndexUAV);
 	SafeRelease(ClusterIndexBuffer);
-	SafeRelease(FP_CameraCB);
+	SafeRelease(LocalLightCountForHeatmapSRV);
+	SafeRelease(LocalLightCountForHeatmapUAV);
+	SafeRelease(LocalLightCountForHeatmapBuffer);
 	SafeRelease(FP_ParamsCB);
 	SafeRelease(LightTilesCS);
 	SafeRelease(VSPhong);

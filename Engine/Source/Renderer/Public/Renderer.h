@@ -110,7 +110,8 @@ private:
 
 	TArray<class FRenderPass*> LevelPasses;
 	TArray<class FRenderPass*> PostProcessPasses;
-	TMap<EViewModeIndex, class FRenderPass*> ViewModePasses;
+	TArray<class FRenderPass*> ViewModePasses;
+	TMap<EViewModeIndex, class FRenderPass*> ViewModePassesMap;
 	class FRenderPass* EditorDepthPass;
 	class FRenderPass* EditorOverlayPass;
 	TArray<class FRenderPass*> EditorOverlayPasses;

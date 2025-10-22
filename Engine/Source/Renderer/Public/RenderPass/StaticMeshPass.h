@@ -45,10 +45,13 @@ private:
 
 	ID3D11Buffer* ClusterIndexBuffer = nullptr;
 	ID3D11UnorderedAccessView* ClusterIndexUAV = nullptr;
-	ID3D11ShaderResourceView* ClusterIndexSRV = nullptr;
-
-	ID3D11Buffer* FP_CameraCB = nullptr;
-	ID3D11Buffer* FP_ParamsCB = nullptr;
+	    ID3D11ShaderResourceView* ClusterIndexSRV = nullptr;
+	
+		ID3D11Buffer* LocalLightCountForHeatmapBuffer = nullptr;
+		ID3D11UnorderedAccessView* LocalLightCountForHeatmapUAV = nullptr;
+		ID3D11ShaderResourceView* LocalLightCountForHeatmapSRV = nullptr;
+	
+		ID3D11Buffer* FP_CameraCB = nullptr;	ID3D11Buffer* FP_ParamsCB = nullptr;
 
     void CreateClusterBuffers(FRenderingContext& Context, uint32 NumLights);
 

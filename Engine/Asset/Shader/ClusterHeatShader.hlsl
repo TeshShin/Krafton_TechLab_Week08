@@ -28,7 +28,7 @@ cbuffer FP_ForwardPlusCB : register(b12)
 };
 
 // Cluster counts per cluster (size: FP_TotalClusters)
-StructuredBuffer<uint> FP_ClusterCount : register(t7);
+StructuredBuffer<uint> FP_LocalLightCountForHeatmap : register(t7);
 
 struct VS_OUT
 {
@@ -75,7 +75,7 @@ float4 mainPS(VS_OUT input) : SV_TARGET
     for (uint z = 0; z < FP_NumZSlices; ++z)
     {
         uint cid = (z * FP_NumTilesY + tileY) * FP_NumTilesX + tileX;
-        sum += FP_ClusterCount[cid];
+        sum += FP_LocalLightCountForHeatmap[cid];
     }
 
     // Normalize against a dynamic scale favoring visibility.

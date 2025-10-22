@@ -152,10 +152,10 @@ void URenderer::ReleaseRenderPasses()
 		RenderPass->Release();
 		SafeDelete(RenderPass);
 	}
-	for (auto& RenderPassPair : ViewModePasses)
+	for (auto& RenderPass : ViewModePasses)
 	{
-		RenderPassPair.second->Release();
-		SafeDelete(RenderPassPair.second);
+		RenderPass->Release();
+		SafeDelete(RenderPass);
 	}
 	EditorDepthPass->Release();
 	SafeDelete(EditorDepthPass);
@@ -237,13 +237,7 @@ void URenderer::Render()
 
 void URenderer::RenderBegin() const
 {
-	// Editor::UpdateLayout()에서 설정한 viewport 레이아웃 유지
-	// (스플릿터에 따라 4개의 뷰포트가 이미 설정되어 있음)
-
-	// Match BackgroundPrimary color from ImGuiStyleHelper (Midnight theme)
-	// sRGB to Linear conversion applied: {0.08, 0.09, 0.12} sRGB → {0.0099, 0.0132, 0.0228} Linear
-	// Linear buffer에서 의도한 sRGB 색상으로 올바르게 표시되도록 변환됨
-	constexpr float ClearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+	constexpr float ClearColor[4] = {0.f, 0.f, 0.f, 1.0f};
 	constexpr float NormalClearColor[] = {0.5f, 0.5f, 0.5f, 1.0f};
 
 	GetDeviceContext()->ClearRenderTargetView(GetBackBufferRTV(), ClearColor);
@@ -324,7 +318,7 @@ void URenderer::RenderPostProcess(struct FRenderingContext& RenderingContext)
 
 void URenderer::RenderByViewMode(struct FRenderingContext& RenderingContext)
 {
-	FRenderPass* ViewModePass = ViewModePasses[RenderingContext.ViewMode];
+	FRenderPass* ViewModePass = ViewModePassesMap[RenderingContext.ViewMode];
 	if (ViewModePass->CanRender(RenderingContext))
 	{
 		ViewModePass->SetRenderTargets(DeviceResources);
@@ -426,13 +420,21 @@ void URenderer::CreateRenderPasses()
 	auto FXAAPass = new FFXAAPass(Pipeline, DeviceResources);
 	PostProcessPasses.push_back(FXAAPass);
 
-	ViewModePasses[EViewModeIndex::VMI_Lit_Phong] = new FDefaultViewPass(Pipeline, DisabledDS);
-	ViewModePasses[EViewModeIndex::VMI_Lit_Lambert] = new FDefaultViewPass(Pipeline, DisabledDS);
-	ViewModePasses[EViewModeIndex::VMI_Lit_Gouraud] = new FDefaultViewPass(Pipeline, DisabledDS);
-	ViewModePasses[EViewModeIndex::VMI_Unlit] = new FDefaultViewPass(Pipeline, DisabledDS);
-	ViewModePasses[EViewModeIndex::VMI_Wireframe] = new FDefaultViewPass(Pipeline, DisabledDS);
-	ViewModePasses[EViewModeIndex::VMI_SceneDepth] = new FSceneDepthPass(Pipeline, DisabledDS);
-	ViewModePasses[EViewModeIndex::VMI_NormalMap] = new FNormalMapPass(Pipeline, DefaultDS);
+	auto DefaultViewPass = new FDefaultViewPass(Pipeline, DisabledDS);
+	auto SceneDepthPass = new FSceneDepthPass(Pipeline, DisabledDS);
+	auto NormalMapPass = new FNormalMapPass(Pipeline, DefaultDS);
+	ViewModePasses.push_back(DefaultViewPass);
+	PostProcessPasses.push_back(SceneDepthPass);
+	ViewModePasses.push_back(NormalMapPass);
+
+	ViewModePassesMap[EViewModeIndex::VMI_Lit_Phong] = DefaultViewPass;
+	ViewModePassesMap[EViewModeIndex::VMI_Lit_Lambert] = DefaultViewPass;
+	ViewModePassesMap[EViewModeIndex::VMI_Lit_Gouraud] = DefaultViewPass;
+	ViewModePassesMap[EViewModeIndex::VMI_Unlit] =DefaultViewPass;
+	ViewModePassesMap[EViewModeIndex::VMI_Wireframe] = DefaultViewPass;
+	ViewModePassesMap[EViewModeIndex::VMI_SceneDepth] = SceneDepthPass;
+	ViewModePassesMap[EViewModeIndex::VMI_NormalMap] = NormalMapPass;
+
 	EditorDepthPass = new FEditorDepthPass(Pipeline, ConstantBufferModels, DefaultDS);
 	EditorOverlayPass = new FEditorOverlayPass(Pipeline, ConstantBufferModels, DisabledDS);
 }

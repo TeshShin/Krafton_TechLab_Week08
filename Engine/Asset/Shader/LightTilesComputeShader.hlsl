@@ -55,6 +55,8 @@ struct FUnifiedDynamicLight
 StructuredBuffer<FUnifiedDynamicLight> DynamicLights : register(t0);
 RWStructuredBuffer<uint> ClusterCount  : register(u0); // size = TotalClusters
 RWStructuredBuffer<uint> ClusterIndex  : register(u1); // size = TotalClusters * MaxLightsPerCluster
+RWStructuredBuffer<uint> LocalLightCountForHeatmap : register(u2); // size = TotalClusters
+
 
 // Geometry helpers -------------------------------------------------
 struct Plane { float3 n; float d; };
@@ -284,22 +286,33 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
     uint clusterID = (zSlice * NumTilesY + tileY) * NumTilesX + tileX;
     if (clusterID >= TotalClusters) return;
 
-    // Clear count for this cluster before accumulation
+    // Clear counts for this cluster before accumulation
     ClusterCount[clusterID] = 0;
+    LocalLightCountForHeatmap[clusterID] = 0; // Initialize new buffer for local light count
 
     Frustum clusterFrustum = BuildClusterFrustum(tileX, tileY, zSlice);
     uint base = clusterID * MaxLightsPerCluster;
 
     for (uint i = 0; i < NumLights; ++i)
     {
-        if (IntersectsUnifiedLightFrustum(DynamicLights[i], clusterFrustum))
+        FUnifiedDynamicLight currentLight = DynamicLights[i];
+
+        // Check intersection for all lights (global lights now return true from IntersectsUnifiedLightFrustum)
+        if (IntersectsUnifiedLightFrustum(currentLight, clusterFrustum))
         {
-        	uint oldIndex;
-        	InterlockedAdd(ClusterCount[clusterID], 1u, oldIndex);
-        	uint idx = oldIndex;
+            // Add to the main cluster light list (for TexturePS.hlsl)
+            uint oldIndex;
+            InterlockedAdd(ClusterCount[clusterID], 1u, oldIndex);
+            uint idx = oldIndex;
             if (idx < MaxLightsPerCluster)
             {
                 ClusterIndex[base + idx] = i;
+            }
+
+            // ONLY increment LocalLightCountForHeatmap for Point and Spot lights
+            if (currentLight.LightType == LIGHT_TYPE_POINT || currentLight.LightType == LIGHT_TYPE_SPOT)
+            {
+                InterlockedAdd(LocalLightCountForHeatmap[clusterID], 1u); // Increment new buffer
             }
         }
     }
