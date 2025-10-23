@@ -1,6 +1,7 @@
 #pragma once
 #include "pch.h"
 #include "Physics/Public/AABB.h"
+#include "Core/Public/Archive/Archive.h"
 
 class UPrimitiveComponent;
 struct FStaticMesh;
@@ -13,8 +14,20 @@ struct FNode
 	int32 Child2;
 	bool bIsLeaf;
 	FAABB Box;
-	int32 TriangleBaseIndex; // �ε��� ���ۿ��� �ﰢ���� ���� �ε���
+	int32 TriangleBaseIndex; // ε ۿ ﰢ  ε
 };
+
+inline FArchive& operator<<(FArchive& Ar, FNode& Node)
+{
+	Ar << Node.ObjectIndex;
+	Ar << Node.ParentIndex;
+	Ar << Node.Child1;
+	Ar << Node.Child2;
+	Ar << Node.bIsLeaf;
+	Ar << Node.Box;
+	Ar << Node.TriangleBaseIndex;
+	return Ar;
+}
 
 //  Phase Picking에 사용되는 BVH (Bounding Volume Hierarchy)
 class FBVH
@@ -59,6 +72,8 @@ public:
 	*/
 	float CalculateCostIncrease(int32 CandidateIndex, const FAABB& NewLeafAABB) const;
 
+	void SetMesh(FStaticMesh* InMesh) { Mesh = InMesh; }
+
 private:
 	/**
 	* @brief 새로운 leaf node를 삽입.
@@ -77,9 +92,19 @@ private:
 	void RefitAncestors(int32 RefitStartIndex);
 
 	FStaticMesh* Mesh = nullptr; // BVH 원본 메시
+public:
 	TArray<FNode> Nodes;
 	int32 RootIndex = -1;
+private:
 	float Cost = 0.0f;
 };
+
+inline FArchive& operator<<(FArchive& Ar, FBVH& BVH)
+{
+	Ar << BVH.Nodes;
+	Ar << BVH.RootIndex;
+	return Ar;
+}
+
 
 FAABB GetTriangleAABB(const FNormalVertex& V0, const FNormalVertex& V1, const FNormalVertex& V2);

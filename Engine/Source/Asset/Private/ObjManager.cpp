@@ -28,7 +28,6 @@ struct VertexKeyHash
 	}
 };
 
-/** @todo: std::filesystem으로 변경 */
 FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FName& PathFileName, const FObjImporter::Configuration& Config)
 {
 	auto Iter = ObjFStaticMeshMap.find(PathFileName);
@@ -39,7 +38,8 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FName& PathFileName, cons
 
 	/** #1. '.obj' 파일로부터 오브젝트 정보를 로드 */
 	FObjInfo ObjInfo;
-	if (!FObjImporter::LoadObj(PathFileName.ToString(), &ObjInfo, Config))
+	bool bIsFromBinary = false;
+	if (!FObjImporter::LoadObj(PathFileName.ToString(), &ObjInfo, Config, &bIsFromBinary))
 	{
 		UE_LOG_ERROR("파일 정보를 읽어오는데 실패했습니다: %s", PathFileName.ToString());
 		return nullptr;
@@ -315,7 +315,17 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FName& PathFileName, cons
 		}
 	}
 
-	StaticMesh->BVH.Build(StaticMesh.get()); // 빠른 피킹용 BVH 구축
+	if (bIsFromBinary)
+	{
+		StaticMesh->BVH.Nodes = ObjInfo.BVHNodes;
+		StaticMesh->BVH.RootIndex = ObjInfo.BVHRootIndex;
+		StaticMesh->BVH.SetMesh(StaticMesh.get());
+	}
+	else
+	{
+		StaticMesh->BVH.Build(StaticMesh.get()); // 빠른 피킹용 BVH 구축
+	}
+
 	ObjFStaticMeshMap.emplace(PathFileName, std::move(StaticMesh));
 
 	return ObjFStaticMeshMap[PathFileName].get();

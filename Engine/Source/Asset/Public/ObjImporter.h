@@ -8,6 +8,7 @@
 // GTL Headers
 #include "Core/Public/Archive/Archive.h"
 #include "Core/Public/Types.h"
+#include "Core/Public/Container/BVH.h"
 
 // Forward Declarations
 struct FObjectInfo;
@@ -22,6 +23,9 @@ struct FObjInfo
 	TArray<FVector> VertexList;
 	TArray<FVector> NormalList;
 	TArray<FVector2> TexCoordList;
+
+	TArray<FNode> BVHNodes;
+	int32 BVHRootIndex;
 };
 
 inline FArchive& operator<<(FArchive& Ar, FObjInfo& ObjInfo)
@@ -32,6 +36,9 @@ inline FArchive& operator<<(FArchive& Ar, FObjInfo& ObjInfo)
 	Ar << ObjInfo.VertexList;
 	Ar << ObjInfo.NormalList;
 	Ar << ObjInfo.TexCoordList;
+
+	Ar << ObjInfo.BVHNodes;
+	Ar << ObjInfo.BVHRootIndex;
 
 	return Ar;
 }
@@ -166,7 +173,7 @@ struct FObjImporter
 	 * @param Config Configuration options for the import process.
 	 * @return True if the file was loaded and parsed successfully, false otherwise.
 	 */
-	static bool LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutObjInfo, Configuration Config = {});
+	static bool LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutObjInfo, Configuration Config = {}, bool* bIsFromBinary = nullptr);
 
 	/**
 	 * @brief Loads and parses a .mtl material library file.

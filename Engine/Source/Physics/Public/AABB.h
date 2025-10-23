@@ -1,5 +1,6 @@
 #pragma once
 #include "Physics/Public/BoundingVolume.h"
+#include "Core/Public/Archive/Archive.h"
 
 struct FAABB : public IBoundingVolume
 {
@@ -25,6 +26,13 @@ struct FAABB : public IBoundingVolume
 
 	EBoundingVolumeType GetType() const override { return EBoundingVolumeType::AABB; }
 };
+
+inline FArchive& operator<<(FArchive& Ar, FAABB& AABB)
+{
+	Ar << AABB.Min;
+	Ar << AABB.Max;
+	return Ar;
+}
 
 bool CheckIntersectionRayBox(const FRay& Ray, const FAABB& Box);
 

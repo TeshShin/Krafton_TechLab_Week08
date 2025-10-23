@@ -2,8 +2,33 @@
 #include "Core/Public/Archive/WindowsBinReader.h"
 #include "Core/Public/Archive/WindowsBinWriter.h"
 #include "Asset/Public/ObjImporter.h"
+#include "Asset/Public/StaticMesh.h"
 
-bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutObjInfo, Configuration Config)
+// Add these for BVH cooking
+#include <tuple>
+#include <unordered_map>
+
+// Vertex Key for creating index buffer
+using VertexKey = std::tuple<size_t, size_t, size_t>;
+
+struct VertexKeyHash
+{
+	std::size_t operator() (VertexKey Key) const
+	{
+		auto Hash1 = std::hash<size_t>{}(std::get<0>(Key));
+		auto Hash2 = std::hash<size_t>{}(std::get<1>(Key));
+		auto Hash3 = std::hash<size_t>{}(std::get<2>(Key));
+
+		std::size_t Seed = Hash1;
+		Seed ^= Hash2 + 0x9e3779b97f4a7c15ULL + (Seed << 6) + (Seed >> 2);
+		Seed ^= Hash3 + 0x9e3779b97f4a7c15ULL + (Seed << 6) + (Seed >> 2);
+
+		return Seed;
+	}
+};
+
+
+bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutObjInfo, Configuration Config, bool* bIsFromBinary)
 {
 	if (!OutObjInfo)
 	{
@@ -29,6 +54,11 @@ bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutO
 			UE_LOG("바이너리 파일이 존재합니다: %s", BinFilePath.string().c_str());
 			FWindowsBinReader WindowsBinReader(BinFilePath);
 			WindowsBinReader << *OutObjInfo;
+
+			if (bIsFromBinary)
+			{
+				*bIsFromBinary = true;
+			}
 
 			return true;
 		}
@@ -286,6 +316,103 @@ bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutO
 
 	if (Config.bIsBinaryEnabled)
 	{
+		// BVH Cooking
+		if (OutObjInfo->ObjectInfoList.size() > 0)
+		{
+			auto TempStaticMesh = std::make_unique<FStaticMesh>();
+			FObjectInfo& ObjectInfo = OutObjInfo->ObjectInfoList[0];
+
+			if (ObjectInfo.NormalIndexList.empty())
+			{
+				const size_t numPositions = OutObjInfo->VertexList.size();
+				TArray<FVector> AccumNormals; AccumNormals.resize(numPositions);
+				for (size_t i = 0; i + 2 < ObjectInfo.VertexIndexList.size(); i += 3)
+				{
+					size_t ia = ObjectInfo.VertexIndexList[i + 0];
+					size_t ib = ObjectInfo.VertexIndexList[i + 1];
+					size_t ic = ObjectInfo.VertexIndexList[i + 2];
+					if (ia >= numPositions || ib >= numPositions || ic >= numPositions) { continue; }
+
+					const FVector& A = OutObjInfo->VertexList[ia];
+					const FVector& B = OutObjInfo->VertexList[ib];
+					const FVector& C = OutObjInfo->VertexList[ic];
+
+					FVector N = (B - A).Cross(C - A);
+					float len = N.Length();
+					if (len > 1e-6f) { N = N * (1/len); }
+					else { N = FVector(0, 0, 1); }
+
+					AccumNormals[ia] = AccumNormals[ia] + N;
+					AccumNormals[ib] = AccumNormals[ib] + N;
+					AccumNormals[ic] = AccumNormals[ic] + N;
+				}
+				if (OutObjInfo->NormalList.empty()) { OutObjInfo->NormalList.resize(numPositions); }
+				for (size_t vi = 0; vi < numPositions; ++vi)
+				{
+					FVector n = AccumNormals[vi];
+					float len = n.Length();
+					if (len > 1e-6f) { OutObjInfo->NormalList[vi] = n * (1/len); }
+					else {
+						const FVector& P = OutObjInfo->VertexList[vi];
+						float plen = P.Length();
+						OutObjInfo->NormalList[vi] = (plen > 1e-6f) ? (P * (1/plen)) : FVector(0, 0, 1);
+					}
+				}
+			}
+
+			std::unordered_map<VertexKey, size_t, VertexKeyHash> VertexMap;
+			for (size_t i = 0; i < ObjectInfo.VertexIndexList.size(); ++i)
+			{
+				size_t VertexIndex = ObjectInfo.VertexIndexList[i];
+
+				size_t NormalIndex = -1;
+				if (!ObjectInfo.NormalIndexList.empty())
+				{
+					NormalIndex = ObjectInfo.NormalIndexList[i];
+				}
+
+				size_t TexCoordIndex = -1;
+				if (!ObjectInfo.TexCoordIndexList.empty())
+				{
+					TexCoordIndex = ObjectInfo.TexCoordIndexList[i];
+				}
+
+				VertexKey Key{ VertexIndex, NormalIndex, TexCoordIndex };
+				auto It = VertexMap.find(Key);
+				if (It == VertexMap.end())
+				{
+					FNormalVertex Vertex = {};
+					Vertex.Position = OutObjInfo->VertexList[VertexIndex];
+
+					if (NormalIndex != -1)
+					{
+						Vertex.Normal = OutObjInfo->NormalList[NormalIndex];
+					}
+					else if (!OutObjInfo->NormalList.empty())
+					{
+						Vertex.Normal = OutObjInfo->NormalList[VertexIndex];
+					}
+
+					if (TexCoordIndex != -1)
+					{
+						Vertex.TexCoord = OutObjInfo->TexCoordList[TexCoordIndex];
+					}
+
+					size_t Index = TempStaticMesh->Vertices.size();
+					TempStaticMesh->Vertices.push_back(Vertex);
+					TempStaticMesh->Indices.push_back(Index);
+					VertexMap[Key] = Index;
+				}
+				else
+				{
+					TempStaticMesh->Indices.push_back(It->second);
+				}
+			}
+			TempStaticMesh->BVH.Build(TempStaticMesh.get());
+			OutObjInfo->BVHNodes = TempStaticMesh->BVH.Nodes;
+			OutObjInfo->BVHRootIndex = TempStaticMesh->BVH.GetRootIndex();
+		}
+
 		FWindowsBinWriter WindowsBinWriter(BinFilePath);
 		WindowsBinWriter << *OutObjInfo;
 	}
