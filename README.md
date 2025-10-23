@@ -427,7 +427,7 @@ if (mesh->IsSphere()) {
 
 ## 11. Hierarchical Visibility 시스템
 
-### 13.1. 개요
+### 11.1. 개요
 
 계층적 Visibility 시스템은 `USceneComponent`의 부모-자식 관계를 활용하여, **부모 컴포넌트가 숨겨지면 자식도 자동으로 숨겨지는** 기능을 제공합니다.
 
@@ -438,9 +438,9 @@ if (mesh->IsSphere()) {
 - ✅ `IsVisibleInHierarchy()`: 부모 체인 전체 Visibility 확인
 - ✅ Abstract Component 생성 방지: `MeshComponent`, `PrimitiveComponent` 등은 생성 메뉴에서 제외
 
-### 13.2. 구현 상세
+### 11.2. 구현 상세
 
-#### 12.2.1. SetVisibility (재귀적 Visibility 설정)
+#### 11.2.1. SetVisibility (재귀적 Visibility 설정)
 
 ```cpp
 void USceneComponent::SetVisibility(bool bNewVisibility)
@@ -458,7 +458,7 @@ void USceneComponent::SetVisibility(bool bNewVisibility)
 }
 ```
 
-#### 12.2.2. IsVisibleInHierarchy (부모 체인 확인)
+#### 11.2.2. IsVisibleInHierarchy (부모 체인 확인)
 
 ```cpp
 bool USceneComponent::IsVisibleInHierarchy() const
@@ -474,7 +474,7 @@ bool USceneComponent::IsVisibleInHierarchy() const
 }
 ```
 
-#### 12.2.3. 렌더링 통합
+#### 11.2.3. 렌더링 통합
 
 모든 렌더 패스에서 `IsVisibleInHierarchy()` 사용:
 
@@ -494,7 +494,7 @@ for (ULightComponentBase* Light : Context.Lights)
 }
 ```
 
-### 13.3. Abstract Component 필터링
+### 11.3. Abstract Component 필터링
 
 특정 컴포넌트는 직접 생성할 수 없도록 Abstract로 표시:
 
@@ -518,7 +518,7 @@ UClass* UMeshComponent::StaticClass()
 
 **에디터 UI**: Abstract 컴포넌트는 "Add Component" 메뉴에서 자동 제외됩니다.
 
-### 13.4. 사용 예시
+### 11.4. 사용 예시
 
 ```cpp
 // Actor에 라이트 추가 (Billboard 포함)
@@ -545,7 +545,7 @@ assert(Billboard->IsVisibleInHierarchy() == false);  // 부모가 숨겨져서 f
 
 ## 12. UPROPERTY 시스템
 
-### 13.1. 개요
+### 12.1. 개요
 
 UPROPERTY 시스템은 UObject 기반 클래스의 멤버 변수를 런타임 리플렉션 시스템에 등록하여, 자동 직렬화, 복제, UI 생성 등을 지원하는 메타데이터 시스템입니다.
 
@@ -556,7 +556,7 @@ UPROPERTY 시스템은 UObject 기반 클래스의 멤버 변수를 런타임 �
 - 타입 안전성 보장
 - 메타데이터 기반 제약 조건
 
-### 13.2. 기본 사용법
+### 12.2. 기본 사용법
 
 #### 12.2.1. UPROPERTY 매크로 종류
 
@@ -612,7 +612,7 @@ public:
 };
 ```
 
-### 13.3. 프로퍼티 플래그
+### 12.3. 프로퍼티 플래그
 
 ```cpp
 enum class EPropertyFlags : uint64
@@ -641,7 +641,7 @@ EPropertyFlags::VisibleAnywhere
 EPropertyFlags::EditAnywhere | EPropertyFlags::DuplicateTransient
 ```
 
-### 13.4. 메타데이터 옵션
+### 12.4. 메타데이터 옵션
 
 ```cpp
 struct FPropertyMetadata
@@ -658,7 +658,7 @@ struct FPropertyMetadata
 };
 ```
 
-### 13.5. 지원하는 타입
+### 12.5. 지원하는 타입
 
 #### 12.5.1. 기본 타입
 - `int8`, `int16`, `int32`, `int64`
@@ -690,7 +690,7 @@ UPROPERTY_INIT_WITHMETA(FLinearColor, ColorWithAlpha, FLinearColor(1, 1, 1, 1), 
 }
 ```
 
-### 13.6. 자동 직렬화 및 복제
+### 12.6. 자동 직렬화 및 복제
 
 #### 12.6.1. 자동 직렬화 (Serialize)
 
@@ -713,7 +713,7 @@ UObject* NewObject = OriginalObject->Duplicate();
 // DuplicateTransient가 아닌 모든 프로퍼티 자동 복제
 ```
 
-### 13.7. 자동 UI 생성
+### 12.7. 자동 UI 생성
 
 #### 12.7.1. ComponentWidget 통합
 
@@ -744,7 +744,7 @@ void MyCustomWidget::RenderWidget()
 | `FLinearColor3` | `ColorEdit3` (RGB 컬러 피커) |
 | `FLinearColor` | `ColorEdit4` (RGBA 컬러 피커) |
 
-### 13.8. 고급 사용 예제
+### 12.8. 고급 사용 예제
 
 ```cpp
 UCLASS()
@@ -790,7 +790,7 @@ public:
 };
 ```
 
-### 13.9. 주의사항
+### 12.9. 주의사항
 
 1. **타입 일치**: 기본값의 타입과 선언된 타입이 일치해야 합니다
    ```cpp
@@ -830,7 +830,7 @@ KTL 엔진의 Shader 시스템은 **Hot-Reload**와 **Binary Caching**을 지원
 
 ### 13.2. 아키텍처
 
-#### 12.2.1. 계층 구조
+#### 13.2.1. 계층 구조
 
 ```
 ┌─────────────────┐
@@ -899,7 +899,7 @@ struct FShaderKey {
 
 ### 13.4. 사용 방법
 
-#### 12.4.1. 기존 코드 (RenderResourceFactory - Deprecated)
+#### 13.4.1. 기존 코드 (RenderResourceFactory - Deprecated)
 
 하위 호환성을 위해 기존 API는 그대로 동작합니다:
 
@@ -918,7 +918,7 @@ FRenderResourceFactory::CreateVertexShaderAndInputLayout(
 );
 ```
 
-#### 12.4.2. 새로운 코드 (ShaderFactory - Recommended)
+#### 13.4.2. 새로운 코드 (ShaderFactory - Recommended)
 
 새 코드는 두 단계 패턴을 사용합니다:
 
@@ -980,7 +980,7 @@ class MyRenderPass {
 
 ### 13.5. Hot-Reload 동작 방식
 
-#### 12.5.1. 자동 감지 (0.5초 간격)
+#### 13.5.1. 자동 감지 (0.5초 간격)
 
 ```cpp
 // Engine 메인 루프
@@ -993,7 +993,7 @@ if (TimeSinceLastCheck >= 0.5f) {
 }
 ```
 
-#### 12.5.2. Shader Folder 기반 변경 감지
+#### 13.5.2. Shader Folder 기반 변경 감지
 
 셰이더 시스템은 **폴더 전체의 타임스탬프**를 추적하여 `#include`로 인한 종속성 변경을 자동으로 감지합니다:
 
@@ -1012,7 +1012,7 @@ if (IsFileTimeNewer(CurrentFolderTimestamp, LastShaderFolderTimestamp)) {
 - ✅ 개별 파일 추적보다 간단하고 안정적
 - ✅ 누락 없이 모든 종속성 변경 감지
 
-#### 12.5.3. 수동 리로드 (F4 키)
+#### 13.5.3. 수동 리로드 (F4 키)
 
 ```cpp
 // 모든 등록된 셰이더 리컴파일
@@ -1022,7 +1022,7 @@ FShaderManager::Get().ReloadAllShaders();
 FShaderManager::Get().ReloadShader(L"Asset/Shader/MyShader.hlsl");
 ```
 
-#### 12.5.4. 안전한 리컴파일
+#### 13.5.4. 안전한 리컴파일
 
 - 컴파일 실패 시: Old shader 유지 (크래시 방지)
 - 성공 시: RenderPass의 포인터를 새 셰이더로 자동 교체
@@ -1048,7 +1048,7 @@ FShaderManager::Get().ReloadShader(L"Asset/Shader/MyShader.hlsl");
 - ✅ `CompileFlags` 추가: 디버그/릴리스 빌드 또는 최적화 플래그 변경 시 캐시 무효화
 - ❌ `CompileTimestamp` 제거: 개별 파일 타임스탬프 대신 폴더 타임스탬프 사용
 
-#### 12.6.2. Cache Invalidation (캐시 무효화)
+#### 13.6.2. Cache Invalidation (캐시 무효화)
 
 캐시가 유효한지 검증하는 3가지 기준:
 
@@ -1080,7 +1080,7 @@ if (IsValid && !IsFolderModified && !FlagsChanged) {
 
 ### 13.7. 성능 최적화
 
-#### 12.7.1. Flyweight Pattern
+#### 13.7.1. Flyweight Pattern
 
 동일한 셰이더를 여러 곳에서 사용해도 메모리는 1개만 사용:
 
@@ -1096,7 +1096,7 @@ After (With Flyweight):
 - RenderPass3: VS_PHONG ─┘
 ```
 
-#### 12.7.2. 시작 속도 개선
+#### 13.7.2. 시작 속도 개선
 
 | 상황 | 소요 시간 |
 |------|----------|
