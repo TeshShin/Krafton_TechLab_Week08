@@ -2,6 +2,7 @@
 #include "Editor/Public/UI/Window/ControlPanelWindow.h"
 #include "Editor/Public/UI/Widget/FPSWidget.h"
 #include "Editor/Public/UI/Widget/ActorSpawnWidget.h"
+#include "Editor/Public/UI/Widget/ControlPanelWidget.h"
 
 IMPLEMENT_CLASS(UControlPanelWindow, UUIWindow)
 /**
@@ -27,10 +28,14 @@ UControlPanelWindow::UControlPanelWindow()
 	UWidget* FPSWidget = NewObject<UFPSWidget>();
 	FPSWidget->Initialize();
 	AddWidget(FPSWidget);
-	
+
 	UWidget* ActorSpawnWidget = NewObject<UActorSpawnWidget>();
 	ActorSpawnWidget->Initialize();
 	AddWidget(ActorSpawnWidget);
+
+	UWidget* ControlPanelWidget = NewObject<UControlPanelWidget>();
+	ControlPanelWidget->Initialize();
+	AddWidget(ControlPanelWidget);
 }
 
 /**

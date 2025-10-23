@@ -166,19 +166,6 @@ void URenderer::ReleaseRenderPasses()
 
 void URenderer::Render()
 {
-	// Manual shader reload via F4 key (for immediate testing)
-	static bool bWasF4Pressed = false;
-	bool bIsF4Pressed = UInputManager::GetInstance().IsKeyDown(EKeyInput::F4);
-
-	if (bIsF4Pressed && !bWasF4Pressed)  // Detect key press (not hold)
-	{
-		UE_LOG("===== Shader Hot-Reload Triggered (F4 - Manual) =====");
-		int32 ReloadedCount = FShaderManager::Get().ReloadAllShaders();
-		UE_LOG("Shader Hot-Reload: %d variants recompiled", ReloadedCount);
-	}
-	bWasF4Pressed = bIsF4Pressed;
-
-	// Auto shader reload (timestamp-based, periodic check)
 	CheckShaderHotReload();
 
 	RenderBegin();
@@ -195,11 +182,9 @@ void URenderer::Render()
 		Pipeline->SetConstantBuffer(1, false, ConstantBufferViewProj);
 
 		FRenderingContext RenderingContext(&Viewport.Camera, GEditor->GetEditorModule()->GetViewMode(),
-		                                   GEditor->GetEditorModule()->GetShowFlags(), Viewport.ViewportInfo,
-		                                   {
-			                                   DeviceResources->GetViewportInfo().Width,
-			                                   DeviceResources->GetViewportInfo().Height
-		                                   });
+           GEditor->GetEditorModule()->GetShowFlags(), Viewport.ViewportInfo,
+{ DeviceResources->GetViewportInfo().Width, DeviceResources->GetViewportInfo().Height }
+        );
 
 		{
 			TIME_PROFILE(RenderLevel)
@@ -357,7 +342,7 @@ void URenderer::RenderEnd() const
 void URenderer::CheckShaderHotReload()
 {
 	// Accumulate time
-	ShaderCheckAccumulator += UTimeManager::GetInstance().GetDeltaTime();
+	ShaderCheckAccumulator += DT;
 
 	// Check periodically (not every frame for performance)
 	if (ShaderCheckAccumulator >= ShaderCheckInterval)

@@ -386,6 +386,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\SpotLightComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\StaticMeshComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\ConsoleWidget.h" />
+    <ClInclude Include="Source\Editor\Public\UI\Widget\ControlPanelWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\FPSWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\InputInformationWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\MainBarWidget.h" />
@@ -517,6 +518,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\BillboardComponentWidget.cpp" />
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\ComponentWidget.cpp" />
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\SpotLightComponentWidget.cpp" />
+    <ClCompile Include="Source\Editor\Private\UI\Widget\ControlPanelWidget.cpp" />
     <ClCompile Include="Source\Renderer\Private\RenderPass\EditorDepthPass.cpp" />
     <ClCompile Include="Source\Renderer\Private\RenderPass\EditorOverlayPass.cpp" />
     <ClCompile Include="Source\Renderer\Private\RenderPass\StaticMeshUnlitPass.cpp" />
