@@ -51,9 +51,9 @@ public:
 	static ImVec4 SuccessActive() { return SRGBToLinear(ImVec4(0.20f, 0.59f, 0.21f, 1.0f)); }
 
 	/** @brief 경고, 일시정지 상태 (부드러운 노란색) */
-	static ImVec4 Warning() { return SRGBToLinear(ImVec4(0.86f, 0.86f, 0.67f, 1.0f)); }
-	static ImVec4 WarningHovered() { return SRGBToLinear(ImVec4(0.96f, 0.96f, 0.77f, 1.0f)); }
-	static ImVec4 WarningActive() { return SRGBToLinear(ImVec4(0.76f, 0.76f, 0.57f, 1.0f)); }
+	static ImVec4 Warning() { return SRGBToLinear(ImVec4(0.76f, 0.66f, 0.27f, 1.0f)); }
+	static ImVec4 WarningHovered() { return SRGBToLinear(ImVec4(0.86f, 0.76f, 0.37f, 1.0f)); }
+	static ImVec4 WarningActive() { return SRGBToLinear(ImVec4(0.66f, 0.56f, 0.17f, 1.0f)); }
 
 	/** @brief 위험, 중지, 에러 (부드러운 빨간색) */
 	static ImVec4 Danger() { return SRGBToLinear(ImVec4(0.96f, 0.53f, 0.44f, 1.0f)); }

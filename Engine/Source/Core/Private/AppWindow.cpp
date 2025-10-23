@@ -5,6 +5,8 @@
 #include "Manager/Public/UIManager.h"
 #include "Manager/Public/InputManager.h"
 #include "Renderer/Public/Renderer.h"
+#include <dwmapi.h>
+#pragma comment(lib, "dwmapi.lib")
 
 FAppWindow::FAppWindow(FClientApp* InOwner)
 	: Owner(InOwner), InstanceHandle(nullptr), MainWindowHandle(nullptr)
@@ -56,6 +58,15 @@ bool FAppWindow::Init(HINSTANCE InInstance, int InCmdShow)
 
 	ShowWindow(MainWindowHandle, InCmdShow);
 	UpdateWindow(MainWindowHandle);
+
+	// Windows 네이티브 타이틀바 색상을 검정색으로 설정
+	COLORREF captionColor = RGB(0, 0, 0); // 검정색 배경 (BGR 형식)
+	DwmSetWindowAttribute(MainWindowHandle, DWMWA_CAPTION_COLOR, &captionColor, sizeof(captionColor));
+
+	// 타이틀바 텍스트를 흰색으로 설정 (보색)
+	COLORREF textColor = RGB(255, 255, 255); // 흰색 텍스트
+	DwmSetWindowAttribute(MainWindowHandle, DWMWA_TEXT_COLOR, &textColor, sizeof(textColor));
+
 	SetNewTitle(L"Project KTL");
 
 	return true;
