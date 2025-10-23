@@ -110,7 +110,7 @@ public:
 
 private:
 	// ini 파일에 저장
-	FName EditorIniFileName;
+	path EditorIniFilePath;  // FName 대신 path 사용 (유니코드 경로 지원)
 	float CellSize;
 	float CameraSensitivity;
 	float RootSplitterRatio;

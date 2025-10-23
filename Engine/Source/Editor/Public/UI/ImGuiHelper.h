@@ -21,4 +21,8 @@ public:
 
 private:
 	bool bIsInitialized = false;
+	path ImGuiIniFilePath;  // ImGui ini 파일 경로 (유니코드 지원)
+
+	void LoadImGuiIni();  // ImGui ini 파일 로드 (유니코드 경로 지원)
+	void SaveImGuiIni();  // ImGui ini 파일 저장 (유니코드 경로 지원)
 };

@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Manager/Public/ConfigManager.h"
+#include "Manager/Public/PathManager.h"
 #include "Editor/Public/Camera.h"
 #include "Asset/Public/JsonSerializer.h"
 #include <json.hpp>
@@ -7,71 +8,140 @@
 IMPLEMENT_SINGLETON_CLASS(UConfigManager, UObject)
 
 UConfigManager::UConfigManager()
-	: EditorIniFileName("editor.ini"),
-	  CellSize(1.0f),
+	: CellSize(1.0f),
 	  CameraSensitivity(UCamera::DEFAULT_SPEED),
 	  RootSplitterRatio(1.0f),   // 왼쪽만 표시 (단일 뷰포트)
 	  LeftSplitterRatio(1.0f),    // 왼쪽 상단만 표시
 	  RightSplitterRatio(0.5f)    // 사용 안 함
 {
-	LoadEditorSetting();
+	try
+	{
+		UPathManager& PathManager = UPathManager::GetInstance();
+		EditorIniFilePath = PathManager.GetConfigPath() / L"editor.ini";
+
+		// Config 디렉토리 존재 확인
+		path configDir = PathManager.GetConfigPath();
+		if (!std::filesystem::exists(configDir))
+		{
+			std::filesystem::create_directories(configDir);
+		}
+
+		LoadEditorSetting();
+	}
+	catch (const std::exception& e)
+	{
+		UE_LOG("ConfigManager: Exception in constructor: %s", e.what());
+	}
+	catch (...)
+	{
+		UE_LOG("ConfigManager: Unknown exception in constructor");
+	}
 }
 
 UConfigManager::~UConfigManager()
 {
-	SaveEditorSetting();
+	try
+	{
+		SaveEditorSetting();
+	}
+	catch (const std::exception& e)
+	{
+		UE_LOG("ConfigManager: Exception in destructor: %s", e.what());
+	}
+	catch (...)
+	{
+		UE_LOG("ConfigManager: Unknown exception in destructor");
+	}
 }
 
 void UConfigManager::LoadEditorSetting()
 {
-	const FString& FileNameStr = EditorIniFileName.ToString();
-	UE_LOG("ConfigManager: Loading from %s", FileNameStr.c_str());
-
-	std::ifstream Ifs(FileNameStr);
-	if (!Ifs.is_open())
+	try
 	{
-		UE_LOG("ConfigManager: File not found, using defaults");
-		CellSize = 1.0f;
-		CameraSensitivity = UCamera::DEFAULT_SPEED;
-		return; // 파일이 없으면 기본값 유지
-	}
-
-	FString Line;
-	while (std::getline(Ifs, Line))
-	{
-		size_t DelimiterPos = Line.find('=');
-		if (DelimiterPos == FString::npos) continue;
-
-		FString Key = Line.substr(0, DelimiterPos);
-		FString Value = Line.substr(DelimiterPos + 1);
-
-		try
+		if (!std::filesystem::exists(EditorIniFilePath))
 		{
-			if (Key == "CellSize") CellSize = std::stof(Value);
-			else if (Key == "CameraSensitivity") CameraSensitivity = std::stof(Value);
-			else if (Key == "RootSplitterRatio") RootSplitterRatio = std::stof(Value);
-			else if (Key == "LeftSplitterRatio") LeftSplitterRatio = std::stof(Value);
-			else if (Key == "RightSplitterRatio") RightSplitterRatio = std::stof(Value);
-			else if (Key == "LastUsedLevelPath") LastUsedLevelPath = Value;
+			CellSize = 1.0f;
+			CameraSensitivity = UCamera::DEFAULT_SPEED;
+			return;
 		}
-		catch (const std::exception&) {}
-	}
 
-	UE_LOG("ConfigManager: Loaded splitter ratios: Root=%.2f, Left=%.2f, Right=%.2f",
-		RootSplitterRatio, LeftSplitterRatio, RightSplitterRatio);
+		std::ifstream Ifs(EditorIniFilePath);
+		if (!Ifs.is_open())
+		{
+			UE_LOG("ConfigManager: Failed to open editor.ini");
+			CellSize = 1.0f;
+			CameraSensitivity = UCamera::DEFAULT_SPEED;
+			return;
+		}
+
+		FString Line;
+		while (std::getline(Ifs, Line))
+		{
+			size_t DelimiterPos = Line.find('=');
+			if (DelimiterPos == FString::npos) continue;
+
+			FString Key = Line.substr(0, DelimiterPos);
+			FString Value = Line.substr(DelimiterPos + 1);
+
+			try
+			{
+				if (Key == "CellSize") CellSize = std::stof(Value);
+				else if (Key == "CameraSensitivity") CameraSensitivity = std::stof(Value);
+				else if (Key == "RootSplitterRatio") RootSplitterRatio = std::stof(Value);
+				else if (Key == "LeftSplitterRatio") LeftSplitterRatio = std::stof(Value);
+				else if (Key == "RightSplitterRatio") RightSplitterRatio = std::stof(Value);
+				else if (Key == "LastUsedLevelPath") LastUsedLevelPath = Value;
+			}
+			catch (const std::exception& e)
+			{
+				UE_LOG("ConfigManager: Error parsing %s: %s", Key.c_str(), e.what());
+			}
+		}
+	}
+	catch (const std::exception& e)
+	{
+		UE_LOG("ConfigManager: Exception in LoadEditorSetting: %s", e.what());
+	}
+	catch (...)
+	{
+		UE_LOG("ConfigManager: Unknown exception in LoadEditorSetting");
+	}
 }
 
 void UConfigManager::SaveEditorSetting()
 {
-	std::ofstream Ofs(EditorIniFileName.ToString());
-	if (Ofs.is_open())
+	try
 	{
-		Ofs << "CellSize=" << CellSize << "\n";
-		Ofs << "CameraSensitivity=" << CameraSensitivity << "\n";
-		Ofs << "RootSplitterRatio=" << RootSplitterRatio << "\n";
-		Ofs << "LeftSplitterRatio=" << LeftSplitterRatio << "\n";
-		Ofs << "RightSplitterRatio=" << RightSplitterRatio << "\n";
-		Ofs << "LastUsedLevelPath=" << LastUsedLevelPath << "\n";
+		path configDir = EditorIniFilePath.parent_path();
+		if (!std::filesystem::exists(configDir))
+		{
+			std::filesystem::create_directories(configDir);
+		}
+
+		std::ofstream Ofs(EditorIniFilePath);
+		if (Ofs.is_open())
+		{
+			Ofs << "CellSize=" << CellSize << "\n";
+			Ofs << "CameraSensitivity=" << CameraSensitivity << "\n";
+			Ofs << "RootSplitterRatio=" << RootSplitterRatio << "\n";
+			Ofs << "LeftSplitterRatio=" << LeftSplitterRatio << "\n";
+			Ofs << "RightSplitterRatio=" << RightSplitterRatio << "\n";
+			Ofs << "LastUsedLevelPath=" << LastUsedLevelPath << "\n";
+			Ofs.flush();
+			Ofs.close();
+		}
+		else
+		{
+			UE_LOG("ConfigManager: Failed to save editor.ini");
+		}
+	}
+	catch (const std::exception& e)
+	{
+		UE_LOG("ConfigManager: Exception in SaveEditorSetting: %s", e.what());
+	}
+	catch (...)
+	{
+		UE_LOG("ConfigManager: Unknown exception in SaveEditorSetting");
 	}
 }
 
@@ -117,7 +187,7 @@ void UConfigManager::SetCameraSettingsFromJson(const JSON& InData)
 		FJsonSerializer::ReadArrayFloat(cameraObject, "FOV", ViewportCameraSettings[i].FovY);
 		FJsonSerializer::ReadArrayFloat(cameraObject, "FarClip", ViewportCameraSettings[i].FarClip);
 		FJsonSerializer::ReadArrayFloat(cameraObject, "NearClip", ViewportCameraSettings[i].NearClip);
-		
+
 		// ReadInt32 대신 더 안전한 방식으로 enum 값을 읽어옵니다.
 		if (cameraObject.hasKey("ViewportCameraType") && cameraObject.at("ViewportCameraType").JSONType() == JSON::Class::Integral)
 		{
