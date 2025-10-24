@@ -47,7 +47,7 @@ public:
 	/**
 	 * @brief Getter
 	 */
-	const FCameraConstants& GetFViewProjConstants() const { return CameraConstants; }
+	const FCameraConstants& GetCameraConstants() const { return CameraConstants; }
 	const FCameraConstants GetFViewProjConstantsInverse() const;
 
 	FRay ConvertToWorldRay(float NdcX, float NdcY) const;

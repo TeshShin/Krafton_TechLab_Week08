@@ -1,3 +1,4 @@
+#include "Asset/Shader/Common/BlitVS.hlsl"
 cbuffer FogConstant : register(b0)
 {
 	float4 FogColor;
@@ -9,61 +10,29 @@ cbuffer FogConstant : register(b0)
 	float FogZ;
 }
 
-cbuffer CameraInverse : register(b3)
+cbuffer CameraInverse : register(b1)
 {
 	row_major float4x4 ViewInverse;
 	row_major float4x4 ProjectionInverse;
-};
-
-cbuffer ViewportInfo : register(b2)
-{
-	float2 RenderTargetSize;
 }
 
 Texture2D DepthTexture : register(t0);
 SamplerState DepthSampler : register(s0);
 
-struct PS_INPUT
-{
-	float4 Position : SV_POSITION;
-	float2 NDC : TEXCOORD;
-};
-
-PS_INPUT mainVS(uint vertexID : SV_VertexID)
-{
-	PS_INPUT output;
-
-
-	switch (vertexID)
-	{
-	case 0:
-		output.NDC = float2(-1.f, -1.f);
-		break;
-	case 1:
-		output.NDC = float2(3.f, -1.f);
-		break;
-	case 2:
-		output.NDC = float2(-1.f, 3.f);
-		break;
-	default:
-		output.NDC = float2(0.f, 0.f);
-		break;
-	}
-	output.Position = float4(output.NDC, 0.0f, 1.0f);
-	return output;
-
-	return output;
-}
-
-
 float4 mainPS(PS_INPUT Input) : SV_TARGET
 {
-	//픽셀 좌표 => depth 값 가져오기 위한 UV 좌표 생성
+	// 1. 픽셀 좌표 => depth 값 가져오기 위한 UV 좌표 생성
 	float2 depthUV = Input.Position.xy / RenderTargetSize;
 	float depth = DepthTexture.Sample(DepthSampler, depthUV);
 
-	//NDC 좌표에서 월드 좌표 역산
-	float4 clipPos = float4(Input.NDC, depth, 1.f);
+	// 2. SV_POSITION (픽셀 좌표)로부터 NDC 좌표를 역산
+	// (Input.Position.xy는 0.5~Width-0.5 범위의 픽셀 중심 좌표)
+	float2 ndc;
+	ndc.x = (Input.Position.x / RenderTargetSize.x) * 2.0f - 1.0f;
+	ndc.y = (1.0f - Input.Position.y / RenderTargetSize.y) * 2.0f - 1.0f;
+
+	// 3. 월드 좌표 역산
+	float4 clipPos = float4(ndc, depth, 1.f);
 	float4 viewPos = mul(clipPos, ProjectionInverse);
 	viewPos /= viewPos.w; // 원근 나누기
 	float4 worldPos = mul(viewPos, ViewInverse);

@@ -6,7 +6,6 @@ class UDeviceResources;
 struct alignas(16) FFXAAConstants
 {
     FVector2 InvResolution = FVector2();
-    FVector2 RenderTargetSize = FVector2();
     float FXAASpanMax = 16.0f;
     float FXAAReduceMul = 1.0f / 16.0f;
     float FXAAReduceMin = 1.0f / 256.0f;
@@ -42,23 +41,13 @@ public:
 
 
 private:
-	/**
-	 * @brief 전체 화면 사각형을 초기화합니다.
-	 */
-	void InitializeFullscreenQuad();
 
 private:
     UDeviceResources* DeviceResources = nullptr;
 
     ID3D11VertexShader* VertexShader = nullptr;
     ID3D11PixelShader* PixelShader = nullptr;
-    ID3D11InputLayout* InputLayout = nullptr;
     ID3D11SamplerState* SamplerState = nullptr;
-
-    ID3D11Buffer* FullscreenVB = nullptr;
-    ID3D11Buffer* FullscreenIB = nullptr;
-    UINT FullscreenStride = 0;
-    UINT FullscreenIndexCount = 0;
 
     ID3D11Buffer* FXAAConstantBuffer = nullptr;
     FFXAAConstants FXAAParams{};

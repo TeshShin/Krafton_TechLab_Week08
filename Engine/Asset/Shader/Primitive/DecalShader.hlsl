@@ -1,19 +1,5 @@
-cbuffer constants : register(b0)
-{
-	row_major float4x4 World;
-	row_major float4x4 WorldInverseTranspose;
-}
-
-cbuffer Camera : register(b1)
-{
-	row_major float4x4 View;
-	row_major float4x4 Projection;
-	float3 ViewWorldLocation;
-	float NearClip;
-	float FarClip;
-};
-
-cbuffer DecalConstants : register(b2)
+#include "Asset/Shader/Common/CommonConstants.hlsli"
+cbuffer DecalConstants : register(b0)
 {
 	row_major float4x4 DecalWorld;
     row_major float4x4 DecalViewProjection;
@@ -46,24 +32,16 @@ PS_INPUT mainVS(VS_INPUT Input)
 {
 	PS_INPUT Output;
 
-	float4 Pos = mul(float4(Input.Position, 1.0f), World);
+	float4 Pos = mul(float4(Input.Position, 1.0f), ModelWorld);
 	Output.Position = mul(mul(Pos, View), Projection);
 	Output.WorldPos = Pos;
-	Output.Normal = normalize(mul(float4(Input.Normal, 0.0f), WorldInverseTranspose));
+	Output.Normal = normalize(mul(float4(Input.Normal, 0.0f), ModelWorldInverseTranspose));
 	Output.Tex = Input.Tex;
 	return Output;
 }
 
 float4 mainPS(PS_INPUT Input) : SV_TARGET
 {
-    float2 DecalUV;
-
-	// Normal Test
-	float4 DecalForward = mul(float4(1.0f, 0.0f, 0.0f, 0.0f), DecalWorld);
-	if (dot(DecalForward, Input.Normal) > 0.0f) {
-		//discard;
-	}
-
 	// Decal Local Transition
     float4 DecalLocalPos = mul(Input.WorldPos, DecalViewProjection);
     DecalLocalPos /= DecalLocalPos.w;
@@ -78,7 +56,7 @@ float4 mainPS(PS_INPUT Input) : SV_TARGET
     }
 
 	//UV Transition ([-0.5~0.5], [-0.5~0.5]) -> ([0~1.0], [1.0~0])
-    DecalUV = ((DecalLocalPos.yz) * float2(0.5f, -0.5f) + 0.5f);
+    float2 DecalUV = ((DecalLocalPos.yz) * float2(0.5f, -0.5f) + 0.5f);
 
 	float4 DecalColor = DecalTexture.Sample(DecalSampler, DecalUV);
 

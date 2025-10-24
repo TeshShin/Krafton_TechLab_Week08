@@ -4,14 +4,6 @@
 #include "Core/Public/Math/Matrix.h"
 #include "Core/Public/Types.h"
 
-//struct BatchLineContants
-//{
-//	float CellSize;
-//	//FMatrix BoundingBoxModel;
-//	uint32 ZGridStartIndex; // 인덱스 버퍼에서, z방향쪽 그리드가 시작되는 인덱스
-//	uint32 BoundingBoxStartIndex; // 인덱스 버퍼에서, 바운딩박스가 시작되는 인덱스
-//};
-
 struct FModelConstants
 {
 	FMatrix World;
@@ -20,17 +12,17 @@ struct FModelConstants
 
 struct FCameraConstants
 {
-	FCameraConstants() : NearClip(0), FarClip(0)
-	{
-		View = FMatrix::Identity();
-		Projection = FMatrix::Identity();
-	}
-
 	FMatrix View;
 	FMatrix Projection;
 	FVector ViewWorldLocation;
 	float NearClip;
 	float FarClip;
+};
+
+struct FViewportConstants
+{
+	FVector2 RenderTargetSize;
+	int IsOrthographic;
 };
 
 #define HAS_DIFFUSE_MAP	 (1 << 0)

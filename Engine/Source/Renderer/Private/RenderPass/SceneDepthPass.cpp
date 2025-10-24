@@ -5,15 +5,12 @@
 #include "Renderer/Public/RenderResourceFactory.h"
 
 FSceneDepthPass::FSceneDepthPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS)
-    : FRenderPass(InPipeline, nullptr), DS(InDS)
+    : FRenderPass(InPipeline), DS(InDS)
 {
-    TArray<D3D11_INPUT_ELEMENT_DESC> LayoutDesc = {};
-
-    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/SceneDepthShader.hlsl", LayoutDesc, &VertexShader, nullptr);
-    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/SceneDepthShader.hlsl", &PixelShader);
+    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/Common/BlitVS.hlsl", {}, &VertexShader, nullptr);
+    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/ViewMode/SceneDepthPS.hlsl", &PixelShader);
 
     SamplerState = FRenderResourceFactory::CreateSamplerState(D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_CLAMP);
-    ConstantBufferPerFrame = FRenderResourceFactory::CreateConstantBuffer<FSceneDepthConstants>();
 }
 
 bool FSceneDepthPass::CanRender(const FRenderingContext& Context)
@@ -38,16 +35,11 @@ void FSceneDepthPass::Execute(FRenderingContext& Context)
     FPipelineInfo PipelineInfo = { nullptr, VertexShader, RS, DS, PixelShader, nullptr };
     Pipeline->UpdatePipeline(PipelineInfo);
 
-    FSceneDepthConstants SceneDepthConstants;
-    SceneDepthConstants.RenderTarget = Context.RTSize;
-    SceneDepthConstants.IsOrthographic = Context.CurrentCamera->GetCameraType() == ECameraType::ECT_Orthographic;
-    FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferPerFrame, SceneDepthConstants);
-    Pipeline->SetConstantBuffer(0, false, ConstantBufferPerFrame);
-    Pipeline->SetSRV(0, false, DepthSRV);
-    Pipeline->SetSamplerState(0, false, SamplerState);
+    Pipeline->SetSRV(0, EShaderType::EST_Pixel, DepthSRV);
+    Pipeline->SetSamplerState(0, EShaderType::EST_Pixel, SamplerState);
 
     Pipeline->Draw(3, 0);
-    Pipeline->SetSRV(0, false, nullptr);
+    Pipeline->SetSRV(0, EShaderType::EST_Pixel, nullptr);
 }
 
 void FSceneDepthPass::Release()
@@ -55,5 +47,4 @@ void FSceneDepthPass::Release()
     SafeRelease(PixelShader);
     SafeRelease(VertexShader);
     SafeRelease(SamplerState);
-    SafeRelease(ConstantBufferPerFrame);
 }

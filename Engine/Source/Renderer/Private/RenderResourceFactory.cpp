@@ -25,7 +25,7 @@ void FRenderResourceFactory::CreateVertexShaderAndInputLayout(
 	}
 
 	// Create shader key using helper
-	FShaderKey Key = ShaderFactory::CreateShaderKey(InFilePath, InDefines, EShaderType::VertexShader);
+	FShaderKey Key = ShaderFactory::CreateShaderKey(InFilePath, InDefines, EShaderType::EST_Vertex);
 
 	// Delegate to new API (pool-based, with binary caching)
 	ID3D11VertexShader* VS = ShaderFactory::CreateVertexShader(
@@ -78,7 +78,7 @@ void FRenderResourceFactory::CreatePixelShader(
 	}
 
 	// Create shader key using helper
-	FShaderKey Key = ShaderFactory::CreateShaderKey(InFilePath, InDefines, EShaderType::PixelShader);
+	FShaderKey Key = ShaderFactory::CreateShaderKey(InFilePath, InDefines, EShaderType::EST_Pixel);
 
 	// Delegate to new API (pool-based, with binary caching)
 	ID3D11PixelShader* PS = ShaderFactory::CreatePixelShader(Key, bEnableHotReload);
@@ -143,7 +143,7 @@ ID3D11RasterizerState* FRenderResourceFactory::GetRasterizerState(const FRenderS
 	return RasterizerState;
 }
 
-void FRenderResourceFactory::ReleaseRasterizerState()
+void FRenderResourceFactory::Release()
 {
 	for (auto& Cache : RasterCache)
 	{
@@ -191,7 +191,7 @@ void FRenderResourceFactory::CreateComputeShader(
     }
 
 	// Create shader key using helper
-	FShaderKey Key = ShaderFactory::CreateShaderKey(InFilePath, InDefines, EShaderType::ComputeShader);
+	FShaderKey Key = ShaderFactory::CreateShaderKey(InFilePath, InDefines, EShaderType::EST_Compute);
 
 	// Delegate to new API (pool-based, with binary caching)
 	ID3D11ComputeShader* CS = ShaderFactory::CreateComputeShader(Key, Entry, Profile, bEnableHotReload);
@@ -303,42 +303,6 @@ ID3D11UnorderedAccessView* FRenderResourceFactory::CreateBufferUAV(
         return nullptr;
     }
     return UAV;
-}
-
-// ---------------------
-// CS bind/dispatch utils
-// ---------------------
-void FRenderResourceFactory::CSSetSRV(uint32 Slot, ID3D11ShaderResourceView* SRV)
-{
-    URenderer::GetInstance().GetDeviceContext()->CSSetShaderResources(Slot, 1, &SRV);
-}
-
-void FRenderResourceFactory::CSSetUAV(uint32 Slot, ID3D11UnorderedAccessView* UAV, uint32 InitialCount)
-{
-    URenderer::GetInstance().GetDeviceContext()->CSSetUnorderedAccessViews(Slot, 1, &UAV, &InitialCount);
-}
-
-void FRenderResourceFactory::CSUnsetSRV(uint32 Slot, uint32 Count)
-{
-    ID3D11ShaderResourceView* NullSRV[8] = {};
-    URenderer::GetInstance().GetDeviceContext()->CSSetShaderResources(Slot, Count, NullSRV);
-}
-
-void FRenderResourceFactory::CSUnsetUAV(uint32 Slot, uint32 Count)
-{
-    ID3D11UnorderedAccessView* NullUAV[8] = {};
-    uint32 Counts[8] = { 0,0,0,0,0,0,0,0 };
-    URenderer::GetInstance().GetDeviceContext()->CSSetUnorderedAccessViews(Slot, Count, NullUAV, Counts);
-}
-
-void FRenderResourceFactory::CSSetShader(ID3D11ComputeShader* CS)
-{
-    URenderer::GetInstance().GetDeviceContext()->CSSetShader(CS, nullptr, 0);
-}
-
-void FRenderResourceFactory::CSDispatch(uint32 GroupX, uint32 GroupY, uint32 GroupZ)
-{
-    URenderer::GetInstance().GetDeviceContext()->Dispatch(GroupX, GroupY, GroupZ);
 }
 
 TMap<FRenderResourceFactory::FRasterKey, ID3D11RasterizerState*, FRenderResourceFactory::FRasterKeyHasher> FRenderResourceFactory::RasterCache;

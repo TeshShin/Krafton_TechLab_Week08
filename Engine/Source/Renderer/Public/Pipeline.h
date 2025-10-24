@@ -23,11 +23,11 @@ public:
 
 	void SetVertexBuffer(ID3D11Buffer* VertexBuffer, uint32 Stride);
 
-	void SetConstantBuffer(uint32 Slot, bool bIsVS, ID3D11Buffer* ConstantBuffer);
+	void SetConstantBuffer(uint32 Slot, EShaderType ShaderType, ID3D11Buffer* ConstantBuffer);
 
-	void SetSRV(uint32 Slot, bool bIsVS, ID3D11ShaderResourceView* Srv);
+	void SetSRV(uint32 Slot, EShaderType ShaderType, ID3D11ShaderResourceView* Srv);
 
-	void SetSamplerState(uint32 Slot, bool bIsVS, ID3D11SamplerState* SamplerState);
+	void SetSamplerState(uint32 Slot, EShaderType ShaderType, ID3D11SamplerState* SamplerState);
 
 	void SetRenderTargets(uint32 NumViews, ID3D11RenderTargetView* const *RenderTargetViews, ID3D11DepthStencilView* DepthStencilView);
 

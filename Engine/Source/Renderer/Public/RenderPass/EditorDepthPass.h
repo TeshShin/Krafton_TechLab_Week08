@@ -4,7 +4,7 @@
 class FEditorDepthPass : public FRenderPass
 {
 public:
-	FEditorDepthPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferModels, ID3D11DepthStencilState* InDS);
+	FEditorDepthPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS);
 
 	bool CanRender(const FRenderingContext& Context) override;
 	void SetRenderTargets(class UDeviceResources* DeviceResources) override;
@@ -19,5 +19,4 @@ private:
 
 	ID3D11DepthStencilState* DS = nullptr;
 	ID3D11RasterizerState* RS = nullptr;
-	ID3D11Buffer* ConstantBufferModels = nullptr;
 };

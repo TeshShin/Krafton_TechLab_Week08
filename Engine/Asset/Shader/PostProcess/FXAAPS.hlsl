@@ -3,11 +3,11 @@
 // Based on NVIDIA FXAA 3.11 logic
 // CORRECTED VERSION
 // ============================================================================
+#include "Asset/Shader/Common/BlitVS.hlsl"
 
 cbuffer FXAAParams : register(b0)
 {
     float2 InvResolution;   // 1.0 / resolution (ex: (1/1920, 1/1080))
-    float2 RenderTargetSize;   // 1.0 / resolution (ex: (1/1920, 1/1080))
     float FXAASpanMax;      // Max search span
     float FXAAReduceMul;    // reduce multiplier (ex: 1/8)
     float FXAAReduceMin;    // minimum reduce value (ex: 1/128)
@@ -15,38 +15,6 @@ cbuffer FXAAParams : register(b0)
 
 Texture2D SceneColor : register(t0);
 SamplerState SceneSampler : register(s0);
-
-struct VSInput
-{
-    float2 Position : POSITION;
-    float2 TexCoord : TEXCOORD0;
-};
-
-// ------------------------------------------------
-// Vertex and Pixel Shader I/O
-// ------------------------------------------------
-struct PS_INPUT
-{
-	float4 Position : SV_POSITION;
-};
-
-// ================================================================
-// Vertex Shader
-// - Generates a full-screen triangle without needing a vertex buffer.
-// ================================================================
-PS_INPUT mainVS(uint vertexID : SV_VertexID)
-{
-	PS_INPUT output;
-
-	// SV_VertexID를 사용하여 화면을 덮는 큰 삼각형의 클립 공간 좌표를 생성
-	// ID 0 -> (-1, 1), ID 1 -> (3, 1), ID 2 -> (-1, -3) -- 수정된 좌표계
-	// 이 좌표계는 UV가 (0,0)부터 시작하도록 조정합니다.
-	float2 pos = float2((vertexID << 1) & 2, vertexID & 2);
-	output.Position = float4(pos * 2.0f - 1.0f, 0.0f, 1.0f);
-	output.Position.y *= -1.0f;
-
-	return output;
-}
 
 //------------------------------------------------------------------------------
 // Utility: luminance calculation

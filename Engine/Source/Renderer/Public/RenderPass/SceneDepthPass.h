@@ -1,12 +1,6 @@
 ﻿#pragma once
 #include "RenderPass.h"
 
-struct FSceneDepthConstants
-{
-    FVector2 RenderTarget;
-    int32 IsOrthographic;
-};
-
 class FSceneDepthPass : public FRenderPass
 {
 public:
@@ -23,7 +17,6 @@ private:
 
     ID3D11DepthStencilState* DS = nullptr;
     ID3D11SamplerState* SamplerState = nullptr;
-    ID3D11Buffer* ConstantBufferPerFrame = nullptr;
 
 	ID3D11ShaderResourceView* DepthSRV = nullptr;
 };

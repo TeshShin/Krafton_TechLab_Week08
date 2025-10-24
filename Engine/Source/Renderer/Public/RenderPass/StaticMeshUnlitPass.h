@@ -4,7 +4,7 @@
 class FStaticMeshUnlitPass : public FRenderPass
 {
 public:
-    FStaticMeshUnlitPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferModel, ID3D11DepthStencilState* InDS);
+    FStaticMeshUnlitPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS);
 
 	virtual bool CanRender(const FRenderingContext& Context) override;
 	void SetRenderTargets(class UDeviceResources* DeviceResources) override;

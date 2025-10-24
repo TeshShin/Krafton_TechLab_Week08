@@ -226,7 +226,7 @@ void* FShaderPool::RecompileShader(const FShaderKey& Key)
 	// Determine shader type and recompile
 	switch (Key.Type)
 	{
-	case EShaderType::VertexShader:
+	case EShaderType::EST_Vertex:
 	{
 		auto It = VSCache.find(Key);
 		if (It == VSCache.end())
@@ -274,7 +274,7 @@ void* FShaderPool::RecompileShader(const FShaderKey& Key)
 		return Result;
 	}
 
-	case EShaderType::PixelShader:
+	case EShaderType::EST_Pixel:
 	{
 		auto It = PSCache.find(Key);
 		if (It == PSCache.end())
@@ -320,7 +320,7 @@ void* FShaderPool::RecompileShader(const FShaderKey& Key)
 		return Result;
 	}
 
-	case EShaderType::ComputeShader:
+	case EShaderType::EST_Compute:
 	{
 		auto It = CSCache.find(Key);
 		if (It == CSCache.end())
@@ -412,15 +412,15 @@ bool FShaderPool::CompileOrLoadShader(const FShaderKey& Key, ID3DBlob** OutBytec
 
 	switch (Key.Type)
 	{
-	case EShaderType::VertexShader:
+	case EShaderType::EST_Vertex:
 		EntryPoint = "mainVS";
 		Profile = "vs_5_0";
 		break;
-	case EShaderType::PixelShader:
+	case EShaderType::EST_Pixel:
 		EntryPoint = "mainPS";
 		Profile = "ps_5_0";
 		break;
-	case EShaderType::ComputeShader:
+	case EShaderType::EST_Compute:
 		EntryPoint = "main";
 		Profile = "cs_5_0";
 		break;

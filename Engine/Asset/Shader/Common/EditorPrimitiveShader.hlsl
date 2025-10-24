@@ -1,19 +1,6 @@
-cbuffer Model : register(b0)
-{
-	row_major float4x4 World;
-	row_major float4x4 WorldInverseTranspose;
-}
+#include "Asset/Shader/Common/CommonConstants.hlsli"
 
-cbuffer Camera : register(b1)
-{
-	row_major float4x4 View;
-	row_major float4x4 Projection;
-	float3 ViewWorldLocation;
-	float NearClip;
-	float FarClip;
-};
-
-cbuffer Color : register(b2)
+cbuffer Color : register(b0)
 {
 	float4 TotalColor;
 };
@@ -36,7 +23,7 @@ struct PS_INPUT
 PS_INPUT mainVS(VS_INPUT Input)
 {
     PS_INPUT Output;
-	Output.Position = mul(mul(mul(float4(Input.Position, 1.0f), World), View), Projection);
+	Output.Position = mul(mul(mul(float4(Input.Position, 1.0f), ModelWorld), View), Projection);
 
     Output.Color = Input.Color;
 

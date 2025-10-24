@@ -4,18 +4,6 @@
 #include <d3dcompiler.h>
 #include <string>
 
-using namespace std;
-
-/**
- * @brief Shader type enumeration
- */
-enum class EShaderType : uint8
-{
-	VertexShader,
-	PixelShader,
-	ComputeShader
-};
-
 /**
  * @brief Preprocessor define for shader compilation
  *
@@ -71,7 +59,7 @@ struct FShaderKey
 	EShaderType Type;                ///< Shader stage type
 
 	FShaderKey()
-		: Type(EShaderType::VertexShader)
+		: Type(EShaderType::EST_Vertex)
 	{}
 
 	FShaderKey(const wstring& InPath, const TArray<FShaderDefine>& InDefines, EShaderType InType)

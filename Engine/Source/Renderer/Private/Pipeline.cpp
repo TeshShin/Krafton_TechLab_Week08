@@ -58,30 +58,57 @@ void UPipeline::SetVertexBuffer(ID3D11Buffer* VertexBuffer, uint32 Stride)
 }
 
 /// @brief 상수 버퍼를 설정
-void UPipeline::SetConstantBuffer(uint32 Slot, bool bIsVS, ID3D11Buffer* ConstantBuffer)
+void UPipeline::SetConstantBuffer(uint32 Slot, EShaderType ShaderType, ID3D11Buffer* ConstantBuffer)
 {
-	if (bIsVS)
+	switch (ShaderType)
+	{
+	case EShaderType::EST_Vertex:
 		DeviceContext->VSSetConstantBuffers(Slot, 1, &ConstantBuffer);
-	else
+		break;
+	case EShaderType::EST_Pixel:
 		DeviceContext->PSSetConstantBuffers(Slot, 1, &ConstantBuffer);
+		break;
+	case EShaderType::EST_Compute:
+		DeviceContext->CSSetConstantBuffers(Slot, 1, &ConstantBuffer);
+		break;
+	default: ;
+	}
 }
 
 /// @brief 텍스처를 설정
-void UPipeline::SetSRV(uint32 Slot, bool bIsVS, ID3D11ShaderResourceView* Srv)
+void UPipeline::SetSRV(uint32 Slot, EShaderType ShaderType, ID3D11ShaderResourceView* Srv)
 {
-	if (bIsVS)
+	switch (ShaderType)
+	{
+	case EShaderType::EST_Vertex:
 		DeviceContext->VSSetShaderResources(Slot, 1, &Srv);
-	else
+		break;
+	case EShaderType::EST_Pixel:
 		DeviceContext->PSSetShaderResources(Slot, 1, &Srv);
+		break;
+	case EShaderType::EST_Compute:
+		DeviceContext->CSSetShaderResources(Slot, 1, &Srv);
+		break;
+	default: ;
+	}
 }
 
 /// @brief 샘플러 상태를 설정
-void UPipeline::SetSamplerState(uint32 Slot, bool bIsVS, ID3D11SamplerState* SamplerState)
+void UPipeline::SetSamplerState(uint32 Slot, EShaderType ShaderType, ID3D11SamplerState* SamplerState)
 {
-	if (bIsVS)
+	switch (ShaderType)
+	{
+	case EShaderType::EST_Vertex:
 		DeviceContext->VSSetSamplers(Slot, 1, &SamplerState);
-	else
+		break;
+	case EShaderType::EST_Pixel:
 		DeviceContext->PSSetSamplers(Slot, 1, &SamplerState);
+		break;
+	case EShaderType::EST_Compute:
+		DeviceContext->CSSetSamplers(Slot, 1, &SamplerState);
+		break;
+	default: ;
+	}
 }
 
 void UPipeline::SetRenderTargets(uint32 NumViews, ID3D11RenderTargetView* const* RenderTargetViews,	ID3D11DepthStencilView* DepthStencilView)

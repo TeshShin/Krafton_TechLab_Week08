@@ -52,6 +52,7 @@ void URenderer::Init(HWND InWindowHandle)
 	CreateBlendState();
 	CreateConstantBuffers();
 	CreateRenderPasses();
+
 	ViewportClient->InitializeLayout(DeviceResources->GetViewportInfo());
 	UBatchLineManager::GetInstance().Init();
 }
@@ -59,12 +60,12 @@ void URenderer::Init(HWND InWindowHandle)
 void URenderer::Release()
 {
 	UBatchLineManager::GetInstance().Release();
+	FRenderResourceFactory::Release();
 
-	ReleaseConstantBuffers();
-	ReleaseDepthStencilState();
-	ReleaseBlendState();
 	ReleaseRenderPasses();
-	FRenderResourceFactory::ReleaseRasterizerState();
+	ReleaseConstantBuffers();
+	ReleaseBlendState();
+	ReleaseDepthStencilState();
 
 	SafeDelete(ViewportClient);
 	SafeDelete(Pipeline);
@@ -123,6 +124,64 @@ void URenderer::CreateBlendState()
 	GetDevice()->CreateBlendState(&AdditiveBlendDesc, &AdditiveBlendState);
 }
 
+void URenderer::CreateConstantBuffers()
+{
+	CameraCB = FRenderResourceFactory::CreateConstantBuffer<FCameraConstants>();
+	ModelCB = FRenderResourceFactory::CreateConstantBuffer<FModelConstants>();
+	ViewportCB = FRenderResourceFactory::CreateConstantBuffer<FViewportConstants>();
+
+	Pipeline->SetConstantBuffer(11, EShaderType::EST_Vertex, CameraCB);
+	Pipeline->SetConstantBuffer(11, EShaderType::EST_Pixel, CameraCB);
+
+	Pipeline->SetConstantBuffer(12, EShaderType::EST_Vertex, ModelCB);
+	Pipeline->SetConstantBuffer(12, EShaderType::EST_Pixel, ModelCB);
+
+	Pipeline->SetConstantBuffer(13, EShaderType::EST_Vertex, ViewportCB);
+	Pipeline->SetConstantBuffer(13, EShaderType::EST_Pixel, ViewportCB);
+}
+
+void URenderer::CreateRenderPasses()
+{
+	auto StaticMeshPass = new FStaticMeshPass(Pipeline, DefaultDS, DisabledDS);
+	LevelPasses.push_back(StaticMeshPass);
+
+	auto StaticMeshUnlitPass = new FStaticMeshUnlitPass(Pipeline, DefaultDS);
+	LevelPasses.push_back(StaticMeshUnlitPass);
+
+	auto TextPass = new FTextPass(Pipeline, DefaultDS, AlphaBlendState);
+	LevelPasses.push_back(TextPass);
+
+	auto BillboardPass = new FBillboardPass(Pipeline, DefaultDS, AlphaBlendState);
+	LevelPasses.push_back(BillboardPass);
+
+	auto DecalPass = new FDecalPass(Pipeline, ReadOnlyDS, AlphaBlendState);
+	LevelPasses.push_back(DecalPass);
+
+	auto FogPass = new FFogPass(Pipeline, DefaultDS, AlphaBlendState);
+	PostProcessPasses.push_back(FogPass);
+
+	auto FXAAPass = new FFXAAPass(Pipeline, DeviceResources);
+	PostProcessPasses.push_back(FXAAPass);
+
+	auto DefaultViewPass = new FDefaultViewPass(Pipeline, DisabledDS);
+	auto SceneDepthPass = new FSceneDepthPass(Pipeline, DisabledDS);
+	auto NormalMapPass = new FNormalMapPass(Pipeline, DefaultDS);
+	ViewModePasses.push_back(DefaultViewPass);
+	PostProcessPasses.push_back(SceneDepthPass);
+	ViewModePasses.push_back(NormalMapPass);
+
+	ViewModePassesMap[EViewModeIndex::VMI_Lit_Phong] = DefaultViewPass;
+	ViewModePassesMap[EViewModeIndex::VMI_Lit_Lambert] = DefaultViewPass;
+	ViewModePassesMap[EViewModeIndex::VMI_Lit_Gouraud] = DefaultViewPass;
+	ViewModePassesMap[EViewModeIndex::VMI_Unlit] =DefaultViewPass;
+	ViewModePassesMap[EViewModeIndex::VMI_Wireframe] = DefaultViewPass;
+	ViewModePassesMap[EViewModeIndex::VMI_SceneDepth] = SceneDepthPass;
+	ViewModePassesMap[EViewModeIndex::VMI_NormalMap] = NormalMapPass;
+
+	EditorDepthPass = new FEditorDepthPass(Pipeline, DefaultDS);
+	EditorOverlayPass = new FEditorOverlayPass(Pipeline, DisabledDS);
+}
+
 void URenderer::ReleaseDepthStencilState()
 {
 	SafeRelease(DefaultDS);
@@ -138,6 +197,12 @@ void URenderer::ReleaseBlendState()
 {
 	SafeRelease(AlphaBlendState);
 	SafeRelease(AdditiveBlendState);
+}
+
+void URenderer::ReleaseConstantBuffers()
+{
+	SafeRelease(ModelCB);
+	SafeRelease(CameraCB);
 }
 
 void URenderer::ReleaseRenderPasses()
@@ -161,13 +226,11 @@ void URenderer::ReleaseRenderPasses()
 	SafeDelete(EditorDepthPass);
 	EditorOverlayPass->Release();
 	SafeDelete(EditorOverlayPass);
-
 }
 
 void URenderer::Render()
 {
 	CheckShaderHotReload();
-
 	RenderBegin();
 
 	for (FViewportClient& Viewport : ViewportClient->GetViewports())
@@ -176,14 +239,16 @@ void URenderer::Render()
 		Viewport.Apply(GetDeviceContext());
 		Viewport.Camera.Update(Viewport.GetViewportInfo());
 
-		FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferViewProj,
-		                                                 Viewport.Camera.GetFViewProjConstants());
-		Pipeline->SetConstantBuffer(1, true, ConstantBufferViewProj);
-		Pipeline->SetConstantBuffer(1, false, ConstantBufferViewProj);
+		// Update Common Constant Buffers
+		FRenderResourceFactory::UpdateConstantBufferData(CameraCB, Viewport.Camera.GetCameraConstants());
+
+		FViewportConstants ViewportConstants;
+		ViewportConstants.RenderTargetSize = { DeviceResources->GetViewportInfo().Width, DeviceResources->GetViewportInfo().Height };
+		ViewportConstants.IsOrthographic = Viewport.IsOrthographic();
+		FRenderResourceFactory::UpdateConstantBufferData(ViewportCB, ViewportConstants);
 
 		FRenderingContext RenderingContext(&Viewport.Camera, GEditor->GetEditorModule()->GetViewMode(),
-           GEditor->GetEditorModule()->GetShowFlags(), Viewport.ViewportInfo,
-{ DeviceResources->GetViewportInfo().Width, DeviceResources->GetViewportInfo().Height }
+           GEditor->GetEditorModule()->GetShowFlags(), Viewport.ViewportInfo, ViewportConstants.RenderTargetSize, ModelCB
         );
 
 		{
@@ -240,8 +305,7 @@ void URenderer::RenderLevel(struct FRenderingContext& RenderingContext)
 	if (!CurrentLevel) { return; }
 
 	// 1. Sort visible primitive components
-	TArray<UPrimitiveComponent*> FinalVisiblePrims = RenderingContext.CurrentCamera->GetViewVolumeCuller().
-	                                                                  GetRenderableObjects();
+	TArray<UPrimitiveComponent*> FinalVisiblePrims = RenderingContext.CurrentCamera->GetViewVolumeCuller().GetRenderableObjects();
 	RenderingContext.AllPrimitives = FinalVisiblePrims;
 	for (const auto& Prim : FinalVisiblePrims)
 	{
@@ -362,72 +426,16 @@ void URenderer::CheckShaderHotReload()
 
 void URenderer::OnResize(uint32 InWidth, uint32 InHeight) const
 {
-	if (!DeviceResources || !GetDeviceContext() || !GetSwapChain()) return;
+	if (!DeviceResources || !GetDeviceContext() || !GetSwapChain()) { return; }
 
 	Pipeline->SetRenderTargets(0, nullptr, nullptr);
 	DeviceResources->ReleaseBuffers();
 
 	if (FAILED(GetSwapChain()->ResizeBuffers(2, InWidth, InHeight, DXGI_FORMAT_UNKNOWN, 0)))
 	{
-		UE_LOG("OnResize Failed");
-		return;
+		UE_LOG("OnResize Failed"); return;
 	}
 
 	DeviceResources->UpdateViewport();
 	DeviceResources->CreateBuffers();
-}
-
-
-void URenderer::CreateConstantBuffers()
-{
-	ConstantBufferModels = FRenderResourceFactory::CreateConstantBuffer<FModelConstants>();
-	ConstantBufferViewProj = FRenderResourceFactory::CreateConstantBuffer<FCameraConstants>();
-}
-
-void URenderer::CreateRenderPasses()
-{
-	auto StaticMeshPass = new FStaticMeshPass(Pipeline, ConstantBufferModels, DefaultDS);
-	LevelPasses.push_back(StaticMeshPass);
-
-	auto StaticMeshUnlitPass = new FStaticMeshUnlitPass(Pipeline, ConstantBufferModels, DefaultDS);
-	LevelPasses.push_back(StaticMeshUnlitPass);
-
-	auto TextPass = new FTextPass(Pipeline, ConstantBufferModels, DefaultDS, AlphaBlendState);
-	LevelPasses.push_back(TextPass);
-
-	auto BillboardPass = new FBillboardPass(Pipeline, ConstantBufferModels, DefaultDS, AlphaBlendState);
-	LevelPasses.push_back(BillboardPass);
-
-	auto DecalPass = new FDecalPass(Pipeline, ReadOnlyDS, AlphaBlendState);
-	LevelPasses.push_back(DecalPass);
-
-	auto FogPass = new FFogPass(Pipeline, DefaultDS, AlphaBlendState);
-	PostProcessPasses.push_back(FogPass);
-
-	auto FXAAPass = new FFXAAPass(Pipeline, DeviceResources);
-	PostProcessPasses.push_back(FXAAPass);
-
-	auto DefaultViewPass = new FDefaultViewPass(Pipeline, DisabledDS);
-	auto SceneDepthPass = new FSceneDepthPass(Pipeline, DisabledDS);
-	auto NormalMapPass = new FNormalMapPass(Pipeline, DefaultDS);
-	ViewModePasses.push_back(DefaultViewPass);
-	PostProcessPasses.push_back(SceneDepthPass);
-	ViewModePasses.push_back(NormalMapPass);
-
-	ViewModePassesMap[EViewModeIndex::VMI_Lit_Phong] = DefaultViewPass;
-	ViewModePassesMap[EViewModeIndex::VMI_Lit_Lambert] = DefaultViewPass;
-	ViewModePassesMap[EViewModeIndex::VMI_Lit_Gouraud] = DefaultViewPass;
-	ViewModePassesMap[EViewModeIndex::VMI_Unlit] =DefaultViewPass;
-	ViewModePassesMap[EViewModeIndex::VMI_Wireframe] = DefaultViewPass;
-	ViewModePassesMap[EViewModeIndex::VMI_SceneDepth] = SceneDepthPass;
-	ViewModePassesMap[EViewModeIndex::VMI_NormalMap] = NormalMapPass;
-
-	EditorDepthPass = new FEditorDepthPass(Pipeline, ConstantBufferModels, DefaultDS);
-	EditorOverlayPass = new FEditorOverlayPass(Pipeline, ConstantBufferModels, DisabledDS);
-}
-
-void URenderer::ReleaseConstantBuffers()
-{
-	SafeRelease(ConstantBufferModels);
-	SafeRelease(ConstantBufferViewProj);
 }

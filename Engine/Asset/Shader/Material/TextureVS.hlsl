@@ -1,15 +1,8 @@
-#include "LightingFunctions.hlsl"
-
-
-// For Gouraud shading model
-//--------------------------------------------------------------------------------------
-// [UNIFIED FORWARD RENDERING] Light Data Structures
-//--------------------------------------------------------------------------------------
-
-// Ambient Light (Scene-wide global illumination)
+#include "Asset/Shader/Common/CommonConstants.hlsli"
+#include "Asset/Shader/Lighting/LightingFunctions.hlsli"
 
 // Light Constants (ConstantBuffer b10)
-cbuffer LightConstants : register(b10)
+cbuffer LightConstants : register(b0)
 {
 	uint UnifiedLightCount; // 4 bytes  - Number of lights in StructuredBuffer
 	float3 Padding; // 12 bytes - Alignment padding
@@ -19,7 +12,7 @@ cbuffer LightConstants : register(b10)
 // Material Constants
 //--------------------------------------------------------------------------------------
 
-cbuffer MaterialConstants : register(b2)
+cbuffer MaterialConstants : register(b1)
 {
 	float4 Ka; // Ambient color
 	float4 Kd; // Diffuse color
@@ -34,21 +27,6 @@ cbuffer MaterialConstants : register(b2)
 StructuredBuffer<FUnifiedDynamicLight> DynamicLights : register(t6);
 //--------------------------------------------------------------------------------------
 
-cbuffer Model : register(b0)
-{
-	row_major float4x4 World;
-	row_major float4x4 WorldInverseTranspose;
-}
-
-cbuffer Camera : register(b1)
-{
-	row_major float4x4 View;
-	row_major float4x4 Projection;
-	float3 ViewWorldLocation;
-	float NearClip;
-	float FarClip;
-};
-
 struct VS_INPUT
 {
 	float3 Position : POSITION;
@@ -61,9 +39,9 @@ struct VS_INPUT
 PS_INPUT mainVS(VS_INPUT Input)
 {
 	PS_INPUT Output;
-	Output.WorldPosition = mul(float4(Input.Position, 1.0f), World).xyz;
-	Output.Position = mul(mul(mul(float4(Input.Position, 1.0f), World), View), Projection);
-	Output.WorldNormal = normalize(mul(Input.Normal, (float3x3)WorldInverseTranspose));
+	Output.WorldPosition = mul(float4(Input.Position, 1.0f), ModelWorld).xyz;
+	Output.Position = mul(mul(mul(float4(Input.Position, 1.0f), ModelWorld), View), Projection);
+	Output.WorldNormal = normalize(mul(Input.Normal, (float3x3)ModelWorldInverseTranspose));
 	Output.Tex = Input.Tex;
 
 //#define LIGHTING_MODEL_GOURAUD // for coding
@@ -95,7 +73,7 @@ PS_INPUT mainVS(VS_INPUT Input)
 	Output.TotalDiffuse = Input.Color;
 
 	// pixel shader에서 normal map을 사용할 경우를 대비하여 World Tangent 계산
-	float3 worldT = mul(Input.Tangent.xyz, (float3x3) World);
+	float3 worldT = mul(Input.Tangent.xyz, (float3x3) ModelWorld);
 	worldT = normalize(worldT - Output.WorldNormal * dot(Output.WorldNormal, worldT));
 	Output.WorldTangent = worldT;
 	Output.TangentSign = Input.Tangent.w;

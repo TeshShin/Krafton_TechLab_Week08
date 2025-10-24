@@ -5,8 +5,8 @@
 #include "Renderer/Public/RenderResourceFactory.h"
 #include "Asset/Public/Texture.h"
 
-FStaticMeshUnlitPass::FStaticMeshUnlitPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferModel, ID3D11DepthStencilState* InDS)
-	: FRenderPass(InPipeline, InConstantBufferModel), DS(InDS)
+FStaticMeshUnlitPass::FStaticMeshUnlitPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS)
+	: FRenderPass(InPipeline), DS(InDS)
 {
 	TArray<D3D11_INPUT_ELEMENT_DESC> TextureLayout =
 	{
@@ -18,8 +18,8 @@ FStaticMeshUnlitPass::FStaticMeshUnlitPass(UPipeline* InPipeline, ID3D11Buffer* 
 	};
 
 	// Create Unlit shaders
-	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/TextureUnlitVS.hlsl", TextureLayout, &VSUnlit, &InputLayout);
-	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/TextureUnlitPS.hlsl", &PSUnlit);
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/Material/TextureUnlitVS.hlsl", TextureLayout, &VSUnlit, &InputLayout);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/Material/TextureUnlitPS.hlsl", &PSUnlit);
 
 	// Create material constant buffer (only for Kd, Ka, D, MaterialFlags)
 	ConstantBufferMaterial = FRenderResourceFactory::CreateConstantBuffer<FMaterialConstants>();
@@ -54,8 +54,6 @@ void FStaticMeshUnlitPass::Execute(FRenderingContext& Context)
 	FPipelineInfo PipelineInfo = { InputLayout, VSUnlit, RS, DS, PSUnlit, nullptr };
 	Pipeline->UpdatePipeline(PipelineInfo);
 
-	Pipeline->SetConstantBuffer(0, true, ConstantBufferModel);
-
 	// Sort mesh components by mesh asset for batching
 	TArray<UStaticMeshComponent*>& MeshComponents = Context.StaticMeshes;
 	sort(MeshComponents.begin(), MeshComponents.end(),
@@ -87,8 +85,7 @@ void FStaticMeshUnlitPass::Execute(FRenderingContext& Context)
 		ModelConstants.World = MeshComp->GetWorldTransformMatrix();
 		ModelConstants.WorldInverseTranspose = MeshComp->GetWorldTransformMatrixInverse().Transpose();
 
-		FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferModel, ModelConstants);
-		Pipeline->SetConstantBuffer(0, true, ConstantBufferModel);
+		FRenderResourceFactory::UpdateConstantBufferData(Context.ModelCB, ModelConstants);
 
 		// Handle meshes without materials
 		if (MeshAsset->MaterialInfo.empty() || MeshComp->GetStaticMesh()->GetNumMaterials() == 0)
@@ -122,17 +119,17 @@ void FStaticMeshUnlitPass::Execute(FRenderingContext& Context)
 				MaterialConstants.Time = MeshComp->GetElapsedTime();
 
 				FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferMaterial, MaterialConstants);
-				Pipeline->SetConstantBuffer(2, false, ConstantBufferMaterial);
+				Pipeline->SetConstantBuffer(1, EShaderType::EST_Pixel, ConstantBufferMaterial);
 
 				// Bind textures (only diffuse and alpha)
 				if (UTexture* DiffuseTexture = Material->GetDiffuseTexture())
 				{
-					Pipeline->SetSRV(0, false, DiffuseTexture->GetTextureSRV());
-					Pipeline->SetSamplerState(0, false, DiffuseTexture->GetTextureSampler());
+					Pipeline->SetSRV(0, EShaderType::EST_Pixel, DiffuseTexture->GetTextureSRV());
+					Pipeline->SetSamplerState(0, EShaderType::EST_Pixel, DiffuseTexture->GetTextureSampler());
 				}
 				if (UTexture* AlphaTexture = Material->GetAlphaTexture())
 				{
-					Pipeline->SetSRV(4, false, AlphaTexture->GetTextureSRV());
+					Pipeline->SetSRV(4, EShaderType::EST_Pixel, AlphaTexture->GetTextureSRV());
 				}
 
 				CurrentMaterial = Material;
@@ -140,7 +137,7 @@ void FStaticMeshUnlitPass::Execute(FRenderingContext& Context)
 			Pipeline->DrawIndexed(Section.IndexCount, Section.StartIndex, 0);
 		}
 	}
-	Pipeline->SetConstantBuffer(2, false, nullptr);
+	Pipeline->SetConstantBuffer(2, EShaderType::EST_Pixel, nullptr);
 }
 
 void FStaticMeshUnlitPass::Release()

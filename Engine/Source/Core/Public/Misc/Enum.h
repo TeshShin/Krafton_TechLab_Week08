@@ -180,3 +180,10 @@ inline uint64 operator&(uint64 lhs, EEngineShowFlags rhs)
 {
 	return lhs & static_cast<uint64>(rhs);
 }
+
+enum class EShaderType
+{
+	EST_Vertex,
+	EST_Pixel,
+	EST_Compute,
+};

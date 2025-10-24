@@ -5,13 +5,12 @@
 #include "Renderer/Public/RenderResourceFactory.h"
 
 FFogPass::FFogPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS, ID3D11BlendState* InBlendState)
-        : FRenderPass(InPipeline, nullptr), DS(InDS), BS(InBlendState)
+        : FRenderPass(InPipeline), DS(InDS), BS(InBlendState)
 {
-    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/HeightFogShader.hlsl", {}, &VS, nullptr);
-    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/HeightFogShader.hlsl", &PS);
+    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/Common/BlitVS.hlsl", {}, &VS, nullptr);
+    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/PostProcess/HeightFogPS.hlsl", &PS);
     ConstantBufferFog = FRenderResourceFactory::CreateConstantBuffer<FFogConstants>();
     ConstantBufferCameraInverse = FRenderResourceFactory::CreateConstantBuffer<FCameraInverseConstants>();
-    ConstantBufferViewportInfo = FRenderResourceFactory::CreateConstantBuffer<FViewportConstants>();
 	Sampler = FRenderResourceFactory::CreateSamplerState(D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP);
 }
 
@@ -23,8 +22,6 @@ bool FFogPass::CanRender(const FRenderingContext& Context)
 void FFogPass::SetRenderTargets(class UDeviceResources* DeviceResources)
 {
 	// Fog는 원래 그려진 것에 Alpha Blend를 하는 방식이라 Frame Swap 필요 X
-	// DeviceResources->SwapFrameBuffers();
-
 	ID3D11RenderTargetView* RTVs[] = { DeviceResources->GetDestinationRTV() };
 	DepthSRV = DeviceResources->GetDepthBufferSRV();
 	Pipeline->SetRenderTargets(1, RTVs, nullptr);
@@ -37,8 +34,8 @@ void FFogPass::Execute(FRenderingContext& Context)
     FPipelineInfo PipelineInfo = { nullptr, VS, FRenderResourceFactory::GetRasterizerState({ ECullMode::Back, EFillMode::Solid }),DS, PS, BS };
     Pipeline->UpdatePipeline(PipelineInfo);
 
-	Pipeline->SetSRV(0, false, DepthSRV);
-	Pipeline->SetSamplerState(0, false, Sampler);
+	Pipeline->SetSRV(0, EShaderType::EST_Pixel, DepthSRV);
+	Pipeline->SetSamplerState(0, EShaderType::EST_Pixel, Sampler);
 
 	// Update CameraInverse Constant Buffer (Slot 1)
 	FCameraInverseConstants CameraInverseConstants;
@@ -46,13 +43,7 @@ void FFogPass::Execute(FRenderingContext& Context)
 	CameraInverseConstants.ProjectionInverse =  ViewProjConstants.Projection;
 	CameraInverseConstants.ViewInverse =  ViewProjConstants.View;
 	FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferCameraInverse, CameraInverseConstants);
-	Pipeline->SetConstantBuffer(3, false, ConstantBufferCameraInverse);
-
-	// Update ViewportInfo Constant Buffer (Slot 2)
-	FViewportConstants ViewportConstants;
-	ViewportConstants.RenderTargetSize = Context.RTSize;
-	FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferViewportInfo, ViewportConstants);
-	Pipeline->SetConstantBuffer(2, false, ConstantBufferViewportInfo);
+	Pipeline->SetConstantBuffer(1, EShaderType::EST_Pixel, ConstantBufferCameraInverse);
 
     // --- Draw Fog --- //
     for (UHeightFogComponent* Fog : Context.Fogs)
@@ -68,11 +59,11 @@ void FFogPass::Execute(FRenderingContext& Context)
         FogConstant.FogMaxOpacity = Fog->GetFogMaxOpacity();
         FogConstant.FogZ = Fog->GetWorldLocation().Z;
         FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferFog, FogConstant);
-        Pipeline->SetConstantBuffer(0, false, ConstantBufferFog);
+        Pipeline->SetConstantBuffer(0, EShaderType::EST_Pixel, ConstantBufferFog);
 
         Pipeline->Draw(3,0);
     }
-    Pipeline->SetSRV(0, false, nullptr);
+    Pipeline->SetSRV(0, EShaderType::EST_Pixel, nullptr);
 }
 
 void FFogPass::Release()
@@ -81,6 +72,5 @@ void FFogPass::Release()
     SafeRelease(PS);
     SafeRelease(ConstantBufferFog);
     SafeRelease(ConstantBufferCameraInverse);
-    SafeRelease(ConstantBufferViewportInfo);
 	SafeRelease(Sampler);
 }

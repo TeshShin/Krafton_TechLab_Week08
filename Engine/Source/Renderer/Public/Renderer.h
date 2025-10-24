@@ -30,15 +30,15 @@ public:
 	void CreateRenderPasses();
 
 	// Release
-	void ReleaseConstantBuffers();
 	void ReleaseDepthStencilState();
 	void ReleaseBlendState();
+	void ReleaseConstantBuffers();
 	void ReleaseRenderPasses();
 
 	// Render
 	void Render();
 
-	void OnResize(uint32 Inwidth = 0, uint32 InHeight = 0) const;
+	void OnResize(uint32 InWidth = 0, uint32 InHeight = 0) const;
 
 	// Getter & Setter
 	ID3D11Device* GetDevice() const { return DeviceResources->GetDevice(); }
@@ -93,8 +93,9 @@ private:
 	ID3D11BlendState* AdditiveBlendState = nullptr;
 
 	// Constant Buffers
-	ID3D11Buffer* ConstantBufferModels = nullptr;
-	ID3D11Buffer* ConstantBufferViewProj = nullptr;
+	ID3D11Buffer* CameraCB = nullptr;
+	ID3D11Buffer* ModelCB = nullptr;
+	ID3D11Buffer* ViewportCB = nullptr;
 
 	FViewport* ViewportClient = nullptr;
 

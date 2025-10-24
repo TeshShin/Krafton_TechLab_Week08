@@ -130,7 +130,7 @@ namespace
 }
 
 FDecalPass::FDecalPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS_Read, ID3D11BlendState* InBlendState)
-    : FRenderPass(InPipeline, nullptr), DS_Read(InDS_Read), BlendState(InBlendState)
+    : FRenderPass(InPipeline), DS_Read(InDS_Read), BlendState(InBlendState)
 {
     TArray<D3D11_INPUT_ELEMENT_DESC> DecalLayout =
     {
@@ -139,10 +139,9 @@ FDecalPass::FDecalPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS_Read
         { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Color), D3D11_INPUT_PER_VERTEX_DATA, 0	},
         { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FNormalVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0	}
     };
-    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/DecalShader.hlsl", DecalLayout, &VS, &InputLayout);
-    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/DecalShader.hlsl", &PS);
+    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/Primitive/DecalShader.hlsl", DecalLayout, &VS, &InputLayout);
+    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/Primitive/DecalShader.hlsl", &PS);
 
-    ConstantBufferPrim = FRenderResourceFactory::CreateConstantBuffer<FModelConstants>();
     ConstantBufferDecal = FRenderResourceFactory::CreateConstantBuffer<FDecalConstants>();
 }
 
@@ -197,19 +196,19 @@ void FDecalPass::Execute(FRenderingContext& Context)
         DecalConstants.FadeProgress = Decal->GetFadeProgress();
 
         FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferDecal, DecalConstants);
-        Pipeline->SetConstantBuffer(2, false, ConstantBufferDecal);
+        Pipeline->SetConstantBuffer(0, EShaderType::EST_Pixel, ConstantBufferDecal);
 
         // --- Bind Decal Texture ---
         if (UTexture* DecalTexture = Decal->GetTexture())
         {
-            Pipeline->SetSRV(0, false, DecalTexture->GetTextureSRV());
-            Pipeline->SetSamplerState(0, false, DecalTexture->GetTextureSampler());
+            Pipeline->SetSRV(0, EShaderType::EST_Pixel, DecalTexture->GetTextureSRV());
+            Pipeline->SetSamplerState(0, EShaderType::EST_Pixel, DecalTexture->GetTextureSampler());
         }
 
         if (UTexture* FadeTexture = Decal->GetFadeTexture())
         {
-            Pipeline->SetSRV(1, false, FadeTexture->GetTextureSRV());
-            Pipeline->SetSamplerState(1, false, FadeTexture->GetTextureSampler());
+            Pipeline->SetSRV(1, EShaderType::EST_Pixel, FadeTexture->GetTextureSRV());
+            Pipeline->SetSamplerState(1, EShaderType::EST_Pixel, FadeTexture->GetTextureSampler());
         }
 
         TArray<UPrimitiveComponent*> Primitives;
@@ -236,8 +235,7 @@ void FDecalPass::Execute(FRenderingContext& Context)
             CollidedComps++;
 
             FModelConstants ModelConstants{ Prim->GetWorldTransformMatrix(), Prim->GetWorldTransformMatrixInverse().Transpose() };
-            FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferPrim, ModelConstants);
-            Pipeline->SetConstantBuffer(0, true, ConstantBufferPrim);
+            FRenderResourceFactory::UpdateConstantBufferData(Context.ModelCB, ModelConstants);
 
             Pipeline->SetVertexBuffer(Prim->GetVertexBuffer(), sizeof(FNormalVertex));
             if (Prim->GetIndexBuffer() && Prim->GetIndicesData())
@@ -260,9 +258,7 @@ void FDecalPass::Release()
     SafeRelease(VS);
     SafeRelease(PS);
     SafeRelease(InputLayout);
-
-    SafeRelease(ConstantBufferPrim);
-    SafeRelease(ConstantBufferDecal);
+	SafeRelease(ConstantBufferDecal);
 }
 
 void FDecalPass::Query(FOctree* InOctree, UDecalComponent* InDecal, TArray<UPrimitiveComponent*>& OutPrimitives)

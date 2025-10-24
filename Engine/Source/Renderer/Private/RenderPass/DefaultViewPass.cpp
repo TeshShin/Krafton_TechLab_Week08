@@ -3,16 +3,13 @@
 #include "Renderer/Public/RenderResourceFactory.h"
 
 FDefaultViewPass::FDefaultViewPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS)
-	: FRenderPass(InPipeline,  nullptr), DS(InDS)
+	: FRenderPass(InPipeline), DS(InDS)
 {
-	// Fullscreen pass: no input layout required
-	TArray<D3D11_INPUT_ELEMENT_DESC> LayoutDesc = {};
 
-	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/BlitShader.hlsl", LayoutDesc, &VertexShader, nullptr);
-	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/BlitShader.hlsl", &PixelShader);
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/Common/BlitVS.hlsl", {}, &VertexShader, nullptr);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/ViewMode/BlitPS.hlsl", &PixelShader);
 
 	SamplerState = FRenderResourceFactory::CreateSamplerState(D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_CLAMP);
-	ConstantBufferPerFrame = FRenderResourceFactory::CreateConstantBuffer<FVector2>();
 }
 
 bool FDefaultViewPass::CanRender(const FRenderingContext& Context)
@@ -35,19 +32,15 @@ void FDefaultViewPass::Execute(FRenderingContext& Context)
 	FPipelineInfo PipelineInfo = { nullptr, VertexShader, RS, DS, PixelShader, nullptr };
 	Pipeline->UpdatePipeline(PipelineInfo);
 
-	FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferPerFrame, Context.RTSize);
-
-	Pipeline->SetConstantBuffer(0, false, ConstantBufferPerFrame);
-	Pipeline->SetSRV(0, false, SceneSRV);
-	Pipeline->SetSamplerState(0, false, SamplerState);
+	Pipeline->SetSRV(0, EShaderType::EST_Pixel, SceneSRV);
+	Pipeline->SetSamplerState(0, EShaderType::EST_Pixel, SamplerState);
 
 	// Fullscreen triangle
 	Pipeline->Draw(3, 0);
-	Pipeline->SetSRV(0, false, nullptr);
+	Pipeline->SetSRV(0, EShaderType::EST_Pixel, nullptr);
 }
 
 void FDefaultViewPass::Release()
 {
 	SafeRelease(SamplerState);
-	SafeRelease(ConstantBufferPerFrame);
 }

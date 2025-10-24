@@ -33,5 +33,4 @@ private:
     ID3D11BlendState* BlendState = nullptr;
 
     ID3D11Buffer* ConstantBufferDecal = nullptr;
-    ID3D11Buffer* ConstantBufferPrim = nullptr;
 };

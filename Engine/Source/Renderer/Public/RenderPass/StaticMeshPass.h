@@ -5,7 +5,7 @@
 class FStaticMeshPass : public FRenderPass
 {
 public:
-    FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferModel, ID3D11DepthStencilState* InDS);
+    FStaticMeshPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS, ID3D11DepthStencilState* InDisabledDS);
 
 	virtual bool CanRender(const FRenderingContext& Context);
 	void SetRenderTargets(class UDeviceResources* DeviceResources) override;
@@ -45,20 +45,20 @@ private:
 
 	ID3D11Buffer* ClusterIndexBuffer = nullptr;
 	ID3D11UnorderedAccessView* ClusterIndexUAV = nullptr;
-	    ID3D11ShaderResourceView* ClusterIndexSRV = nullptr;
-	
-		ID3D11Buffer* LocalLightCountForHeatmapBuffer = nullptr;
-		ID3D11UnorderedAccessView* LocalLightCountForHeatmapUAV = nullptr;
-		ID3D11ShaderResourceView* LocalLightCountForHeatmapSRV = nullptr;
-	
-		ID3D11Buffer* FP_CameraCB = nullptr;	ID3D11Buffer* FP_ParamsCB = nullptr;
+    ID3D11ShaderResourceView* ClusterIndexSRV = nullptr;
+
+	ID3D11Buffer* LocalLightCountForHeatmapBuffer = nullptr;
+	ID3D11UnorderedAccessView* LocalLightCountForHeatmapUAV = nullptr;
+	ID3D11ShaderResourceView* LocalLightCountForHeatmapSRV = nullptr;
+
+	ID3D11Buffer* FP_CameraCB = nullptr;	ID3D11Buffer* FP_ParamsCB = nullptr;
 
     void CreateClusterBuffers(FRenderingContext& Context, uint32 NumLights);
 
     // Debug heat overlay resources
     ID3D11VertexShader* HeatVS = nullptr;
     ID3D11PixelShader* HeatPS = nullptr;
-    ID3D11DepthStencilState* DS_Disabled = nullptr;
+    ID3D11DepthStencilState* DisabledDS = nullptr;
     bool bShowClusterHeat = true; // simple always-on toggle for now
 
 	uint32 TileSize = 16;

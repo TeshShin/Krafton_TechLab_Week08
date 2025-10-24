@@ -1,23 +1,11 @@
-#include "LightingFunctions.hlsl"
-
-//--------------------------------------------------------------------------------------
-// [UNIFIED FORWARD RENDERING] Light Data Structures
-//--------------------------------------------------------------------------------------
-
-// Light Constants (ConstantBuffer b10)
-cbuffer LightConstants : register(b10)
-{
-	uint UnifiedLightCount; // 4 bytes  - Number of lights in StructuredBuffer
-	float3 Padding; // 12 bytes - Alignment padding
-};
+#include "Asset/Shader/Material/TextureVS.hlsl"
 
 //--------------------------------------------------------------------------------------
 // [FORWARD PLUS RENDERING] Light Tile Clustering Data Structures
 //--------------------------------------------------------------------------------------
 
-
 // Camera and tiling parameters
-cbuffer FP_CameraCB : register(b11)
+cbuffer FP_CameraCB : register(b2)
 {
 	row_major float4x4 FP_View;
 	row_major float4x4 FP_Projection;
@@ -32,7 +20,7 @@ cbuffer FP_CameraCB : register(b11)
 };
 
 // Forward+ control parameters
-cbuffer FP_ForwardPlusCB : register(b12)
+cbuffer FP_ForwardPlusCB : register(b3)
 {
 	uint FP_NumLights;                // number of entries in DynamicLights
 	uint FP_MaxLightsPerCluster;      // capacity per cluster
@@ -41,24 +29,8 @@ cbuffer FP_ForwardPlusCB : register(b12)
 };
 
 // Cluster lists produced by the compute shader
-StructuredBuffer<uint> FP_ClusterCount : register(t7);  // count per cluster
-StructuredBuffer<uint> FP_ClusterIndex : register(t8);  // flat indices array (clusterID*Max + i)
-
-//--------------------------------------------------------------------------------------
-// Material Constants
-//--------------------------------------------------------------------------------------
-
-cbuffer MaterialConstants : register(b2)
-{
-    float4 Ka;		// Ambient color
-    float4 Kd;		// Diffuse color
-    float4 Ks;		// Specular color
-    float Ns;		// Specular exponent
-    float Ni;		// Index of refraction
-    float D;		// Dissolve factor
-    uint MaterialFlags;	// Which textures are available (bitfield)
-    float Time;
-};
+StructuredBuffer<uint> FP_ClusterCount : register(t10);  // count per cluster
+StructuredBuffer<uint> FP_ClusterIndex : register(t11);  // flat indices array (clusterID*Max + i)
 
 Texture2D DiffuseTexture : register(t0);	// map_Kd
 Texture2D AmbientTexture : register(t1);	// map_Ka
@@ -66,8 +38,6 @@ Texture2D SpecularTexture : register(t2);   // map_Ks
 Texture2D ShininessTexture : register(t3);   // map_Ns
 Texture2D AlphaTexture : register(t4);		// map_d
 Texture2D BumpTexture : register(t5);		// map_bump
-
-StructuredBuffer<FUnifiedDynamicLight> DynamicLights : register(t6);
 
 SamplerState SamplerWrap : register(s0);
 
@@ -78,15 +48,6 @@ SamplerState SamplerWrap : register(s0);
 #define HAS_SHININESS_MAP (1 << 3)
 #define HAS_ALPHA_MAP	 (1 << 4)
 #define HAS_BUMP_MAP	 (1 << 5)
-
-cbuffer Camera : register(b1)
-{
-	row_major float4x4 View;
-	row_major float4x4 Projection;
-	float3 ViewWorldLocation;
-	float NearClip;
-	float FarClip;
-};
 
 struct PS_OUTPUT
 {

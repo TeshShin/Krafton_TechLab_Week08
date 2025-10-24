@@ -32,7 +32,6 @@ public:
 		const D3D_SHADER_MACRO* InDefines = nullptr,
 		bool bEnableHotReload = true);
 
-
 	template<typename T>
 	static ID3D11Buffer* CreateVertexBuffer(const TArray<T>& InVertices, bool bCpuAccess = false)
 	{
@@ -87,7 +86,7 @@ public:
 		bool bEnableHotReload = true);
 	static ID3D11SamplerState* CreateSamplerState(D3D11_FILTER InFilter, D3D11_TEXTURE_ADDRESS_MODE InAddressMode);
 	static ID3D11RasterizerState* GetRasterizerState(const FRenderState& InRenderState);
-	static void ReleaseRasterizerState();
+	static void Release();
 
 	// Helper function
 	static D3D11_CULL_MODE ToD3D11(ECullMode InCull);
@@ -295,14 +294,6 @@ public:
 		ID3D11Buffer* Buffer,
 		uint32 NumElements,
 		DXGI_FORMAT Format = DXGI_FORMAT_UNKNOWN);
-
-	// Helpers to bind/unbind CS resources & dispatch
-	static void CSSetSRV(uint32 Slot, ID3D11ShaderResourceView* SRV);
-	static void CSSetUAV(uint32 Slot, ID3D11UnorderedAccessView* UAV, uint32 InitialCount = 0);
-	static void CSUnsetSRV(uint32 Slot, uint32 Count = 1);
-	static void CSUnsetUAV(uint32 Slot, uint32 Count = 1);
-	static void CSSetShader(ID3D11ComputeShader* CS);
-	static void CSDispatch(uint32 GroupX, uint32 GroupY, uint32 GroupZ);
 
 	// ===============================
 

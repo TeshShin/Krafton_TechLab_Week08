@@ -21,12 +21,6 @@ struct FCameraInverseConstants
     FMatrix ProjectionInverse;
 };
 
-struct FViewportConstants
-{
-    FVector2 RenderTargetSize;
-    float Padding[2];
-};
-
 class FFogPass : public FRenderPass
 {
 public:
@@ -46,7 +40,6 @@ private:
 
     ID3D11Buffer* ConstantBufferFog = nullptr;
     ID3D11Buffer* ConstantBufferCameraInverse = nullptr;
-    ID3D11Buffer* ConstantBufferViewportInfo = nullptr;
 
 	ID3D11ShaderResourceView* DepthSRV = nullptr;
 };

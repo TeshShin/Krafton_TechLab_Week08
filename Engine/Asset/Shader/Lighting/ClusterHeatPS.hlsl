@@ -1,11 +1,13 @@
+#include "Asset/Shader/Common/BlitVS.hlsl"
+
 // ================================================================
 // ClusterHeatShader.hlsl
 // - Debug fullscreen overlay visualizing Forward+ cluster light counts
-// - Reads FP_ClusterCount (t7) and FP cbuffers (b11,b12)
+// - Reads FP_ClusterCount (t7) and FP cbuffers (b2,b3)
 // ================================================================
 
 // Camera and tiling parameters (must match TexturePS / LightTilesComputeShader)
-cbuffer FP_CameraCB : register(b11)
+cbuffer FP_CameraCB : register(b2)
 {
     row_major float4x4 FP_View;
     row_major float4x4 FP_Projection;
@@ -19,7 +21,7 @@ cbuffer FP_CameraCB : register(b11)
     float   FP_FarZ;           // view-space far  (>  NearZ)
 };
 
-cbuffer FP_ForwardPlusCB : register(b12)
+cbuffer FP_ForwardPlusCB : register(b3)
 {
     uint FP_NumLights;                // number of entries in DynamicLights
     uint FP_MaxLightsPerCluster;      // capacity per cluster
@@ -29,21 +31,6 @@ cbuffer FP_ForwardPlusCB : register(b12)
 
 // Cluster counts per cluster (size: FP_TotalClusters)
 StructuredBuffer<uint> FP_LocalLightCountForHeatmap : register(t7);
-
-struct VS_OUT
-{
-    float4 Position : SV_POSITION;
-};
-
-// Fullscreen triangle via SV_VertexID
-VS_OUT mainVS(uint vertexID : SV_VertexID)
-{
-    VS_OUT o;
-    float2 pos = float2((vertexID << 1) & 2, vertexID & 2);
-    o.Position = float4(pos * 2.0f - 1.0f, 0.0f, 1.0f);
-    o.Position.y *= -1.0f; // Flip Y for DX screen
-    return o;
-}
 
 float3 HeatColor(float t)
 {
@@ -61,7 +48,7 @@ float3 HeatColor(float t)
     float u = (t - 0.75) / 0.25; return lerp(c3, c4, u);
 }
 
-float4 mainPS(VS_OUT input) : SV_TARGET
+float4 mainPS(PS_INPUT input) : SV_TARGET
 {
     // Full-viewport overlay
     float2 pix2 = input.Position.xy - float2(FP_ViewportOrigin);

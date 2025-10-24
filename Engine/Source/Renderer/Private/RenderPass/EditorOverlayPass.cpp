@@ -3,8 +3,8 @@
 #include "Editor/Public/Editor.h"
 #include "Renderer/Public/RenderResourceFactory.h"
 
-FEditorOverlayPass::FEditorOverlayPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferModels, ID3D11DepthStencilState* InDS)
-	: FRenderPass(InPipeline, nullptr), ConstantBufferModels(InConstantBufferModels), DS(InDS)
+FEditorOverlayPass::FEditorOverlayPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS)
+	: FRenderPass(InPipeline), DS(InDS)
 {
 	TArray<D3D11_INPUT_ELEMENT_DESC> DefaultLayout =
 	{
@@ -14,8 +14,8 @@ FEditorOverlayPass::FEditorOverlayPass(UPipeline* InPipeline, ID3D11Buffer* InCo
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FNormalVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0	},
 		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Tangent), D3D11_INPUT_PER_VERTEX_DATA, 0 }
 	};
-	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/SampleShader.hlsl", DefaultLayout, &VS, &InputLayout);
-	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/SampleShader.hlsl", &PS);
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/Common/EditorPrimitiveShader.hlsl", DefaultLayout, &VS, &InputLayout);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/Common/EditorPrimitiveShader.hlsl", &PS);
 	ConstantBufferColor = FRenderResourceFactory::CreateConstantBuffer<FVector4>();
 	RS = FRenderResourceFactory::GetRasterizerState({ ECullMode::None, EFillMode::Solid });
 }
@@ -48,11 +48,10 @@ void FEditorOverlayPass::Execute(FRenderingContext& Context)
 		FModelConstants ModelConstants {
 			FMatrix::GetModelMatrix(Primitive->Location, Primitive->Rotation, Primitive->Scale), FMatrix::Identity() };
 
-		FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferModels, ModelConstants);
-		Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
+		FRenderResourceFactory::UpdateConstantBufferData(Context.ModelCB, ModelConstants);
 
 		FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferColor, Primitive->Color);
-		Pipeline->SetConstantBuffer(2, false, ConstantBufferColor);
+		Pipeline->SetConstantBuffer(0, EShaderType::EST_Pixel, ConstantBufferColor);
 
 		Pipeline->SetVertexBuffer(Primitive->VertexBuffer, Stride);
 		if (Primitive->IndexBuffer && Primitive->NumIndices > 0)

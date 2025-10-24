@@ -1,10 +1,10 @@
-#include "LightingFunctions.hlsl"
+#include "Asset/Shader/Lighting/LightingFunctions.hlsli"
 
 //--------------------------------------------------------------------------------------
 // Material Constants
 //--------------------------------------------------------------------------------------
 
-cbuffer MaterialConstants : register(b2)
+cbuffer MaterialConstants : register(b1)
 {
 	float4 Ka; // Ambient color
 	float4 Kd; // Diffuse color
@@ -51,7 +51,7 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
 	float4 FinalColor;
 	FinalColor.rgb = float3(0, 0, 0);
 	FinalColor.rgb += DiffuseColor.rgb;
-	
+
     // 3. Alpha value processing
     // -----------------------
 	FinalColor.a = D; // Base alpha value

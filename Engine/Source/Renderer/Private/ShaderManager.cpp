@@ -46,7 +46,7 @@ void FShaderManager::RegisterVertexShader(
 	TArray<FShaderDefine> Defines = ConvertDefines(InDefines);
 
 	// Create shader key for tracking
-	FShaderKey Key(InFilePath, Defines, EShaderType::VertexShader);
+	FShaderKey Key(InFilePath, Defines, EShaderType::EST_Vertex);
 
 	// Track variant for hot-reload (don't modify the shader, just track it)
 	FShaderVariant Variant;
@@ -81,7 +81,7 @@ void FShaderManager::RegisterPixelShader(
 	TArray<FShaderDefine> Defines = ConvertDefines(InDefines);
 
 	// Create shader key for tracking
-	FShaderKey Key(InFilePath, Defines, EShaderType::PixelShader);
+	FShaderKey Key(InFilePath, Defines, EShaderType::EST_Pixel);
 
 	// Track variant for hot-reload (don't modify the shader, just track it)
 	FShaderVariant Variant;
@@ -117,7 +117,7 @@ void FShaderManager::RegisterComputeShader(
 	TArray<FShaderDefine> Defines = ConvertDefines(InDefines);
 
 	// Create shader key for tracking
-	FShaderKey Key(InFilePath, Defines, EShaderType::ComputeShader);
+	FShaderKey Key(InFilePath, Defines, EShaderType::EST_Compute);
 
 	// Track variant for hot-reload (don't modify the shader, just track it)
 	FShaderVariant Variant;
@@ -413,7 +413,7 @@ bool FShaderManager::RecompileVariant(FShaderVariant& Variant)
 	// IMPORTANT: Must release old shader to decrement RenderPass's reference count
 	switch (Variant.Key.Type)
 	{
-	case EShaderType::VertexShader:
+	case EShaderType::EST_Vertex:
 	{
 		// Release RenderPass's old shader reference
 		ID3D11VertexShader* OldVS = *(ID3D11VertexShader**)Variant.ShaderPtr;
@@ -440,7 +440,7 @@ bool FShaderManager::RecompileVariant(FShaderVariant& Variant)
 		break;
 	}
 
-	case EShaderType::PixelShader:
+	case EShaderType::EST_Pixel:
 	{
 		// Release old shader
 		ID3D11PixelShader* OldPS = *(ID3D11PixelShader**)Variant.ShaderPtr;
@@ -451,7 +451,7 @@ bool FShaderManager::RecompileVariant(FShaderVariant& Variant)
 		break;
 	}
 
-	case EShaderType::ComputeShader:
+	case EShaderType::EST_Compute:
 	{
 		// Release old shader
 		ID3D11ComputeShader* OldCS = *(ID3D11ComputeShader**)Variant.ShaderPtr;

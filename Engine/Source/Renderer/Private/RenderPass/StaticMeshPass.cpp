@@ -8,8 +8,8 @@
 #include "Asset/Public/Texture.h"
 #include "Editor/Public/Camera.h"
 
-FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferModel, ID3D11DepthStencilState* InDS)
-	: FRenderPass(InPipeline, InConstantBufferModel), DS(InDS)
+FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS, ID3D11DepthStencilState* InDisabledDS)
+	: FRenderPass(InPipeline), DS(InDS), DisabledDS(InDisabledDS)
 {
 	TArray<D3D11_INPUT_ELEMENT_DESC> TextureLayout =
 	{
@@ -25,24 +25,24 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstant
 		"LIGHTING_MODEL_PHONG", "1",
 		nullptr, nullptr
 	};
-	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/TextureVS.hlsl", TextureLayout, &VSPhong, &InputLayout, TexturePhongDefines);
-	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/TexturePS.hlsl", &PSPhong, TexturePhongDefines);
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/Material/TextureVS.hlsl", TextureLayout, &VSPhong, &InputLayout, TexturePhongDefines);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/Material/TexturePS.hlsl", &PSPhong, TexturePhongDefines);
 
 	D3D_SHADER_MACRO TextureGouraudDefines[] =
 	{
 		"LIGHTING_MODEL_GOURAUD", "1",
 		nullptr, nullptr
 	};
-	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/TextureVS.hlsl", TextureLayout, &VSGouraud, &InputLayout, TextureGouraudDefines);
-	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/TexturePS.hlsl", &PSGouraud, TextureGouraudDefines);
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/Material/TextureVS.hlsl", TextureLayout, &VSGouraud, &InputLayout, TextureGouraudDefines);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/Material/TexturePS.hlsl", &PSGouraud, TextureGouraudDefines);
 
 	D3D_SHADER_MACRO TextureLambertDefines[] =
 	{
 		"LIGHTING_MODEL_LAMBERT", "1",
 		nullptr, nullptr
 	};
-	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/TextureVS.hlsl", TextureLayout, &VSLambert, &InputLayout, TextureLambertDefines);
-	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/TexturePS.hlsl", &PSLambert, TextureLambertDefines);
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/Material/TextureVS.hlsl", TextureLayout, &VSLambert, &InputLayout, TextureLambertDefines);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/Material/TexturePS.hlsl", &PSLambert, TextureLambertDefines);
 
 	ConstantBufferMaterial = FRenderResourceFactory::CreateConstantBuffer<FMaterialConstants>();
 	ConstantBufferLight = FRenderResourceFactory::CreateConstantBuffer<FLightConstants>();
@@ -52,21 +52,14 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11Buffer* InConstant
 	UnifiedLightStructuredBuffer = FRenderResourceFactory::CreateStructuredBuffer<FUnifiedDynamicLight>(UnifiedLightCapacity);
 	UnifiedLightSRV = FRenderResourceFactory::CreateBufferSRV(UnifiedLightStructuredBuffer, UnifiedLightCapacity);
 
-	FRenderResourceFactory::CreateComputeShader(L"Asset/Shader/LightTilesComputeShader.hlsl", &LightTilesCS);
+	FRenderResourceFactory::CreateComputeShader(L"Asset/Shader/Lighting/LightTilesCS.hlsl", &LightTilesCS);
 
     FP_CameraCB = FRenderResourceFactory::CreateConstantBuffer<FForwardPlusCameraConstants>();
     FP_ParamsCB = FRenderResourceFactory::CreateConstantBuffer<FForwardPlusConstants>();
 
     // Debug heat overlay shaders (fullscreen VS + heat PS)
-    TArray<D3D11_INPUT_ELEMENT_DESC> FullscreenLayout = {};
-    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/ClusterHeatShader.hlsl", FullscreenLayout, &HeatVS, nullptr);
-    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/ClusterHeatShader.hlsl", &HeatPS);
-
-    // Create disabled depth-stencil state so overlay always draws on top
-    D3D11_DEPTH_STENCIL_DESC DisabledDesc = {};
-    DisabledDesc.DepthEnable = FALSE;
-    DisabledDesc.StencilEnable = FALSE;
-    URenderer::GetInstance().GetDevice()->CreateDepthStencilState(&DisabledDesc, &DS_Disabled);
+    FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/Common/BlitVS.hlsl", {}, &HeatVS, nullptr);
+    FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/Lighting/ClusterHeatPS.hlsl", &HeatPS);
 }
 
 bool FStaticMeshPass::CanRender(const FRenderingContext& Context)
@@ -141,8 +134,8 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 	auto* CurrentCamera = Context.CurrentCamera;
 
 	FForwardPlusCameraConstants FPcam = {};
-	FPcam.View        = CurrentCamera->GetFViewProjConstants().View;                // row_major
-	FPcam.Proj        = CurrentCamera->GetFViewProjConstants().Projection;          // row_major
+	FPcam.View        = CurrentCamera->GetCameraConstants().View;                // row_major
+	FPcam.Proj        = CurrentCamera->GetCameraConstants().Projection;          // row_major
 	FPcam.InvProj     = CurrentCamera->GetFViewProjConstantsInverse().Projection;
     FPcam.ScreenSize  = {Width, Height};
     FPcam.ViewportOrigin = { static_cast<uint32>(Context.Viewport.TopLeftX), static_cast<uint32>(Context.Viewport.TopLeftY) };
@@ -153,7 +146,7 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 	FPcam.FarZ        = CurrentCamera->GetFarZ();
 
 	FForwardPlusConstants FPparams = {};
-	FPparams.NumLights            = static_cast<uint32>(NumLights);
+	FPparams.NumLights            = NumLights;
 	FPparams.MaxLightsPerCluster  = MaxLightsPerCluster;
 	FPparams.TotalClusters        = TotalClusters;
 
@@ -164,7 +157,7 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 
 	// CS constant buffers (slots b0,b1 to match LightTilesComputeShader.hlsl)
 	ID3D11Buffer* csCBs[2] = { FP_CameraCB, FP_ParamsCB };
-	ctx->CSSetConstantBuffers(10, 2, csCBs);
+	ctx->CSSetConstantBuffers(0, 2, csCBs);
 
 	// CS SRV (t0 = unified dynamic lights; you already filled/grew this)
 	ID3D11ShaderResourceView* csSRVs[1] = { UnifiedLightSRV };
@@ -185,7 +178,7 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 	// Set compute shader
 	ctx->CSSetShader(LightTilesCS, nullptr, 0);
 
-    // Dispatch with threadgroups covering clusters.
+    // Dispatch with thread groups covering clusters.
     // Must stay in sync with [numthreads] in LightTilesComputeShader.hlsl
     const uint32 GroupSizeX = 8;
     const uint32 GroupSizeY = 8;
@@ -197,7 +190,7 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 
     ctx->Dispatch(GroupsX, GroupsY, GroupsZ);
 
-	// Unbind CS UAVs/SRVs to avoid hazards when we rebinding as PS SRVs later
+	// Unbind shader and resources to prevent hazards
 	ID3D11UnorderedAccessView* nullUAVs[3] = { nullptr, nullptr, nullptr };
 	ctx->CSSetUnorderedAccessViews(0, 3, nullUAVs, initialCounts);
 
@@ -228,19 +221,19 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	// Bind Unified Light SRV to the pipeline
 	if(Context.ViewMode == EViewModeIndex::VMI_Lit_Gouraud)
 	{
-		Pipeline->SetSRV(6, true, UnifiedLightSRV);
+		Pipeline->SetSRV(6, EShaderType::EST_Vertex, UnifiedLightSRV);
 	}
 	else
 	{
 		// PS also needs the unified light buffer at t6 for clustering
-		Pipeline->SetSRV(6, false /*PS*/, UnifiedLightSRV);
+		Pipeline->SetSRV(6, EShaderType::EST_Pixel /*PS*/, UnifiedLightSRV);
 		// Bind Forward+ SRVs for PS
-		Pipeline->SetSRV(7, false /*PS*/, ClusterCountSRV);
-		Pipeline->SetSRV(8, false /*PS*/, ClusterIndexSRV);
+		Pipeline->SetSRV(10, EShaderType::EST_Pixel /*PS*/, ClusterCountSRV);
+		Pipeline->SetSRV(11, EShaderType::EST_Pixel /*PS*/, ClusterIndexSRV);
 
 		// Bind Forward+ CBs for PS (slots b11, b12)
-		Pipeline->SetConstantBuffer(11, false /*PS*/, FP_CameraCB);
-		Pipeline->SetConstantBuffer(12, false /*PS*/, FP_ParamsCB);
+		Pipeline->SetConstantBuffer(2, EShaderType::EST_Pixel /*PS*/, FP_CameraCB);
+		Pipeline->SetConstantBuffer(3, EShaderType::EST_Pixel /*PS*/, FP_ParamsCB);
 	}
 
 	FRenderState RenderState = UStaticMeshComponent::GetClassDefaultRenderState();
@@ -282,20 +275,9 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	// GlobalAmbient is deprecated - all lights now go through unified StructuredBuffer
 	LightConstants.UnifiedLightCount = UnifiedLights.size();
 
-	if (Context.ViewMode == EViewModeIndex::VMI_Lit_Gouraud)
-	{
-		Pipeline->SetConstantBuffer(10, true, ConstantBufferLight);
-		FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
-	}
-	else
-	{
-		Pipeline->SetConstantBuffer(10, false, ConstantBufferLight);
-		FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
-	}
-
-	Pipeline->SetConstantBuffer(0, true, ConstantBufferModel);
-
-	//Pipeline->SetSamplerState(0, false, URenderer::GetInstance().GetDefaultSampler());
+	FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferLight, LightConstants);
+	Pipeline->SetConstantBuffer(0, EShaderType::EST_Vertex, ConstantBufferLight);
+	Pipeline->SetConstantBuffer(0, EShaderType::EST_Pixel, ConstantBufferLight);
 
 	TArray<UStaticMeshComponent*>& MeshComponents = Context.StaticMeshes;
 	sort(MeshComponents.begin(), MeshComponents.end(),
@@ -325,8 +307,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 		ModelConstants.World = MeshComp->GetWorldTransformMatrix();
 		ModelConstants.WorldInverseTranspose = MeshComp->GetWorldTransformMatrixInverse().Transpose();
 
-		FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferModel, ModelConstants);
-		Pipeline->SetConstantBuffer(0, true, ConstantBufferModel);
+		FRenderResourceFactory::UpdateConstantBufferData(Context.ModelCB, ModelConstants);
 
 		if (MeshAsset->MaterialInfo.empty() || MeshComp->GetStaticMesh()->GetNumMaterials() == 0)
 		{
@@ -361,37 +342,33 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 
 				FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferMaterial, MaterialConstants);
 
-				// Gouraud 모드면, Vertex Shader에도 Material 바인딩
-				Pipeline->SetConstantBuffer(2, false, ConstantBufferMaterial);
-				if(Context.ViewMode == EViewModeIndex::VMI_Lit_Gouraud)
-				{
-					Pipeline->SetConstantBuffer(2, true, ConstantBufferMaterial);
-				}
+				Pipeline->SetConstantBuffer(1, EShaderType::EST_Vertex, ConstantBufferMaterial);
+				Pipeline->SetConstantBuffer(1, EShaderType::EST_Pixel, ConstantBufferMaterial);
 
 				if (UTexture* DiffuseTexture = Material->GetDiffuseTexture())
 				{
-					Pipeline->SetSRV(0, false, DiffuseTexture->GetTextureSRV());
-					Pipeline->SetSamplerState(0, false, DiffuseTexture->GetTextureSampler());
+					Pipeline->SetSRV(0, EShaderType::EST_Pixel, DiffuseTexture->GetTextureSRV());
+					Pipeline->SetSamplerState(0, EShaderType::EST_Pixel, DiffuseTexture->GetTextureSampler());
 				}
 				if (UTexture* AmbientTexture = Material->GetAmbientTexture())
 				{
-					Pipeline->SetSRV(1, false, AmbientTexture->GetTextureSRV());
+					Pipeline->SetSRV(1, EShaderType::EST_Pixel, AmbientTexture->GetTextureSRV());
 				}
 				if (UTexture* SpecularTexture = Material->GetSpecularTexture())
 				{
-					Pipeline->SetSRV(2, false, SpecularTexture->GetTextureSRV());
+					Pipeline->SetSRV(2, EShaderType::EST_Pixel, SpecularTexture->GetTextureSRV());
 				}
 				if (UTexture* NormalTexture = Material->GetShininessTexture())
 				{
-					Pipeline->SetSRV(3, false, NormalTexture->GetTextureSRV());
+					Pipeline->SetSRV(3, EShaderType::EST_Pixel, NormalTexture->GetTextureSRV());
 				}
 				if (UTexture* AlphaTexture = Material->GetAlphaTexture())
 				{
-					Pipeline->SetSRV(4, false, AlphaTexture->GetTextureSRV());
+					Pipeline->SetSRV(4, EShaderType::EST_Pixel, AlphaTexture->GetTextureSRV());
 				}
 				if (UTexture* BumpTexture = Material->GetBumpTexture())
 				{
-					Pipeline->SetSRV(5, false, BumpTexture->GetTextureSRV());
+					Pipeline->SetSRV(5, EShaderType::EST_Pixel, BumpTexture->GetTextureSRV());
 				}
 
 				CurrentMaterial = Material;
@@ -399,7 +376,6 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 			Pipeline->DrawIndexed(Section.IndexCount, Section.StartIndex, 0);
 		}
 	}
-	Pipeline->SetConstantBuffer(2, false, nullptr);
 
 	// --- Debug: draw cluster heat overlay ---
 	bool bOverlayEnabled = (Context.ShowFlags & EEngineShowFlags::SF_ClusterHeat) != 0;
@@ -409,14 +385,16 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 		// Setup fullscreen pipeline with disabled depth
 		auto RS = FRenderResourceFactory::GetRasterizerState({ ECullMode::None, EFillMode::Solid });        // Use alpha blending for a proper overlay regardless of previous passes
 		ID3D11BlendState* BS = URenderer::GetInstance().GetAlphaBlendState();
-		FPipelineInfo HeatPipe = { nullptr, HeatVS, RS, DS_Disabled ? DS_Disabled : DS, HeatPS, BS };
+		FPipelineInfo HeatPipe = { nullptr, HeatVS, RS, DisabledDS, HeatPS, BS };
 		Pipeline->UpdatePipeline(HeatPipe);
-		// Ensure SRV t7 and CBs b11,b12 are bound to PS
-		Pipeline->SetSRV(7, false /*PS*/, LocalLightCountForHeatmapSRV);
-		Pipeline->SetConstantBuffer(11, false /*PS*/, FP_CameraCB);
-		Pipeline->SetConstantBuffer(12, false /*PS*/, FP_ParamsCB);
+		Pipeline->SetSRV(7, EShaderType::EST_Pixel, LocalLightCountForHeatmapSRV);
+		Pipeline->SetConstantBuffer(0, EShaderType::EST_Pixel, FP_CameraCB);
+		Pipeline->SetConstantBuffer(1, EShaderType::EST_Pixel, FP_ParamsCB);
 		Pipeline->Draw(3, 0);
 	}
+
+	Pipeline->SetSRV(10, EShaderType::EST_Pixel, nullptr);
+	Pipeline->SetSRV(11, EShaderType::EST_Pixel, nullptr);
 }
 
 TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderingContext& Context)
@@ -465,5 +443,4 @@ void FStaticMeshPass::Release()
 	SafeRelease(InputLayout);
     SafeRelease(HeatVS);
     SafeRelease(HeatPS);
-    SafeRelease(DS_Disabled);
 }

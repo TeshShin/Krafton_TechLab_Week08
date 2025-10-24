@@ -1,11 +1,6 @@
 ﻿#pragma once
 #include "RenderPass.h"
 
-struct FNormalMapConstants
-{
-    FVector2 RenderTarget; // RenderTargetSize (width, height)
-};
-
 class FNormalMapPass : public FRenderPass
 {
 public:
@@ -23,5 +18,4 @@ private:
     ID3D11DepthStencilState* DS = nullptr;
 	ID3D11ShaderResourceView* NormalSRV = nullptr;
     ID3D11SamplerState* SamplerState = nullptr;
-    ID3D11Buffer* ConstantBufferPerFrame = nullptr;
 };

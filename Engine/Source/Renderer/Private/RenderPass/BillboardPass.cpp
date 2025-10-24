@@ -5,8 +5,8 @@
 #include "Renderer/Public/RenderResourceFactory.h"
 #include "Scene/Public/Component/BillBoardComponent.h"
 
-FBillboardPass::FBillboardPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBufferModel, ID3D11DepthStencilState* InDS, ID3D11BlendState* InBS)
-        : FRenderPass(InPipeline, InConstantBufferModel), DS(InDS), BS(InBS)
+FBillboardPass::FBillboardPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS, ID3D11BlendState* InBS)
+        : FRenderPass(InPipeline), DS(InDS), BS(InBS)
 {
 	TArray<D3D11_INPUT_ELEMENT_DESC> LayoutDesc = {
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Position), D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -15,8 +15,8 @@ FBillboardPass::FBillboardPass(UPipeline* InPipeline, ID3D11Buffer* InConstantBu
 		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FNormalVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0}
 	};
 
-	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/BillboardShader.hlsl", LayoutDesc, &VS, &InputLayout);
-	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/BillboardShader.hlsl", &PS);
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/Primitive/BillboardShader.hlsl", LayoutDesc, &VS, &InputLayout);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/Primitive/BillboardShader.hlsl", &PS);
 	ConstantBufferColor = FRenderResourceFactory::CreateConstantBuffer<FVector4>();
 }
 
@@ -46,7 +46,7 @@ void FBillboardPass::Execute(FRenderingContext& Context)
 	//Pipeline->SetTexture(0, false, nullptr);
     for (UBillBoardComponent* BillBoardComp : Context.BillBoards)
     {
-    	Pipeline->SetConstantBuffer(2, true, ConstantBufferColor);
+    	Pipeline->SetConstantBuffer(0, EShaderType::EST_Vertex, ConstantBufferColor);
     	FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferColor, BillBoardComp->GetColor());
         BillBoardComp->FaceCamera(Context.CurrentCamera->GetForward());
 
@@ -64,13 +64,12 @@ void FBillboardPass::Execute(FRenderingContext& Context)
         Pipeline->SetVertexBuffer(BillBoardComp->GetVertexBuffer(), sizeof(FNormalVertex));
         Pipeline->SetIndexBuffer(BillBoardComp->GetIndexBuffer(), 0);
 
-        FRenderResourceFactory::UpdateConstantBufferData(ConstantBufferModel, WorldMatrix);
-        Pipeline->SetConstantBuffer(0, true, ConstantBufferModel);
+        FRenderResourceFactory::UpdateConstantBufferData(Context.ModelCB, WorldMatrix);
 
     	if (Context.ViewMode != EViewModeIndex::VMI_Wireframe)
     	{
-    		Pipeline->SetSRV(0, false, BillBoardComp->GetSprite()->GetTextureSRV());
-    		Pipeline->SetSamplerState(0, false, BillBoardComp->GetSprite()->GetTextureSampler());
+    		Pipeline->SetSRV(0, EShaderType::EST_Pixel, BillBoardComp->GetSprite()->GetTextureSRV());
+    		Pipeline->SetSamplerState(0, EShaderType::EST_Pixel, BillBoardComp->GetSprite()->GetTextureSampler());
     	}
 
         Pipeline->DrawIndexed(BillBoardComp->GetNumIndices(), 0, 0);
