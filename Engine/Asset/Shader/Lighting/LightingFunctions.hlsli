@@ -102,13 +102,6 @@ struct FUnifiedDynamicLight
 	float Padding;				// 4 bytes - four Byte
 };
 
-Texture2D ShadowMap : register(t12);
-SamplerComparisonState ShadowSampler : register(s1);
-
-/**
- * @brief Calculate dynamic light contribution with attenuation using Blinn-Phong
- * @return Separated diffuse and specular contributions
- */
 FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower)
 {
     FLightingResult Result;
@@ -122,25 +115,6 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
 
     float3 LightDir;
     float Attenuation = Light.Intensity;
-
-	float ShadowFactor = 1.0f;
-#if defined (LIGHTING_MODEL_PHONG)
-	if (Light.bCastShadows > 0)
-	{
-		float4 LightSpacePos = mul(float4(WorldPos, 1.0f), Light.LightViewProjection);
-		float3 ShadowCoords = LightSpacePos.xyz / LightSpacePos.w;
-
-		ShadowCoords.x = ShadowCoords.x * 0.5f + 0.5f;
-		ShadowCoords.y = ShadowCoords.y * -0.5f + 0.5f;
-
-		// 현재 픽셀의 깊이(shadowCoords.z)와 섀도우 맵의 깊이(arrayCoords)를 비교
-		ShadowFactor = ShadowMap.SampleCmp(
-			  ShadowSampler,
-			  ShadowCoords.xy,
-			  ShadowCoords.z - Light.ShadowBias
-		);
-	}
-#endif
 
 	// Ambient Light: no direction or attenuation
 	if (Light.LightType == LIGHT_TYPE_AMBIENT)
@@ -200,6 +174,29 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
     Result.Diffuse = float3(0, 0, 0);
     Result.Specular = float3(0, 0, 0);
 #endif
+
+    return Result;
+}
+
+FLightingResult CalculateDynamicLightWithShadows(FUnifiedDynamicLight Light, float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower, Texture2D ShadowMap, SamplerComparisonState ShadowSampler)
+{
+    FLightingResult Result = CalculateDynamicLight(Light, WorldPos, Normal, ViewDir, SpecularPower);
+
+	float ShadowFactor = 1.0f;
+	if (Light.bCastShadows > 0)
+	{
+		float4 LightSpacePos = mul(float4(WorldPos, 1.0f), Light.LightViewProjection);
+		float3 ShadowCoords = LightSpacePos.xyz / LightSpacePos.w;
+
+		ShadowCoords.x = ShadowCoords.x * 0.5f + 0.5f;
+		ShadowCoords.y = ShadowCoords.y * -0.5f + 0.5f;
+
+		ShadowFactor = ShadowMap.SampleCmp(
+			  ShadowSampler,
+			  ShadowCoords.xy,
+			  ShadowCoords.z - Light.ShadowBias
+		);
+	}
 
 	Result.Diffuse *= ShadowFactor;
 	Result.Specular *= ShadowFactor;
