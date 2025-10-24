@@ -284,7 +284,7 @@ void UDeviceResources::CreateFrameBuffers()
 	SceneDesc.Height = Height;
 	SceneDesc.MipLevels = 1;
 	SceneDesc.ArraySize = 1;
-	SceneDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	SceneDesc.Format = DXGI_FORMAT_B8G8R8A8_TYPELESS;
 	SceneDesc.SampleDesc.Count = 1;
 	SceneDesc.SampleDesc.Quality = 0;
 	SceneDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -302,7 +302,12 @@ void UDeviceResources::CreateFrameBuffers()
 			return;
 		}
 
-		Result = Device->CreateRenderTargetView(FrameBuffer[Idx], nullptr, &FrameBufferRTV[Idx]);
+		D3D11_RENDER_TARGET_VIEW_DESC RtvDesc = {};
+		RtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		RtvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+		RtvDesc.Texture2D.MipSlice = 0;
+
+		Result = Device->CreateRenderTargetView(FrameBuffer[Idx], &RtvDesc, &FrameBufferRTV[Idx]);
 		if (FAILED(Result))
 		{
 			UE_LOG_ERROR("DeviceResources: FrameBuffer RTV 생성 실패");
@@ -311,7 +316,7 @@ void UDeviceResources::CreateFrameBuffers()
 		}
 
 		D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
-		SRVDesc.Format = SceneDesc.Format;
+		SRVDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
 		SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 		SRVDesc.Texture2D.MostDetailedMip = 0;
 		SRVDesc.Texture2D.MipLevels = 1;
