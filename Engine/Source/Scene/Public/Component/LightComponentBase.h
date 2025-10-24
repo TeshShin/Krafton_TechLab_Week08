@@ -122,13 +122,14 @@ private:
 public:
 	virtual const FMatrix& GetLightViewProjectionMatrix() const { return FMatrix(); }
 	bool DoesCastShadows() const { return bCastShadows; }
-	const FShadowMap* GetShadowMap() const { return &ShadowMap; }
+	int32 GetShadowMapIdx() const { return ShadowMapIdx; }
+	void SetShadowMapIdx(int32 InShadowIdx) { ShadowMapIdx = InShadowIdx; }
 
 protected:
 	mutable FMatrix CachedLightViewProjection;
 	mutable bool bIsLightVPDirty = true;
 
-	bool bCastShadows = false; // 일단 SpotLight만 true로 하기 위한 용
+	bool bCastShadows = false; // 일단 SpotLight만 true로 함
 	FShadowMap ShadowMap;
 	int32 ShadowMapWidth = 2048;
 	int32 ShadowMapHeight = 2048;

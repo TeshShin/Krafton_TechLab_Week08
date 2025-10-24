@@ -178,7 +178,7 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
     return Result;
 }
 
-FLightingResult CalculateDynamicLightWithShadows(FUnifiedDynamicLight Light, float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower, Texture2D ShadowMap, SamplerComparisonState ShadowSampler)
+FLightingResult CalculateDynamicLightWithShadows(FUnifiedDynamicLight Light, float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower, Texture2DArray ShadowMapArray, SamplerComparisonState ShadowSampler)
 {
     FLightingResult Result = CalculateDynamicLight(Light, WorldPos, Normal, ViewDir, SpecularPower);
 
@@ -191,11 +191,12 @@ FLightingResult CalculateDynamicLightWithShadows(FUnifiedDynamicLight Light, flo
 		ShadowCoords.x = ShadowCoords.x * 0.5f + 0.5f;
 		ShadowCoords.y = ShadowCoords.y * -0.5f + 0.5f;
 
-		ShadowFactor = ShadowMap.SampleCmp(
-			  ShadowSampler,
-			  ShadowCoords.xy,
-			  ShadowCoords.z - Light.ShadowBias
-		);
+		float3 SampleCoords = float3(ShadowCoords.xy, Light.ShadowMapIndex);
+		ShadowFactor = ShadowMapArray.SampleCmp(
+					ShadowSampler,
+					SampleCoords,
+					ShadowCoords.z - Light.ShadowBias
+			   );
 	}
 
 	Result.Diffuse *= ShadowFactor;

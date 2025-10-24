@@ -7,6 +7,7 @@
 #include "Renderer/Public/LightData.h"
 #include "Asset/Public/Texture.h"
 #include "Editor/Public/Camera.h"
+#include "Renderer/Public/ShadowMapManager.h"
 
 FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS, ID3D11DepthStencilState* InDisabledDS)
 	: FRenderPass(InPipeline), DS(InDS), DisabledDS(InDisabledDS)
@@ -401,6 +402,9 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 
 TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderingContext& Context)
 {
+	Pipeline->SetSRV(12, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetSRV());
+	Pipeline->SetSamplerState(1, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetSamplerState());
+
 	// Collect all dynamic lights into unified buffer
 	TArray<FUnifiedDynamicLight> UnifiedLights;
 
@@ -414,8 +418,6 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 
 		if (Light->DoesCastShadows())
 		{
-			Pipeline->SetSRV(12, EShaderType::EST_Pixel, Light->GetShadowMap()->GetSRV());
-			Pipeline->SetSamplerState(1, EShaderType::EST_Pixel, Light->GetShadowMap()->GetSampler());
 		}
 	}
 

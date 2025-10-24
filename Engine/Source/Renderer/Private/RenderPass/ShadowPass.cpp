@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "Renderer/Public/RenderPass/ShadowPass.h"
 #include "Renderer/Public/RenderResourceFactory.h"
+#include "Renderer/Public/ShadowMapManager.h"
 #include "Renderer/Public/RenderPass/DecalPass.h"
 #include "Scene/Public/Component/LightComponentBase.h"
 #include "Scene/Public/Component/StaticMeshComponent.h"
@@ -14,6 +15,7 @@ FShadowPass::FShadowPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS) :
 	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/Lighting/ShadowMapVS.hlsl", Layout, &VS, &InputLayout);
 
 	CBLightViewProj = FRenderResourceFactory::CreateConstantBuffer<FMatrix>();
+	FShadowMapManager::GetInstance().Initalize(32, 2048);
 }
 
 bool FShadowPass::CanRender(const FRenderingContext& Context)
@@ -34,17 +36,28 @@ void FShadowPass::Execute(FRenderingContext& Context)
 	Pipeline->UpdatePipeline(PipelineInfo);
 	Pipeline->SetConstantBuffer(0, EShaderType::EST_Vertex, CBLightViewProj);
 
+	FShadowMapManager& ShadowMapManager = FShadowMapManager::GetInstance();
+	ShadowMapManager.ClearShadowMaps();
+
+	D3D11_VIEWPORT ShadowViewport = {};
+	ShadowViewport.Width = static_cast<float>(ShadowMapManager.GetResolution());
+	ShadowViewport.Height = static_cast<float>(ShadowMapManager.GetResolution());
+	ShadowViewport.TopLeftX = 0.0f;
+	ShadowViewport.TopLeftY = 0.0f;
+	ShadowViewport.MinDepth = 0.0f;
+	ShadowViewport.MaxDepth = 1.0f;
+	DeviceContext->RSSetViewports(1, &ShadowViewport);
+
 	for (ULightComponentBase* Light : Context.Lights)
 	{
 		if (Light->DoesCastShadows())
 		{
-			const FShadowMap* ShadowMap = Light->GetShadowMap();
+			ShadowMapManager.AllocateShadowMap(Light);
 
-			ID3D11DepthStencilView* ShadowMapDSV = ShadowMap->GetDSV();
+			if (Light->GetShadowMapIdx() == -1) { continue; }
+
+			ID3D11DepthStencilView* ShadowMapDSV = ShadowMapManager.GetDSV(Light->GetShadowMapIdx());
 			Pipeline->SetRenderTargets(0, nullptr, ShadowMapDSV);
-
-			DeviceContext->RSSetViewports(1, &ShadowMap->GetViewport());
-			DeviceContext->ClearDepthStencilView(ShadowMapDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 			FRenderResourceFactory::UpdateConstantBufferData(CBLightViewProj, Light->GetLightViewProjectionMatrix());
 			RenderAllStaticMeshes(Context);

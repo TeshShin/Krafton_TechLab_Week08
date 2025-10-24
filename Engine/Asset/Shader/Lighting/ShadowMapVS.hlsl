@@ -32,17 +32,3 @@ VS_OUTPUT mainVS(VS_INPUT Input)
 
 	return Output;
 }
-
-// ---------------------------------
-// Pixel Shader
-// ---------------------------------
-// 픽셀 셰이더는 필요 없습니다.
-// C++에서 OMSetRenderTargets(0, nullptr, pShadowMapDSV)를 호출할 것이므로
-// 픽셀 셰이더는 nullptr로 설정(Pipeline->UpdatePipeline)하세요.
-// 만약 셰이더를 꼭 지정해야 한다면, 그냥 비워둡니다.
-/*
-void mainPS()
-{
-	// 아무것도 하지 않음
-}
-*/
