@@ -393,6 +393,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 		Pipeline->Draw(3, 0);
 	}
 
+	Pipeline->SetSRV(7, EShaderType::EST_Pixel, nullptr);
 	Pipeline->SetSRV(10, EShaderType::EST_Pixel, nullptr);
 	Pipeline->SetSRV(11, EShaderType::EST_Pixel, nullptr);
 	Pipeline->SetSRV(12, EShaderType::EST_Pixel, nullptr);
