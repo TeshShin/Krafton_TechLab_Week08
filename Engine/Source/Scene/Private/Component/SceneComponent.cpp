@@ -115,6 +115,7 @@ void USceneComponent::SetRelativeLocation(const FVector& Location)
 void USceneComponent::SetRelativeRotation(const FQuaternion& Rotation)
 {
 	RelativeRotation = Rotation;
+	RelativeRotation.Normalize(); // 안정성 확보
 	MarkAsDirty();
 
 	if (auto PrimitiveComponent = Cast<UPrimitiveComponent>(this))

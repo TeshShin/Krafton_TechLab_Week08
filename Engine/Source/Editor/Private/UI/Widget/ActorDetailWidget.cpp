@@ -6,6 +6,22 @@
 #include "Scene/Public/Actor/Actor.h"
 #include "Scene/Public/Component/SceneComponent.h"
 
+// LH 표기를 위해 부호 반전한 오일러에서 -0.0f를 0.0f로 정리
+static float SanitizeZeroForUI(float Value)
+{
+	const float Epsilon = 1e-6f;
+	return (fabsf(Value) < Epsilon) ? 0.0f : Value;
+}
+
+static FVector SanitizeEulerForUI(const FVector& Euler)
+{
+	return FVector(
+		SanitizeZeroForUI(Euler.X),
+		SanitizeZeroForUI(Euler.Y),
+		SanitizeZeroForUI(Euler.Z)
+	);
+}
+
 IMPLEMENT_CLASS(UActorDetailWidget, UWidget)
 UActorDetailWidget::UActorDetailWidget()
 {
@@ -44,32 +60,35 @@ void UActorDetailWidget::RenderWidget()
 		return;
 	}
 
-	// 선택된 액터가 변경되면, 컴포넌트 선택 상태를 초기화
 	if (CachedSelectedActor != SelectedActor)
 	{
 		CachedSelectedActor = SelectedActor;
 		SelectedComponent = SelectedActor->GetRootComponent();
+
+		RotationEditCache.clear();
+		RotationLastQuaternionCache.clear();
+
 	}
 
-	    // Actor 헤더 렌더링 (이름 + rename 기능)
-	    RenderActorHeader(SelectedActor);
+	// Actor 헤더 렌더링 (이름 + rename 기능)
+	RenderActorHeader(SelectedActor);
 
-	    ImGui::Separator();
+	ImGui::Separator();
 
-	    if (ImGui::CollapsingHeader("Tick Settings"))
+	if (ImGui::CollapsingHeader("Tick Settings"))
+	{
+	    bool bCanEverTick = SelectedActor->CanTick();
+	    if (ImGui::Checkbox("Enable Tick", &bCanEverTick))
 	    {
-	        bool bCanEverTick = SelectedActor->CanTick();
-	        if (ImGui::Checkbox("Enable Tick", &bCanEverTick))
-	        {
-	            SelectedActor->SetCanTick(bCanEverTick);
-	        }
-
-	        bool bTickInEditor = SelectedActor->CanTickInEditor();
-	        if (ImGui::Checkbox("Tick in Editor", &bTickInEditor))
-	        {
-	            SelectedActor->SetTickInEditor(bTickInEditor);
-	        }
+	        SelectedActor->SetCanTick(bCanEverTick);
 	    }
+
+	    bool bTickInEditor = SelectedActor->CanTickInEditor();
+	    if (ImGui::Checkbox("Tick in Editor", &bTickInEditor))
+	    {
+	        SelectedActor->SetTickInEditor(bTickInEditor);
+	    }
+	}
 	ImGui::Separator();
 
 	// 컴포넌트 트리 렌더링
@@ -540,11 +559,64 @@ void UActorDetailWidget::RenderTransformEdit()
 		SceneComponent->SetRelativeLocation(ComponentPosition);
 	}
 
-	// Relative Rotation
-	FVector ComponentRotation = SceneComponent->GetRelativeRotation().ToEuler();
-	if (ImGui::DragFloat3("Relative Rotation", &ComponentRotation.X, 1.0f))
+	// Relative Rotation (Delta 기반 편집 + 누적)
+	// 1) 캐시 초기화: 이 컴포넌트에 대한 캐시가 없으면 현재 쿼터니언을 기반으로 생성
+	if (RotationEditCache.find(SceneComponent) == RotationEditCache.end())
 	{
-		SceneComponent->SetRelativeRotation(FQuaternion::FromEuler(ComponentRotation));
+		const FQuaternion CurrentQuat = SceneComponent->GetRelativeRotation();
+		RotationEditCache[SceneComponent] = SanitizeEulerForUI(-CurrentQuat.ToEuler());         // 도 단위, LH 기대로 표기용 부호 반전
+		RotationLastQuaternionCache[SceneComponent] = CurrentQuat;
+	}
+
+	// 2) UI 표시용 오일러를 캐시에서 가져옴
+	FVector ComponentEulerForUI = SanitizeEulerForUI(RotationEditCache[SceneComponent]);
+
+	// 3) 드래그 입력
+	if (ImGui::DragFloat3("Relative Rotation", &ComponentEulerForUI.X, 1.0f))
+	{
+		// 3-1) 변화량(도) 계산
+		const FVector DeltaEulerDegrees = ComponentEulerForUI - RotationEditCache[SceneComponent];
+		RotationEditCache[SceneComponent] = SanitizeEulerForUI(ComponentEulerForUI);
+
+		// 3-2) 현재 쿼터니언과 Δ 쿼터니언 구성
+		const FQuaternion CurrentQuat = SceneComponent->GetRelativeRotation();
+
+		const float DeltaRadX = FVector::GetDegreeToRadian(DeltaEulerDegrees.X);
+		const float DeltaRadY = FVector::GetDegreeToRadian(DeltaEulerDegrees.Y);
+		const float DeltaRadZ = FVector::GetDegreeToRadian(DeltaEulerDegrees.Z);
+		// 축 매핑: X=Forward(로컬 X), Y=Right(로컬 Y), Z=Up(로컬 Z)
+		// 부호: LH 기대(+각도=반시계)를 만족시키기 위해 부호 반전하여 쿼터니언 생성
+		const FQuaternion DeltaQuatX = FQuaternion::FromAxisAngle(FVector::ForwardVector(), -DeltaRadX); // Roll (X)
+		const FQuaternion DeltaQuatY = FQuaternion::FromAxisAngle(FVector::RightVector(), -DeltaRadY); // Pitch (Y)
+		const FQuaternion DeltaQuatZ = FQuaternion::FromAxisAngle(FVector::UpVector(), -DeltaRadZ); // Yaw (Z)
+
+		// 로컬축 적용: 프리멀티플라이
+		FQuaternion NewQuat = (DeltaQuatX * DeltaQuatY * DeltaQuatZ) * CurrentQuat;
+		NewQuat.Normalize();
+
+		SceneComponent->SetRelativeRotation(NewQuat);
+		RotationLastQuaternionCache[SceneComponent] = NewQuat;
+
+	}
+	else
+	{
+		// 4) 외부 변경(기즈모/스크립트) 감지 시 캐시 재동기화
+		const FQuaternion CurrentQuat = SceneComponent->GetRelativeRotation();
+		const FQuaternion& LastQuat = RotationLastQuaternionCache[SceneComponent];
+
+		const float Eps = 1e-5f;
+		const bool bQuatChanged =
+			fabs(CurrentQuat.X - LastQuat.X) > Eps ||
+			fabs(CurrentQuat.Y - LastQuat.Y) > Eps ||
+			fabs(CurrentQuat.Z - LastQuat.Z) > Eps ||
+			fabs(CurrentQuat.W - LastQuat.W) > Eps;
+
+		if (bQuatChanged)
+		{
+			RotationLastQuaternionCache[SceneComponent] = CurrentQuat;
+			RotationEditCache[SceneComponent] = SanitizeEulerForUI(-CurrentQuat.ToEuler()); // 보여주는 값만 동기화, LH 표기 유지
+		}
+
 	}
 
 	// Relative Scale
@@ -657,3 +729,4 @@ void UActorDetailWidget::LoadComponentClasses()
 		}
 	}
 }
+

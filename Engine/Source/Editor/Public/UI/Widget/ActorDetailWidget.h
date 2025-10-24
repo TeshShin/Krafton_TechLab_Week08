@@ -53,4 +53,8 @@ private:
 	void LoadComponentClasses();
 	
 	TMap<FString, UClass*> ComponentClasses;
+	// 회전 편집 캐시: 컴포넌트별로 UI에 표시할 누적 오일러(도)
+	TMap<USceneComponent*, FVector> RotationEditCache;
+	// 외부 변경 감지를 위한 마지막 쿼터니언 스냅샷
+	TMap<USceneComponent*, FQuaternion> RotationLastQuaternionCache;
 };
