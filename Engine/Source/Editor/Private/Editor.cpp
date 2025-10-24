@@ -545,7 +545,7 @@ FVector UEditor::GetGizmoDragLocation(UCamera* InActiveCamera, FRay& WorldRay)
 		GizmoAxis = q.RotateVector(GizmoAxis);
 	}
 
-	if (ObjectPicker.IsRayCollideWithPlane(WorldRay, PlaneOrigin, InActiveCamera->CalculatePlaneNormal(GizmoAxis).Cross(GizmoAxis), MouseWorld))
+	if (ObjectPicker.IsRayCollideWithPlane(WorldRay, PlaneOrigin, GizmoAxis.Cross(InActiveCamera->CalculatePlaneNormal(GizmoAxis)), MouseWorld))
 	{
 		FVector MouseDistance = MouseWorld - Gizmo.GetDragStartMouseLocation();
 		return Gizmo.GetDragStartActorLocation() + GizmoAxis * MouseDistance.Dot(GizmoAxis);
@@ -573,7 +573,7 @@ FVector UEditor::GetGizmoDragRotation(UCamera* InActiveCamera, FRay& WorldRay)
 		PlaneOriginToMouseStart.Normalize();
 		float DotResult = (PlaneOriginToMouseStart).Dot(PlaneOriginToMouse);
 		float Angle = acosf(std::max(-1.0f, std::min(1.0f, DotResult)));
-		if ((PlaneOriginToMouseStart.Cross(PlaneOriginToMouse)).Dot(GizmoAxis) < 0)
+		if ((PlaneOriginToMouse.Cross(PlaneOriginToMouseStart)).Dot(GizmoAxis) < 0)
 		{
 			Angle = -Angle;
 		}
@@ -602,7 +602,7 @@ FVector UEditor::GetGizmoDragScale(UCamera* InActiveCamera, FRay& WorldRay)
 	FQuaternion q = Gizmo.GetTargetComponent()->GetWorldRotationAsQuaternion();
 	GizmoAxis = q.RotateVector(GizmoAxis);
 
-	FVector PlaneNormal = InActiveCamera->CalculatePlaneNormal(GizmoAxis).Cross(GizmoAxis);
+	FVector PlaneNormal = GizmoAxis.Cross(InActiveCamera->CalculatePlaneNormal(GizmoAxis));
 	if (ObjectPicker.IsRayCollideWithPlane(WorldRay, PlaneOrigin, PlaneNormal, MouseWorld))
 	{
 		FVector PlaneOriginToMouse = MouseWorld - PlaneOrigin;

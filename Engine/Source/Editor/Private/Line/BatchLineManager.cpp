@@ -113,8 +113,8 @@ void UBatchLineManager::AddDebugArrow(const FName& InLabel, const FVector& InSta
 	// Draw the arrow head
 	FVector Direction = (InEnd - InStart).GetNormalized();
 	FVector UpVector = (abs(Direction.Z) < 0.999f) ? FVector(0, 0, 1) : FVector(0, 1, 0);
-	FVector RightVector = Direction.Cross(UpVector).GetNormalized();
-	UpVector = RightVector.Cross(Direction);
+	FVector RightVector = UpVector.Cross(Direction).GetNormalized();
+	UpVector = Direction.Cross(RightVector);
 
 	FVector HeadBase = InEnd - Direction * InHeadSize;
 
@@ -166,8 +166,8 @@ void UBatchLineManager::AddDebugCone(const FName& BaseLabel, const FVector& TipL
 	{
 		UpVector = WorldUp;
 	}
-	const FVector RightVector = Direction.Cross(UpVector).GetNormalized();
-	const FVector ConeUpVector = RightVector.Cross(Direction);
+	const FVector RightVector = UpVector.Cross(Direction).GetNormalized();
+	const FVector ConeUpVector = Direction.Cross(RightVector);
 
 	const float AngleRad = ConeAngleDegrees * ToRad;
 	const float ConeHeight = Radius * cos(AngleRad);
@@ -212,15 +212,15 @@ void UBatchLineManager::AddDebugCone(const FName& BaseLabel, const FVector& TipL
         // Direction이 Z축과 같으면, 로컬 Right(+Y)를 월드 +X로 설정
         Right = FVector(1.0f, 0.0f, 0.0f);
         // 로컬 Up(+Z) 계산
-        Up = Direction.Cross(Right); // (0,0,1).Cross(1,0,0) = (0,1,0) (월드 Y)
+        Up = Right.Cross(Direction); // (0,0,1).Cross(1,0,0) = (0,1,0) (월드 Y)
     }
     else
     {
         // 일반적인 경우
         // 로컬 Right(+Y) 계산 (LH, Z-Up 기준)
-        Right = WorldZ.Cross(Direction).GetNormalized();
+        Right = Direction.Cross(WorldZ).GetNormalized();
         // 로컬 Up(+Z) 계산
-        Up = Direction.Cross(Right);
+        Up = Right.Cross(Direction);
     }
 
     // --- 2. 로컬 좌표축을 이용해 호 그리기 ---

@@ -34,8 +34,8 @@ void UUUIDTextComponent::OnDeselected()
 void UUUIDTextComponent::UpdateRotationMatrix(const FVector& InCameraForward)
 {
 	FVector Forward = InCameraForward;
-	FVector Right = Forward.Cross(FVector::UpVector()); Right.Normalize();
-	FVector Up = Right.Cross(Forward); Up.Normalize();
+	FVector Right = FVector::UpVector().Cross(Forward); Right.Normalize();
+	FVector Up = Forward.Cross(Right); Up.Normalize();
 
 	// Construct the rotation matrix from the basis vectors
 	RTMatrix = FMatrix(Forward, Right, Up);

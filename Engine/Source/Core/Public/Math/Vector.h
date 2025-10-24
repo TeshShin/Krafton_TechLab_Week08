@@ -100,9 +100,9 @@ struct FVector
 	inline FVector Cross(const FVector& InOtherVector) const
 	{
 		return FVector(
-			Z * InOtherVector.Y - Y * InOtherVector.Z,
-			X * InOtherVector.Z - Z * InOtherVector.X,
-			Y * InOtherVector.X - X * InOtherVector.Y
+			Y * InOtherVector.Z - Z * InOtherVector.Y,
+			Z * InOtherVector.X - X * InOtherVector.Z,
+			X * InOtherVector.Y - Y * InOtherVector.X
 		);
 	}
 

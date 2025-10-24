@@ -63,8 +63,8 @@ void UBillBoardComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 void UBillBoardComponent::FaceCamera(const FVector& CameraForward)
 {
     FVector Forward = CameraForward;
-    FVector Right = Forward.Cross(FVector::UpVector()); Right.Normalize();
-    FVector Up = Right.Cross(Forward); Up.Normalize();
+    FVector Right = FVector::UpVector().Cross(Forward); Right.Normalize();
+    FVector Up = Forward.Cross(Right); Up.Normalize();
 
     // Construct the rotation matrix from the basis vectors
     FMatrix RotationMatrix = FMatrix(Forward, Right, Up);

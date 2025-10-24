@@ -170,10 +170,10 @@ FQuaternion FQuaternion::MakeFromDirection(const FVector& Direction)
 	if (Dot == -1.f)
 	{
 		// 180도 회전
-		FVector RotAxis = ForwardVector.Cross(FVector::UpVector());
+		FVector RotAxis = FVector::UpVector().Cross(ForwardVector);
 		if (RotAxis.IsZero()) // Forward가 UP 벡터와 평행하면 다른 축 사용
 		{
-			RotAxis = ForwardVector.Cross(FVector::ForwardVector());
+			RotAxis = FVector::ForwardVector().Cross(ForwardVector);
 		}
 		return FromAxisAngle(RotAxis.GetNormalized(), PI);
 	}
@@ -181,7 +181,7 @@ FQuaternion FQuaternion::MakeFromDirection(const FVector& Direction)
 	float AngleRad = acos(Dot);
 
 	// 두 벡터에 수직인 회전축 계산 후 쿼터니언 생성
-	FVector Axis = ForwardVector.Cross(Dir);
+	FVector Axis = Dir.Cross(ForwardVector);
 	Axis.Normalize();
 	return FromAxisAngle(Axis, AngleRad);
 }
@@ -196,7 +196,7 @@ FVector FQuaternion::RotateVector(const FQuaternion& q, const FVector& v)
 FVector FQuaternion::RotateVector(const FVector& V) const
 {
 	const FVector Q(X, Y, Z);
-	const FVector TT = Q.Cross(V) * 2.f;
-	const FVector Result = V + (TT * W) + Q.Cross(TT);
+	const FVector TT = V.Cross(Q) * 2.f;
+	const FVector Result = V + (TT * W) + TT.Cross(Q);
 	return Result;
 }

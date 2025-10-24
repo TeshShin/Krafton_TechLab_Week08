@@ -75,7 +75,7 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FName& PathFileName, cons
             const FVector& B = ObjInfo.VertexList[ib];
             const FVector& C = ObjInfo.VertexList[ic];
 
-            FVector N = (B - A).Cross(C - A);
+            FVector N = (C - A).Cross(B - A);
             float len = N.Length();
             if (len > 1e-6f) { N = N * (1/len); }
             else { N = FVector(0, 0, 1); }
@@ -221,12 +221,12 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FName& PathFileName, cons
             {
                 // Fallback: build any valid tangent
                 FVector ref = fabsf(n.Z) < 0.999f ? FVector::UpVector() : FVector::RightVector();
-                tOrtho = n.Cross(ref);
+                tOrtho = ref.Cross(n);
                 tOrtho.Normalize();
             }
 
             // Compute handedness (w)
-            FVector b = n.Cross(tOrtho);
+            FVector b = tOrtho.Cross(n);
             float w = (b.Dot(tan2[v]) < 0.0f) ? -1.0f : 1.0f;
 
             StaticMesh->Vertices[v].Tangent = FVector4(tOrtho.X, tOrtho.Y, tOrtho.Z, w);

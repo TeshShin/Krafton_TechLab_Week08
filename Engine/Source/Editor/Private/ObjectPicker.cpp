@@ -296,8 +296,8 @@ bool UObjectPicker::IsRayTriangleCollided(UCamera* InActiveCamera, const FRay& R
 	FVector Result = (RayOrigin - Vertex1); //[E1 E2 -RayDirection]x = [RayOrigin - Vertex1.Position] 의 result임.
 
 
-	FVector CrossE2Ray = E2.Cross(RayDirection);
-	FVector CrossE1Result = E1.Cross(Result);
+	FVector CrossE2Ray = RayDirection.Cross(E2);
+	FVector CrossE1Result = Result.Cross(E1);
 
 	float Determinant = E1.Dot(CrossE2Ray);
 

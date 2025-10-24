@@ -89,9 +89,9 @@ void UCamera::Update(const D3D11_VIEWPORT& InViewport)
 
 	Forward = FVector(Forward4.X, Forward4.Y, Forward4.Z);
 	Forward.Normalize();
-	Right = Forward.Cross(WorldUp);
+	Right = WorldUp.Cross(Forward);
 	Right.Normalize();
-	Up = Right.Cross(Forward);
+	Up = Forward.Cross(Right);
 	Up.Normalize();
 
 	// 종횡비 갱신
@@ -314,9 +314,9 @@ FRay UCamera::ConvertToWorldRay(float NdcX, float NdcY) const
 
 FVector UCamera::CalculatePlaneNormal(const FVector4& Axis)
 {
-	return Forward.Cross(FVector(Axis.X, Axis.Y, Axis.Z));
+	return FVector(Axis.X, Axis.Y, Axis.Z).Cross(Forward);
 }
 FVector UCamera::CalculatePlaneNormal(const FVector& Axis)
 {
-	return Forward.Cross(FVector(Axis.X, Axis.Y, Axis.Z));
+	return FVector(Axis.X, Axis.Y, Axis.Z).Cross(Forward);
 }

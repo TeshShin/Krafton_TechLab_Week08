@@ -337,7 +337,7 @@ bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutO
 					const FVector& B = OutObjInfo->VertexList[ib];
 					const FVector& C = OutObjInfo->VertexList[ic];
 
-					FVector N = (B - A).Cross(C - A);
+					FVector N = (C - A).Cross(B - A);
 					float len = N.Length();
 					if (len > 1e-6f) { N = N * (1/len); }
 					else { N = FVector(0, 0, 1); }
