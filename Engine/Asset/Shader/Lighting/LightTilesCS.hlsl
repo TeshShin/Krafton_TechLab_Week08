@@ -47,8 +47,12 @@ struct FUnifiedDynamicLight
     float  Param0;              // spot inner (rad) / rect width
     float  Param1;              // spot outer (rad) / rect height
     float  Param2;              // reserved
-    uint   LightType;           // enum above
-    float4 Padding;             // alignment
+	uint   LightType;           // enum above
+	float4x4 LightViewProjection; // 64 bytes - Light View Projection Matrix
+	float ShadowBias;            // 4 bytes - Shadow Bias
+	uint bCastShadows;         // 4 bytes - Light Does Cast Shadows
+	int ShadowMapIndex;        // 4 bytes - Shadow Texture2D Array Index
+	float Padding;				// 4 bytes - four Byte
 };
 
 // Inputs/Outputs

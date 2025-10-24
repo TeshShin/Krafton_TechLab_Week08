@@ -95,8 +95,15 @@ struct FUnifiedDynamicLight
     float Param1;               // 4 bytes  - Spot: OuterConeAngle (radians), Rect: Height
     float Param2;               // 4 bytes  - Reserved for future use
     uint LightType;             // 4 bytes  - Light type identifier
-    float4 Padding;             // 16 bytes - Alignment padding
+	row_major float4x4 LightViewProjection; // 64 bytes - Light View Projection Matrix
+	float ShadowBias;            // 4 bytes - Shadow Bias
+	uint bCastShadows;         // 4 bytes - Light Does Cast Shadows
+	int ShadowMapIndex;        // 4 bytes - Shadow Texture2D Array Index
+	float Padding;				// 4 bytes - four Byte
 };
+
+Texture2D ShadowMap : register(t12);
+SamplerComparisonState ShadowSampler : register(s1);
 
 /**
  * @brief Calculate dynamic light contribution with attenuation using Blinn-Phong
@@ -116,6 +123,24 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
     float3 LightDir;
     float Attenuation = Light.Intensity;
 
+	float ShadowFactor = 1.0f;
+#if defined (LIGHTING_MODEL_PHONG)
+	if (Light.bCastShadows > 0)
+	{
+		float4 LightSpacePos = mul(float4(WorldPos, 1.0f), Light.LightViewProjection);
+		float3 ShadowCoords = LightSpacePos.xyz / LightSpacePos.w;
+
+		ShadowCoords.x = ShadowCoords.x * 0.5f + 0.5f;
+		ShadowCoords.y = ShadowCoords.y * -0.5f + 0.5f;
+
+		// 현재 픽셀의 깊이(shadowCoords.z)와 섀도우 맵의 깊이(arrayCoords)를 비교
+		ShadowFactor = ShadowMap.SampleCmp(
+			  ShadowSampler,
+			  ShadowCoords.xy,
+			  ShadowCoords.z - Light.ShadowBias
+		);
+	}
+#endif
 
 	// Ambient Light: no direction or attenuation
 	if (Light.LightType == LIGHT_TYPE_AMBIENT)
@@ -175,6 +200,9 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
     Result.Diffuse = float3(0, 0, 0);
     Result.Specular = float3(0, 0, 0);
 #endif
+
+	Result.Diffuse *= ShadowFactor;
+	Result.Specular *= ShadowFactor;
 
     return Result;
 }

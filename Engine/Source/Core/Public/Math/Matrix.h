@@ -99,15 +99,24 @@ struct FMatrix
 	*/
 	static FMatrix RotationZ(float Radian);
 
-	    static FMatrix GetModelMatrix(const FVector& Location, const FVector& Rotation, const FVector& Scale);
-	
-	    static FMatrix GetModelMatrix(const FVector& Location, const FQuaternion& Rotation, const FVector& Scale);
-	    static FMatrix GetModelMatrixInverse(const FVector& Location, const FVector& Rotation, const FVector& Scale);
-	
-		static FMatrix GetModelMatrixInverse(const FVector& Location, const FQuaternion& Rotation, const FVector& Scale);
+    static FMatrix GetModelMatrix(const FVector& Location, const FVector& Rotation, const FVector& Scale);
+
+    static FMatrix GetModelMatrix(const FVector& Location, const FQuaternion& Rotation, const FVector& Scale);
+    static FMatrix GetModelMatrixInverse(const FVector& Location, const FVector& Rotation, const FVector& Scale);
+
+	static FMatrix GetModelMatrixInverse(const FVector& Location, const FQuaternion& Rotation, const FVector& Scale);
 	static FVector4 VectorMultiply(const FVector4&, const FMatrix&);
 
 	static FVector VectorMultiply(const FVector& v, const FMatrix& m);
+
+	/**
+	 * @brief (LH) 원근 투영 행렬을 생성합니다. (Z: 0-1 범위)
+	 * @param FovYRadians 세로 화각 (라디안 단위)
+	 * @param AspectRatio 종횡비 (Width / Height)
+	 * @param NearZ 가까운 클립 평면
+	 * @param FarZ 먼 클립 평면
+	 */
+	static FMatrix CreatePerspectiveFOV(float FovYRadians, float AspectRatio, float NearZ, float FarZ);
 
 	FMatrix Transpose() const;
 

@@ -139,22 +139,23 @@ void UCamera::UpdateMatrixByPers()
 	 * f = 1 / tan(fovY/2)
 	 */
 	const float RadianFovY = FVector::GetDegreeToRadian(FovY);
-	const float F = 1.0f / std::tanf(RadianFovY * 0.5f);
+	CameraConstants.Projection = FMatrix::CreatePerspectiveFOV(RadianFovY, Aspect, NearZ, FarZ);
+	// const float F = 1.0f / std::tanf(RadianFovY * 0.5f);
+	//
+	// FMatrix P = FMatrix::Identity();
+	// // | f/aspect   0        0         0 |
+	// // |    0       f        0         0 |
+	// // |    0       0   zf/(zf-zn)     1 |
+	// // |    0       0  -zn*zf/(zf-zn)  0 |
+	// P.Data[0][0] = F / Aspect;
+	// P.Data[1][1] = F;
+	// P.Data[2][2] = FarZ / (FarZ - NearZ);
+	// P.Data[2][3] = 1.0f;
+	// P.Data[3][2] = (-NearZ * FarZ) / (FarZ - NearZ);
+	// P.Data[3][3] = 0.0f;
+	//
+	// CameraConstants.Projection = P;
 
-	FMatrix P = FMatrix::Identity();
-	// | f/aspect   0        0         0 |
-	// |    0       f        0         0 |
-	// |    0       0   zf/(zf-zn)     1 |
-	// |    0       0  -zn*zf/(zf-zn)  0 |
-	P.Data[0][0] = F / Aspect;
-	P.Data[1][1] = F;
-	P.Data[2][2] = FarZ / (FarZ - NearZ);
-	P.Data[2][3] = 1.0f;
-	P.Data[3][2] = (-NearZ * FarZ) / (FarZ - NearZ);
-	P.Data[3][3] = 0.0f;
-
-	CameraConstants.Projection = P;
-	
 	CameraConstants.ViewWorldLocation = RelativeLocation;
 	CameraConstants.NearClip = NearZ;
 	CameraConstants.FarClip = FarZ;
@@ -191,7 +192,7 @@ void UCamera::UpdateMatrixByOrth()
 	P.Data[3][2] = -NearZ / (FarZ - NearZ);
 	P.Data[3][3] = 1.0f;
 	CameraConstants.Projection = P;
-	
+
 	CameraConstants.ViewWorldLocation = RelativeLocation;
 	CameraConstants.NearClip = NearZ;
 	CameraConstants.FarClip = FarZ;

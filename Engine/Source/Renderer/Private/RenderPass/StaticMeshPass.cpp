@@ -395,6 +395,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 
 	Pipeline->SetSRV(10, EShaderType::EST_Pixel, nullptr);
 	Pipeline->SetSRV(11, EShaderType::EST_Pixel, nullptr);
+	Pipeline->SetSRV(12, EShaderType::EST_Pixel, nullptr);
 }
 
 TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderingContext& Context)
@@ -409,11 +410,16 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 		// [UNIFIED FORWARD RENDERING] All light types (including Ambient) go through StructuredBuffer
 		FUnifiedDynamicLight UnifiedLight = Light->GetUnifiedLightData();
 		UnifiedLights.push_back(UnifiedLight);
+
+		if (Light->DoesCastShadows())
+		{
+			Pipeline->SetSRV(12, EShaderType::EST_Pixel, Light->GetShadowMap()->GetSRV());
+			Pipeline->SetSamplerState(1, EShaderType::EST_Pixel, Light->GetShadowMap()->GetSampler());
+		}
 	}
 
 	return UnifiedLights;
 }
-
 
 void FStaticMeshPass::Release()
 {

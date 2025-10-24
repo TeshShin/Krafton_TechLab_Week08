@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "Scene/Public/Component/LightComponentBase.h"
 #include "Asset/Public/JsonSerializer.h"
 #include "Editor/Public/Line/BatchLineManager.h"
@@ -7,6 +7,11 @@
 #include "Scene/Public/Component/BillBoardComponent.h"
 
 IMPLEMENT_ABSTRACT_CLASS(ULightComponentBase, USceneComponent)
+
+ULightComponentBase::~ULightComponentBase()
+{
+	ShadowMap.Release();
+}
 
 void ULightComponentBase::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
@@ -104,6 +109,7 @@ void ULightComponentBase::OnDeselected()
 void ULightComponentBase::MarkAsDirty()
 {
 	USceneComponent::MarkAsDirty();
+	bIsLightVPDirty = true;
 	if (bIsSelected)
 	{
 		ClearDebugLines();

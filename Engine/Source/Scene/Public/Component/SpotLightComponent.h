@@ -75,4 +75,10 @@ private:
 		.DisplayName = "Outer Cone Angle"
 	}))
 	 */
+
+	/*-----------------------------------------------------------------------------
+		Shadow Features
+	 -----------------------------------------------------------------------------*/
+public:
+    const FMatrix& GetLightViewProjectionMatrix() const override;
 };

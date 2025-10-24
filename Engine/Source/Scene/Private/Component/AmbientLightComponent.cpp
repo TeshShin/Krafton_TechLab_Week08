@@ -7,13 +7,17 @@ IMPLEMENT_CLASS(UAmbientLightComponent, ULightComponent)
 
 FUnifiedDynamicLight UAmbientLightComponent::GetUnifiedLightData() const
 {
-    FUnifiedDynamicLight UnifiedLight = {};
+    FUnifiedDynamicLight LightData = {};
 
-    UnifiedLight.Intensity = GetIntensity();
-    UnifiedLight.Color = GetLightColor();
-    UnifiedLight.LightType = static_cast<uint32>(EDynamicLightType::Ambient);
+    LightData.Intensity = GetIntensity();
+    LightData.Color = GetLightColor();
+	LightData.LightType = static_cast<uint32>(EDynamicLightType::Ambient);
+	LightData.LightViewProjection = GetLightViewProjectionMatrix();
+	LightData.ShadowBias = 0;
+	LightData.bCastShadows = bCastShadows;
+	LightData.ShadowMapIndex = ShadowMapIdx;
 
-    return UnifiedLight;
+    return LightData;
 }
 
 class UTexture* UAmbientLightComponent::GetLightBillboardTexture()

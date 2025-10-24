@@ -14,7 +14,6 @@
 #include "Editor/Public/UI/StatOverlay.h"
 #include "Scene/Public/Level/Level.h"
 #include "Manager/Public/UIManager.h"
-#include "Manager/Public/InputManager.h"
 #include "Manager/Public/TimeManager.h"
 #include "Renderer/Public/RenderPass/RenderPass.h"
 #include "Renderer/Public/RenderPass/BillboardPass.h"
@@ -33,6 +32,7 @@
 #include "Editor/Public/Line/BatchLineManager.h"
 #include "Renderer/Public/RenderPass/EditorDepthPass.h"
 #include "Renderer/Public/RenderPass/EditorOverlayPass.h"
+#include "Renderer/Public/RenderPass/ShadowPass.h"
 
 IMPLEMENT_SINGLETON_CLASS(URenderer, UObject)
 
@@ -142,6 +142,9 @@ void URenderer::CreateConstantBuffers()
 
 void URenderer::CreateRenderPasses()
 {
+	auto ShadowPass = new FShadowPass(Pipeline, DefaultDS);
+	LevelPasses.push_back(ShadowPass);
+
 	auto StaticMeshPass = new FStaticMeshPass(Pipeline, DefaultDS, DisabledDS);
 	LevelPasses.push_back(StaticMeshPass);
 

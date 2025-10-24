@@ -311,6 +311,23 @@ FVector FMatrix::VectorMultiply(const FVector& V, const FMatrix& M)
 	return result;
 }
 
+FMatrix FMatrix::CreatePerspectiveFOV(float FovYRadians, float AspectRatio, float NearZ, float FarZ)
+{
+	FMatrix Proj = {}; // 0으로 초기화
+
+	const float YScale = 1.0f / tan(FovYRadians * 0.5f);
+	const float XScale = YScale / AspectRatio;
+
+	Proj.Data[0][0] = XScale;
+	Proj.Data[1][1] = YScale;
+	Proj.Data[2][2] = FarZ / (FarZ - NearZ);
+	Proj.Data[2][3] = 1.0f; // z/w
+	Proj.Data[3][2] = -NearZ * FarZ / (FarZ - NearZ);
+	Proj.Data[3][3] = 0.0f;
+
+	return Proj;
+}
+
 FMatrix FMatrix::Transpose() const
 {
 	// 1. 4개 행을 SIMD 레지스터에 로드

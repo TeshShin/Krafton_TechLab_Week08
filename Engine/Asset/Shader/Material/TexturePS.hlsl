@@ -97,7 +97,7 @@ uint FP_ComputeClusterID(float4 svpos /* SV_POSITION */, float3 worldPos)
 	return (zSlice * FP_NumTilesY + tileY) * FP_NumTilesX + tileX;
 }
 
-PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
+PS_OUTPUT mainPS(PS_INPUT Input)
 {
     PS_OUTPUT Output;
 
@@ -175,6 +175,7 @@ PS_OUTPUT mainPS(PS_INPUT Input) : SV_TARGET
     uint safeCount = (count < maxCount) ? count : maxCount;
     uint base  = cid * FP_MaxLightsPerCluster;
 
+	[loop]
 	for (uint i = 0; i < safeCount; ++i)
 	{
 		uint li = FP_ClusterIndex[base + i];

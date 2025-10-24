@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SceneComponent.h"
+#include "Renderer/Public/ShadowMap.h"
 
 UENUM()
 enum class ELightComponentType
@@ -23,7 +24,7 @@ class ULightComponentBase : public USceneComponent
 public:
     ULightComponentBase() = default;
 
-    virtual ~ULightComponentBase() = default;
+    ~ULightComponentBase() override;
 
     /*-----------------------------------------------------------------------------
         UObject Features
@@ -114,4 +115,22 @@ private:
 	void CreateIconChild();
 
 	class UBillBoardComponent* IconBillboard = nullptr;
+
+	/*-----------------------------------------------------------------------------
+		Shadow Features
+	 -----------------------------------------------------------------------------*/
+public:
+	virtual const FMatrix& GetLightViewProjectionMatrix() const { return FMatrix(); }
+	bool DoesCastShadows() const { return bCastShadows; }
+	const FShadowMap* GetShadowMap() const { return &ShadowMap; }
+
+protected:
+	mutable FMatrix CachedLightViewProjection;
+	mutable bool bIsLightVPDirty = true;
+
+	bool bCastShadows = false; // 일단 SpotLight만 true로 하기 위한 용
+	FShadowMap ShadowMap;
+	int32 ShadowMapWidth = 2048;
+	int32 ShadowMapHeight = 2048;
+	int32 ShadowMapIdx = -1;
 };

@@ -70,7 +70,7 @@ PS_INPUT mainVS(VS_INPUT Input)
 	Output.TotalDiffuse = TotalDiffuse;
 	Output.TotalSpecular = TotalSpecular;
 #else
-	Output.TotalDiffuse = Input.Color;
+	Output.TotalDiffuse = Input.Color.rgb;
 
 	// pixel shader에서 normal map을 사용할 경우를 대비하여 World Tangent 계산
 	float3 worldT = mul(Input.Tangent.xyz, (float3x3) ModelWorld);
