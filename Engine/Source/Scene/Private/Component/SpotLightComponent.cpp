@@ -13,7 +13,6 @@ USpotLightComponent::USpotLightComponent()
 {
 	bCanEverTick = true;
 	bCastShadows = true;
-	ShadowMap.Initialize(ShadowMapWidth, ShadowMapHeight);
 }
 
 void USpotLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)

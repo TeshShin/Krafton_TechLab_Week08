@@ -1,7 +1,6 @@
 #pragma once
 
 #include "SceneComponent.h"
-#include "Renderer/Public/ShadowMap.h"
 
 UENUM()
 enum class ELightComponentType
@@ -130,7 +129,6 @@ protected:
 	mutable bool bIsLightVPDirty = true;
 
 	bool bCastShadows = false; // 일단 SpotLight만 true로 함
-	FShadowMap ShadowMap;
 	int32 ShadowMapWidth = 2048;
 	int32 ShadowMapHeight = 2048;
 	int32 ShadowMapIdx = -1;
