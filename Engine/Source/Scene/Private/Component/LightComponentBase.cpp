@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Scene/Public/Component/LightComponentBase.h"
 #include "Asset/Public/JsonSerializer.h"
 #include "Editor/Public/Line/BatchLineManager.h"
@@ -16,6 +16,7 @@ void ULightComponentBase::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		FJsonSerializer::ReadFloat(InOutHandle, "Intensity", Intensity);
 		FJsonSerializer::ReadVector(InOutHandle, "LightColor", LightColor);
 		FJsonSerializer::ReadBool(InOutHandle, "bVisible", bVisible, true);
+		SetLightColor(LightColor);
 	}
 	else
 	{
@@ -52,7 +53,38 @@ void ULightComponentBase::BeginPlay()
 	if (!GEditor->IsPIESessionActive())
 	{
 		IconBillboard = nullptr;
-		CreateIconChild();
+
+		// 1) 이미 로드된 빌보드(시각화 컴포넌트) 재사용 시도
+		if (AActor* OwnerActor = GetOwner())
+		{
+			TArray<UActorComponent*>& Components = OwnerActor->GetOwnedComponents();
+			for (UActorComponent* Component : Components)
+			{
+				UBillBoardComponent* BillboardCandidate = Cast<UBillBoardComponent>(Component);
+				if (BillboardCandidate)
+				{
+					USceneComponent* Parent = BillboardCandidate->GetAttachParent();
+					if (Parent == this && BillboardCandidate->IsVisualizationComponent())
+					{
+						IconBillboard = BillboardCandidate;
+						break;
+					}
+				}
+			}
+		}
+
+		// 2) 없으면 새로 생성
+		if (!IconBillboard)
+		{
+			CreateIconChild();
+		}
+
+		// 3) 색상 동기화 보장
+		if (IconBillboard)
+		{
+			IconBillboard->SetColor(FVector4(LightColor.X, LightColor.Y, LightColor.Z, 1.0f));
+		}
+
 	}
 }
 
@@ -110,5 +142,6 @@ void ULightComponentBase::CreateIconChild()
 		IconBillboard->SetIsVisualizationComponent(true);
 		IconBillboard->SetSprite(GetLightBillboardTexture());
 		IconBillboard->SetScreenSizeScaled(true);
+		IconBillboard->SetColor(FVector4(LightColor.X, LightColor.Y, LightColor.Z, 1.0f));
 	}
 }
