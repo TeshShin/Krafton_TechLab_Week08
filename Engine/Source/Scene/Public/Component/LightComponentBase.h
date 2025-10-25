@@ -9,8 +9,7 @@ enum class ELightComponentType
     LightType_Directional = 1,
     LightType_Point       = 2,
     LightType_Spot        = 3,
-    LightType_Rect        = 4,
-    LightType_Max         = 5
+    LightType_Max         = 4,
 };
 DECLARE_ENUM_REFLECTION(ELightComponentType)
 
@@ -119,7 +118,7 @@ private:
 		Shadow Features
 	 -----------------------------------------------------------------------------*/
 public:
-	virtual const FMatrix& GetLightViewProjectionMatrix() const { return FMatrix(); }
+	virtual const TArray<FMatrix>& GetLightViewProjectionMatrices() const { return TArray<FMatrix>(); }
 
 	bool DoesCastShadows() const { return bCastShadows; }
 	void SetCastShadows(bool bInCastShadows) { bCastShadows = bInCastShadows; }
@@ -128,7 +127,7 @@ public:
 	void SetShadowMapIdx(int32 InShadowIdx) { ShadowMapIdx = InShadowIdx; }
 
 protected:
-	mutable FMatrix CachedLightViewProjection;
+	mutable TArray<FMatrix> CachedLightViewProjection;
 	mutable bool bIsLightVPDirty = true;
 
 	bool bCastShadows = false; // 일단 SpotLight만 true로 함

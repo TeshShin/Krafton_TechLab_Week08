@@ -47,10 +47,9 @@ struct FUnifiedDynamicLight
     float Param2;               // 4 bytes  - Reserved for future use
     uint32 LightType;           // 4 bytes  - EDynamicLightType enum value
 	/// Shadow ///
-	FMatrix LightViewProjection; // 64 bytes - Light View Projection Matrix
 	float ShadowBias;            // 4 bytes - Shadow Bias
 	uint32 bCastShadows;         // 4 bytes - Light Does Cast Shadows
 	int32 ShadowMapIndex;        // 4 bytes - Shadow Texture2D Array Index, 나중에 ShadowAtlas를 위해서.
 	float Padding;        // 4 bytes - four Byte
 };
-static_assert(sizeof(FUnifiedDynamicLight) == 144, "FUnifiedDynamicLight must be 144 bytes for proper GPU alignment");
+static_assert(sizeof(FUnifiedDynamicLight) == 80, "FUnifiedDynamicLight must be 144 bytes for proper GPU alignment");

@@ -15,7 +15,7 @@ FShadowPass::FShadowPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS) :
 	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/Lighting/ShadowMapVS.hlsl", Layout, &VS, &InputLayout);
 
 	CBLightViewProj = FRenderResourceFactory::CreateConstantBuffer<FMatrix>();
-	FShadowMapManager::GetInstance().Initalize(32, 2048);
+	FShadowMapManager::GetInstance().Initialize(32, 2048, 32, 2048);
 }
 
 bool FShadowPass::CanRender(const FRenderingContext& Context)
@@ -40,13 +40,11 @@ void FShadowPass::Execute(FRenderingContext& Context)
 	ShadowMapManager.ClearShadowMaps();
 
 	D3D11_VIEWPORT ShadowViewport = {};
-	ShadowViewport.Width = static_cast<float>(ShadowMapManager.GetResolution());
-	ShadowViewport.Height = static_cast<float>(ShadowMapManager.GetResolution());
 	ShadowViewport.TopLeftX = 0.0f;
 	ShadowViewport.TopLeftY = 0.0f;
 	ShadowViewport.MinDepth = 0.0f;
 	ShadowViewport.MaxDepth = 1.0f;
-	DeviceContext->RSSetViewports(1, &ShadowViewport);
+	TArray<ID3D11DepthStencilView*> ShadowMaps;
 
 	for (ULightComponentBase* Light : Context.Lights)
 	{
@@ -54,14 +52,22 @@ void FShadowPass::Execute(FRenderingContext& Context)
 		if (Light->DoesCastShadows())
 		{
 			ShadowMapManager.AllocateShadowMap(Light);
-
 			if (Light->GetShadowMapIdx() == -1) { continue; }
 
-			ID3D11DepthStencilView* ShadowMapDSV = ShadowMapManager.GetDSV(Light->GetShadowMapIdx());
-			Pipeline->SetRenderTargets(0, nullptr, ShadowMapDSV);
+			const uint32 Resolution = ShadowMapManager.GetResolution(Light);
+			ShadowViewport.Width = static_cast<float>(Resolution);
+			ShadowViewport.Height = static_cast<float>(Resolution);
+			DeviceContext->RSSetViewports(1, &ShadowViewport);
 
-			FRenderResourceFactory::UpdateConstantBufferData(CBLightViewProj, Light->GetLightViewProjectionMatrix());
-			RenderAllStaticMeshes(Context);
+			ShadowMapManager.GetDSVs(Light, ShadowMaps);
+			const TArray<FMatrix>& VPs = Light->GetLightViewProjectionMatrices();
+			for (uint32 Idx = 0; Idx < ShadowMaps.size(); Idx++)
+			{
+				Pipeline->SetRenderTargets(0, nullptr, ShadowMaps[Idx]);
+				FRenderResourceFactory::UpdateConstantBufferData(CBLightViewProj, VPs[Idx]);
+
+				RenderAllStaticMeshes(Context);
+			}
 		}
 	}
 

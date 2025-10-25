@@ -9,6 +9,7 @@ FShadowMapManager::FShadowMapManager()
 
 FShadowMapManager::~FShadowMapManager()
 {
+	Release();
 }
 
 FShadowMapManager& FShadowMapManager::GetInstance()
@@ -17,68 +18,13 @@ FShadowMapManager& FShadowMapManager::GetInstance()
 	return Instance;
 }
 
-void FShadowMapManager::Initalize(uint32 InMaxShadows, uint32 InResolution)
+void FShadowMapManager::Initialize(uint32 InMaxSpotShadows, uint32 InSpotResolution, uint32 InMaxPointShadowCubes, uint32 InPointResolution)
 {
-	Release();
-	ID3D11Device* Device = URenderer::GetInstance().GetDevice();
+	Device = URenderer::GetInstance().GetDevice();
+	Context = URenderer::GetInstance().GetDeviceContext();
 
-    Resolution = InResolution;
-    MaxShadows = InMaxShadows;
-
-    // --- Texture2DArray ---
-    D3D11_TEXTURE2D_DESC TexDesc = {};
-    TexDesc.Width = Resolution;
-    TexDesc.Height = Resolution;
-    TexDesc.MipLevels = 1;
-    TexDesc.ArraySize = MaxShadows;
-    TexDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-    TexDesc.SampleDesc.Count = 1;
-    TexDesc.SampleDesc.Quality = 0;
-    TexDesc.Usage = D3D11_USAGE_DEFAULT;
-    TexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
-    TexDesc.CPUAccessFlags = 0;
-    TexDesc.MiscFlags = 0;
-
-    HRESULT hr = Device->CreateTexture2D(&TexDesc, nullptr, &ShadowMapArrayTexture);
-    if (FAILED(hr))
-    {
-	    return;
-    }
-
-	// --- SRV ---
-    D3D11_SHADER_RESOURCE_VIEW_DESC SrvDesc = {};
-    SrvDesc.Format = DXGI_FORMAT_R32_FLOAT;
-    SrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-    SrvDesc.Texture2DArray.MostDetailedMip = 0;
-    SrvDesc.Texture2DArray.MipLevels = 1;
-    SrvDesc.Texture2DArray.FirstArraySlice = 0;
-    SrvDesc.Texture2DArray.ArraySize = MaxShadows;
-
-    hr = Device->CreateShaderResourceView(ShadowMapArrayTexture, &SrvDesc, &ShadowMapArraySRV);
-    if (FAILED(hr))
-    {
-	    return;
-    }
-
-	// --- DSV ---
-    D3D11_DEPTH_STENCIL_VIEW_DESC DsvDesc = {};
-    DsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
-    DsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-    DsvDesc.Texture2DArray.MipSlice = 0;
-    ShadowMapSliceDSVs.resize(MaxShadows);
-
-    for (uint32 i = 0; i < MaxShadows; ++i)
-    {
-        DsvDesc.Texture2DArray.FirstArraySlice = i;
-        DsvDesc.Texture2DArray.ArraySize = 1;
-
-        hr = Device->CreateDepthStencilView(ShadowMapArrayTexture, &DsvDesc, &ShadowMapSliceDSVs[i]);
-        if (FAILED(hr))
-        {
-            ShadowMapSliceDSVs.clear();
-            return;
-        }
-    }
+	InitializeSpotShadows(InMaxSpotShadows, InSpotResolution);
+	InitializePointShadows(InMaxPointShadowCubes, InPointResolution);
 
 	D3D11_SAMPLER_DESC SamplerDesc = {};
 	SamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
@@ -95,99 +41,387 @@ void FShadowMapManager::Initalize(uint32 InMaxShadows, uint32 InResolution)
 	SamplerDesc.MinLOD = 0;
 	SamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 
-	hr = Device->CreateSamplerState(&SamplerDesc, &ShadowMapSamplerState);
+	HRESULT hr = Device->CreateSamplerState(&SamplerDesc, &ShadowMapSamplerState);
 	if (FAILED(hr))
 	{
+		UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE SAMPLER STATE");
 		return;
 	}
 
-	InitializeForDebug(Device);
+	InitializeForDebug();
+}
+
+void FShadowMapManager::InitializeSpotShadows(uint32 InMaxSpotShadows, uint32 InSpotResolution)
+{
+	ReleaseSpotShadows();
+	MaxSpotShadows = InMaxSpotShadows;
+	SpotResolution = InSpotResolution;
+
+    // --- Texture2DArray ---
+    D3D11_TEXTURE2D_DESC SpotTexDesc = {};
+    SpotTexDesc.Width = SpotResolution;
+    SpotTexDesc.Height = SpotResolution;
+    SpotTexDesc.MipLevels = 1;
+    SpotTexDesc.ArraySize = MaxSpotShadows;
+    SpotTexDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+    SpotTexDesc.SampleDesc.Count = 1;
+    SpotTexDesc.SampleDesc.Quality = 0;
+    SpotTexDesc.Usage = D3D11_USAGE_DEFAULT;
+    SpotTexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
+    SpotTexDesc.CPUAccessFlags = 0;
+    SpotTexDesc.MiscFlags = 0;
+
+    HRESULT hr = Device->CreateTexture2D(&SpotTexDesc, nullptr, &SpotShadowMapArrayTexture);
+    if (FAILED(hr))
+    {
+        UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE TEXTURE");
+	    return;
+    }
+
+	// --- SRV ---
+    D3D11_SHADER_RESOURCE_VIEW_DESC SpotSrvDesc = {};
+    SpotSrvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+    SpotSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+    SpotSrvDesc.Texture2DArray.MostDetailedMip = 0;
+    SpotSrvDesc.Texture2DArray.MipLevels = 1;
+    SpotSrvDesc.Texture2DArray.FirstArraySlice = 0;
+    SpotSrvDesc.Texture2DArray.ArraySize = MaxSpotShadows;
+
+    hr = Device->CreateShaderResourceView(SpotShadowMapArrayTexture, &SpotSrvDesc, &SpotShadowMapArraySRV);
+    if (FAILED(hr))
+    {
+        UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE SRV");
+	    return;
+    }
+
+	// --- DSV ---
+    D3D11_DEPTH_STENCIL_VIEW_DESC SpotDsvDesc = {};
+    SpotDsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+    SpotDsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+    SpotDsvDesc.Texture2DArray.MipSlice = 0;
+    SpotShadowMapSliceDSVs.resize(MaxSpotShadows);
+
+    for (uint32 i = 0; i < MaxSpotShadows; ++i)
+    {
+        SpotDsvDesc.Texture2DArray.FirstArraySlice = i;
+        SpotDsvDesc.Texture2DArray.ArraySize = 1;
+
+        hr = Device->CreateDepthStencilView(SpotShadowMapArrayTexture, &SpotDsvDesc, &SpotShadowMapSliceDSVs[i]);
+        if (FAILED(hr))
+        {
+            SpotShadowMapSliceDSVs.clear();
+        	UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE DSV");
+            return;
+        }
+    }
+}
+
+void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uint32 InPointResolution)
+{
+	ReleasePointShadows();
+	MaxPointShadowCubes = InMaxPointShadowCubes;
+	PointResolution = InPointResolution;
+
+    // --- Texture2DArray ---
+    D3D11_TEXTURE2D_DESC PointTexDesc = {};
+    PointTexDesc.Width = PointResolution;
+    PointTexDesc.Height = PointResolution;
+    PointTexDesc.MipLevels = 1;
+    PointTexDesc.ArraySize = MaxPointShadowCubes * 6;
+    PointTexDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+    PointTexDesc.SampleDesc.Count = 1;
+    PointTexDesc.SampleDesc.Quality = 0;
+    PointTexDesc.Usage = D3D11_USAGE_DEFAULT;
+    PointTexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
+    PointTexDesc.CPUAccessFlags = 0;
+    PointTexDesc.MiscFlags = 0;
+	PointTexDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+
+    HRESULT hr = Device->CreateTexture2D(&PointTexDesc, nullptr, &PointShadowCubeArrayTexture);
+    if (FAILED(hr))
+    {
+        UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE TEXTURE");
+	    return;
+    }
+
+	// --- SRV ---
+    D3D11_SHADER_RESOURCE_VIEW_DESC PointSrvDesc = {};
+    PointSrvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+    PointSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
+    PointSrvDesc.TextureCubeArray.MostDetailedMip = 0;
+    PointSrvDesc.TextureCubeArray.MipLevels = 1;
+    PointSrvDesc.TextureCubeArray.First2DArrayFace = 0;
+    PointSrvDesc.TextureCubeArray.NumCubes = MaxPointShadowCubes;
+
+    hr = Device->CreateShaderResourceView(PointShadowCubeArrayTexture, &PointSrvDesc, &PointShadowCubeArraySRV);
+    if (FAILED(hr))
+    {
+        UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE SRV");
+	    return;
+    }
+
+	// --- DSV ---
+    D3D11_DEPTH_STENCIL_VIEW_DESC PointDsvDesc = {};
+    PointDsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+    PointDsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+    PointDsvDesc.Texture2DArray.MipSlice = 0;
+    PointShadowCubeSliceDSVs.resize(MaxPointShadowCubes * 6);
+
+    for (uint32 i = 0; i < MaxPointShadowCubes * 6; ++i)
+    {
+        PointDsvDesc.Texture2DArray.FirstArraySlice = i;
+        PointDsvDesc.Texture2DArray.ArraySize = 1;
+
+        hr = Device->CreateDepthStencilView(PointShadowCubeArrayTexture, &PointDsvDesc, &PointShadowCubeSliceDSVs[i]);
+        if (FAILED(hr))
+        {
+            PointShadowCubeSliceDSVs.clear();
+        	UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE DSV");
+            return;
+        }
+    }
+}
+
+void FShadowMapManager::ReleaseSpotShadows()
+{
+	SafeRelease(SpotShadowMapArrayTexture);
+	SafeRelease(SpotShadowMapArraySRV);
+	for (uint32 Idx = 0; Idx < MaxSpotShadows; ++Idx)
+	{
+		SafeRelease(SpotShadowMapSliceDSVs[Idx]);
+	}
+}
+
+void FShadowMapManager::ReleasePointShadows()
+{
+	SafeRelease(PointShadowCubeArrayTexture);
+	SafeRelease(PointShadowCubeArraySRV);
+	for (uint32 Idx = 0; Idx < MaxPointShadowCubes * 6; ++Idx)
+	{
+		SafeRelease(PointShadowCubeSliceDSVs[Idx]);
+	}
 }
 
 void FShadowMapManager::Release()
 {
-	SafeRelease(ShadowMapArrayTexture);
-	SafeRelease(ShadowMapArraySRV);
-	for (uint32 i = 0; i < MaxShadows; ++i)
-	{
-		SafeRelease(ShadowMapSliceDSVs[i]);
-	}
+	ReleaseSpotShadows();
+	ReleasePointShadows();
 }
 
 void FShadowMapManager::ClearShadowMaps()
 {
-	ID3D11DeviceContext* Context = URenderer::GetInstance().GetDeviceContext();
-	for (uint32 Idx = 0; Idx < CurrentShadowIdx; ++Idx)
+	for (uint32 Idx = 0; Idx < CurrentSpotShadowIdx; ++Idx)
 	{
-		Context->ClearDepthStencilView(GetDSV(Idx), D3D11_CLEAR_DEPTH, 1.0f, 0);
+		Context->ClearDepthStencilView(SpotShadowMapSliceDSVs[Idx], D3D11_CLEAR_DEPTH, 1.0f, 0);
 	}
-	CurrentShadowIdx = 0;
+	CurrentSpotShadowIdx = 0;
+
+	for (uint32 Idx = 0; Idx < CurrentPointCubeIdx * 6; ++Idx)
+	{
+		Context->ClearDepthStencilView(PointShadowCubeSliceDSVs[Idx], D3D11_CLEAR_DEPTH, 1.0f, 0);
+	}
+	CurrentPointCubeIdx = 0;
 }
 
 void FShadowMapManager::AllocateShadowMap(class ULightComponentBase* Light)
 {
-	if (CurrentShadowIdx < MaxShadows)
+	switch (Light->GetLightType())
 	{
-		Light->SetShadowMapIdx(CurrentShadowIdx++);
-		return;
+	case ELightComponentType::LightType_Spot:
+		if (CurrentSpotShadowIdx < MaxSpotShadows)
+		{
+			Light->SetShadowMapIdx(CurrentSpotShadowIdx++);
+			return;
+		}
+		break;
+	case ELightComponentType::LightType_Point:
+		if (CurrentPointCubeIdx < MaxPointShadowCubes)
+		{
+			Light->SetShadowMapIdx(CurrentPointCubeIdx++);
+			return;
+		}
+		break;
+	case ELightComponentType::LightType_Directional:
+		break;
+	default:
+		break;
 	}
 
 	Light->SetShadowMapIdx(-1);
 }
 
-ID3D11DepthStencilView* FShadowMapManager::GetDSV(uint32 ShadowMapIdx) const
+void FShadowMapManager::GetDSVs(class ULightComponentBase* Light, TArray<ID3D11DepthStencilView*>& OutDSVs) const
 {
-	if (ShadowMapIdx < CurrentShadowIdx)
+	OutDSVs.clear();
+	int32 ShadowMapIdx = Light->GetShadowMapIdx();
+
+	if (ShadowMapIdx < 0) { return; }
+
+	switch (Light->GetLightType())
 	{
-		return ShadowMapSliceDSVs[ShadowMapIdx];
-	}
-	return nullptr;
-}
-
-void FShadowMapManager::InitializeForDebug(ID3D11Device* Device)
-{
-	// --- ImGui 디버그용 텍스처 생성 ---
-	D3D11_TEXTURE2D_DESC DebugTexDesc = {};
-	ShadowMapArrayTexture->GetDesc(&DebugTexDesc);
-	DebugTexDesc.ArraySize = 1;
-	DebugTexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	DebugTexDesc.Usage = D3D11_USAGE_DEFAULT;
-	DebugTexDesc.MiscFlags = 0;
-	DebugTexDesc.Format = DXGI_FORMAT_R32_FLOAT;
-
-	HRESULT hr = Device->CreateTexture2D(&DebugTexDesc, nullptr, &ImGuiDebugTexture);
-	if (FAILED(hr))
-	{
-		return;
-	}
-
-	// --- ImGui 디버그용 SRV 생성 ---
-	D3D11_SHADER_RESOURCE_VIEW_DESC SrvDesc = {};
-	SrvDesc.Format = DebugTexDesc.Format;
-	SrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	SrvDesc.Texture2D.MostDetailedMip = 0;
-	SrvDesc.Texture2D.MipLevels = 1;
-
-	hr = Device->CreateShaderResourceView(ImGuiDebugTexture, &SrvDesc, &ImGuiDebugSRV);
-	if (FAILED(hr))
-	{
-		return;
+	case ELightComponentType::LightType_Spot:
+		if (CurrentSpotShadowIdx < MaxSpotShadows)
+		{
+			OutDSVs.emplace_back(SpotShadowMapSliceDSVs[ShadowMapIdx]);
+		}
+		break;
+	case ELightComponentType::LightType_Point:
+		if (CurrentPointCubeIdx < MaxPointShadowCubes)
+		{
+			for (uint32 Idx = 0; Idx < 6; ++Idx)
+			{
+				OutDSVs.emplace_back(PointShadowCubeSliceDSVs[ShadowMapIdx * 6 + Idx]);
+			}
+		}
+		break;
+	case ELightComponentType::LightType_Directional:
+		break;
+	default:
+		break;
 	}
 }
 
-ID3D11ShaderResourceView* FShadowMapManager::GetSRVForImGuiDebug(uint32 ShadowMapIdx)
+uint32 FShadowMapManager::GetResolution(class ULightComponentBase* Light) const
 {
-	ID3D11DeviceContext* Context = URenderer::GetInstance().GetDeviceContext();
-	if (ShadowMapIdx >= MaxShadows || !Context || !ShadowMapArrayTexture || !ImGuiDebugTexture) { return nullptr; }
+	switch (Light->GetLightType())
+	{
+	case ELightComponentType::LightType_Spot:
+		return SpotResolution;
+	case ELightComponentType::LightType_Point:
+		return PointResolution;
+	case ELightComponentType::LightType_Directional:
+		break;
+	default:
+		break;
+	}
+	return 0;
+}
 
-	UINT SrcMipLevels = 1;
-	UINT SrcSubresource = D3D11CalcSubresource(0, ShadowMapIdx, SrcMipLevels);
-	UINT DstSubresource = 0;
+void FShadowMapManager::InitializeForDebug()
+{
+	// 0. 필수 오브젝트 확인
+    if (!Device || !SpotShadowMapArrayTexture || !PointShadowCubeArrayTexture)
+    {
+        UE_LOG_ERROR("[ShadowMapManager] Debug Init Failed: Device or Source Textures are null.");
+        return;
+    }
 
-	Context->CopySubresourceRegion(
-		ImGuiDebugTexture, DstSubresource, 0, 0, 0,
-		ShadowMapArrayTexture, SrcSubresource, nullptr
-	);
+    HRESULT hr;
+    // --- 1. 스포트라이트 디버그 리소스 생성 ---
+    {
+        D3D11_TEXTURE2D_DESC SrcDesc;
+        SpotShadowMapArrayTexture->GetDesc(&SrcDesc);
 
-	return ImGuiDebugSRV;
+        D3D11_TEXTURE2D_DESC Desc = {};
+        Desc.Width = SrcDesc.Width;
+        Desc.Height = SrcDesc.Height;
+        Desc.MipLevels = 1;
+        Desc.ArraySize = 1;
+        Desc.Format = DXGI_FORMAT_R32_FLOAT;
+        Desc.SampleDesc.Count = 1;
+        Desc.Usage = D3D11_USAGE_DEFAULT;
+        Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        Desc.CPUAccessFlags = 0;
+        Desc.MiscFlags = 0;
+
+        hr = Device->CreateTexture2D(&Desc, nullptr, &ImGuiDebugTexture_Spot);
+        if (FAILED(hr))
+        {
+            UE_LOG_ERROR("[ShadowMapManager] Failed to create Spot Debug Texture.");
+            return;
+        }
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC SrvDesc = {};
+        SrvDesc.Format = Desc.Format;
+        SrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        SrvDesc.Texture2D.MostDetailedMip = 0;
+        SrvDesc.Texture2D.MipLevels = 1;
+
+        hr = Device->CreateShaderResourceView(ImGuiDebugTexture_Spot, &SrvDesc, &ImGuiDebugSRV_Spot);
+        if (FAILED(hr))
+        {
+            UE_LOG_ERROR("[ShadowMapManager] Failed to create Spot Debug SRV.");
+            return;
+        }
+    }
+
+    // --- 2. 포인트라이트 디버그 리소스 생성 ---
+    {
+        D3D11_TEXTURE2D_DESC SrcDesc;
+        PointShadowCubeArrayTexture->GetDesc(&SrcDesc);
+
+        D3D11_TEXTURE2D_DESC Desc = {};
+        Desc.Width = SrcDesc.Width;
+        Desc.Height = SrcDesc.Height;
+        Desc.MipLevels = 1;
+        Desc.ArraySize = 1;
+        Desc.Format = DXGI_FORMAT_R32_FLOAT;
+        Desc.SampleDesc.Count = 1;
+        Desc.Usage = D3D11_USAGE_DEFAULT;
+        Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        Desc.CPUAccessFlags = 0;
+        Desc.MiscFlags = 0;
+
+        hr = Device->CreateTexture2D(&Desc, nullptr, &ImGuiDebugTexture_Point);
+        if (FAILED(hr))
+        {
+            UE_LOG_ERROR("[ShadowMapManager] Failed to create Point Debug Texture.");
+            return;
+        }
+
+        // SRV 생성
+        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+        srvDesc.Format = Desc.Format;
+        srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Texture2D.MostDetailedMip = 0;
+        srvDesc.Texture2D.MipLevels = 1;
+
+        hr = Device->CreateShaderResourceView(ImGuiDebugTexture_Point, &srvDesc, &ImGuiDebugSRV_Point);
+        if (FAILED(hr))
+        {
+            UE_LOG_ERROR("[ShadowMapManager] Failed to create Point Debug SRV.");
+            return;
+        }
+    }
+}
+
+ID3D11ShaderResourceView* FShadowMapManager::GetSpotSRVForImGuiDebug(uint32 SpotIndex)
+{
+    if (!Context || !SpotShadowMapArrayTexture || !ImGuiDebugTexture_Spot || !ImGuiDebugSRV_Spot) { return nullptr; }
+    if (SpotIndex >= MaxSpotShadows) { return nullptr; }
+
+    UINT SrcSubresource = D3D11CalcSubresource(0, SpotIndex, 1);
+    UINT DstSubresource = 0;
+
+    // 리소스 복사 (GPU 작업)
+    Context->CopySubresourceRegion(ImGuiDebugTexture_Spot, DstSubresource,0, 0, 0,
+        SpotShadowMapArrayTexture, SrcSubresource, nullptr
+    );
+
+    return ImGuiDebugSRV_Spot;
+}
+
+ID3D11ShaderResourceView* FShadowMapManager::GetPointSRVForImGuiDebug(uint32 CubeIndex, uint32 FaceIndex)
+{
+    // 1. 유효성 검사
+    if (!Context || !PointShadowCubeArrayTexture || !ImGuiDebugTexture_Point || !ImGuiDebugSRV_Point)
+    {
+        return nullptr;
+    }
+    if (CubeIndex >= MaxPointShadowCubes || FaceIndex >= 6)
+    {
+        return nullptr;
+    }
+
+    uint32 FinalSliceIndex = (CubeIndex * 6) + FaceIndex;
+    UINT SrcSubresource = D3D11CalcSubresource(0, FinalSliceIndex, 1);
+    UINT DstSubresource = 0;
+
+    // 리소스 복사 (GPU 작업)
+    Context->CopySubresourceRegion(
+        ImGuiDebugTexture_Point, DstSubresource, 0, 0, 0,
+        PointShadowCubeArrayTexture, SrcSubresource, nullptr
+    );
+
+    return ImGuiDebugSRV_Point;
 }

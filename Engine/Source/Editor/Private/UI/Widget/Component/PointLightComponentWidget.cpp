@@ -28,11 +28,8 @@ void UPointLightComponentWidget::Update()
 
 void UPointLightComponentWidget::RenderWidget()
 {
+	if (!PointLightComponent) { return; }
 	Super::RenderWidget();
-    if (!PointLightComponent)
-    {
-        return;
-    }
 
     // Attenuation Radius
     float AttenuationRadius = PointLightComponent->GetAttenuationRadius();
@@ -50,4 +47,3 @@ void UPointLightComponentWidget::RenderWidget()
 
     ImGui::Separator();
 }
-

@@ -10,7 +10,7 @@ class UPointLightComponent : public ULightComponentBase
     DECLARE_CLASS(UPointLightComponent, ULightComponentBase)
 
 public:
-    UPointLightComponent() = default;
+    UPointLightComponent();
 
     virtual ~UPointLightComponent() = default;
 
@@ -75,4 +75,10 @@ private:
 
     /** Radius of light source shape. */
 	float AttenuationRadius = 10.0f;
+
+	/*-----------------------------------------------------------------------------
+		Shadow Features
+	 -----------------------------------------------------------------------------*/
+public:
+	const TArray<FMatrix>& GetLightViewProjectionMatrices() const override;
 };

@@ -311,6 +311,16 @@ FVector FMatrix::VectorMultiply(const FVector& V, const FMatrix& M)
 	return result;
 }
 
+FMatrix FMatrix::CreateViewFromAxes(const FVector& Position, const FVector& Right, const FVector& Up, const FVector& Forward)
+{
+	FMatrix T = TranslationMatrixInverse(Position);
+	FMatrix R = FMatrix(Right, Up, Forward);
+	R = R.Transpose();
+
+	FMatrix ViewMatrix = T * R;
+	return ViewMatrix;
+}
+
 FMatrix FMatrix::CreatePerspectiveFOV(float FovYRadians, float AspectRatio, float NearZ, float FarZ)
 {
 	FMatrix Proj = {}; // 0으로 초기화

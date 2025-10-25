@@ -39,10 +39,12 @@ Texture2D ShininessTexture : register(t3);   // map_Ns
 Texture2D AlphaTexture : register(t4);		// map_d
 Texture2D BumpTexture : register(t5);		// map_bump
 
-Texture2DArray ShadowMapArray : register(t12);
-SamplerComparisonState ShadowSampler : register(s1);
-
 SamplerState SamplerWrap : register(s0);
+
+// Shadow
+Texture2DArray SpotShadowAtlas : register(t12);
+TextureCubeArray PointShadowAtlas : register(t13);
+SamplerComparisonState ShadowSampler : register(s1);
 
 // Material flags
 #define HAS_DIFFUSE_MAP	 (1 << 0)
@@ -184,7 +186,8 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 		uint li = FP_ClusterIndex[base + i];
 		FLightingResult LightResult = CalculateDynamicLightWithShadows(
 			DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, max(Ns, 1.0f),
-            ShadowMapArray, ShadowSampler);		TotalDiffuse  += LightResult.Diffuse;
+            SpotShadowAtlas, SpotLightShadowMatrices, PointShadowAtlas, ShadowSampler);
+		TotalDiffuse  += LightResult.Diffuse;
 		TotalSpecular += LightResult.Specular;
 		TotalAmbient  += LightResult.Ambient;
 	}

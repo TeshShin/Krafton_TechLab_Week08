@@ -11,6 +11,7 @@ IMPLEMENT_CLASS(USpotLightComponent, UPointLightComponent)
 
 USpotLightComponent::USpotLightComponent()
 {
+	CachedLightViewProjection.reserve(1);
 	bCanEverTick = true;
 	bCastShadows = true;
 }
@@ -114,32 +115,25 @@ UTexture* USpotLightComponent::GetLightBillboardTexture()
 	return UAssetManager::GetInstance().LoadTexture("Data/Icons/SpotLight_64x.png");
 }
 
-const FMatrix& USpotLightComponent::GetLightViewProjectionMatrix() const
+const TArray<FMatrix>& USpotLightComponent::GetLightViewProjectionMatrices() const
 {
 	if (bIsLightVPDirty)
 	{
+		CachedLightViewProjection.clear();
 		const FVector LightPosition = GetWorldLocation();
 		const FVector Right = GetWorldRightVector();
 		const FVector Up = GetWorldUpVector();
 		const FVector Forward = GetWorldForwardVector();
 
-		FMatrix T = FMatrix::TranslationMatrixInverse(LightPosition);
-		FMatrix R = FMatrix(Right, Up, Forward);
-		R = R.Transpose();
+		FMatrix ViewMatrix = FMatrix::CreateViewFromAxes(LightPosition, Right, Up, Forward);
 
-		FMatrix ViewMatrix = T * R;
-
-		// Projection Matrix 생성 (Perspective)
-		// 섀도우 맵은 보통 정사각형이므로 종횡비(AspectRatio)는 1.0
 		float AspectRatio = 1.0f;
 		float FOV = OuterConeAngle * 2.0f * ToRad;
-
-		// Near/Far 클립 평면 설정
 		float NearZ = 0.1f;
-		float FarZ = GetAttenuationRadius(); // 빛의 최대 도달 거리
+		float FarZ = GetAttenuationRadius();
 		FMatrix ProjMatrix = FMatrix::CreatePerspectiveFOV(FOV, AspectRatio, NearZ, FarZ);
 
-		CachedLightViewProjection = ViewMatrix * ProjMatrix;
+		CachedLightViewProjection.emplace_back(ViewMatrix * ProjMatrix);
 		bIsLightVPDirty = false;
 	}
 

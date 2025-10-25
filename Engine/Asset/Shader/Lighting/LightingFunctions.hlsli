@@ -95,7 +95,6 @@ struct FUnifiedDynamicLight
     float Param1;               // 4 bytes  - Spot: OuterConeAngle (radians), Rect: Height
     float Param2;               // 4 bytes  - Reserved for future use
     uint LightType;             // 4 bytes  - Light type identifier
-	row_major float4x4 LightViewProjection; // 64 bytes - Light View Projection Matrix
 	float ShadowBias;            // 4 bytes - Shadow Bias
 	uint bCastShadows;         // 4 bytes - Light Does Cast Shadows
 	int ShadowMapIndex;        // 4 bytes - Shadow Texture2D Array Index
@@ -178,25 +177,42 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
     return Result;
 }
 
-FLightingResult CalculateDynamicLightWithShadows(FUnifiedDynamicLight Light, float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower, Texture2DArray ShadowMapArray, SamplerComparisonState ShadowSampler)
+FLightingResult CalculateDynamicLightWithShadows(FUnifiedDynamicLight Light, float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower,
+	Texture2DArray SpotShadowAtlas, StructuredBuffer<float4x4> SpotLightShadowMatrices, TextureCubeArray PointShadowAtlas, SamplerComparisonState ShadowSampler)
 {
     FLightingResult Result = CalculateDynamicLight(Light, WorldPos, Normal, ViewDir, SpecularPower);
 
 	float ShadowFactor = 1.0f;
 	if (Light.bCastShadows > 0)
 	{
-		float4 LightSpacePos = mul(float4(WorldPos, 1.0f), Light.LightViewProjection);
-		float3 ShadowCoords = LightSpacePos.xyz / LightSpacePos.w;
+		if (Light.LightType == LIGHT_TYPE_SPOT)
+		{
+			float4 LightSpacePos = mul(float4(WorldPos, 1.0f), SpotLightShadowMatrices[Light.ShadowMapIndex]);
+			float3 ShadowCoords = LightSpacePos.xyz / LightSpacePos.w;
 
-		ShadowCoords.x = ShadowCoords.x * 0.5f + 0.5f;
-		ShadowCoords.y = ShadowCoords.y * -0.5f + 0.5f;
+			ShadowCoords.x = ShadowCoords.x * 0.5f + 0.5f;
+			ShadowCoords.y = ShadowCoords.y * -0.5f + 0.5f;
 
-		float3 SampleCoords = float3(ShadowCoords.xy, Light.ShadowMapIndex);
-		ShadowFactor = ShadowMapArray.SampleCmp(
-					ShadowSampler,
-					SampleCoords,
-					ShadowCoords.z - Light.ShadowBias
-			   );
+			float3 SampleCoords = float3(ShadowCoords.xy, Light.ShadowMapIndex);
+			ShadowFactor = SpotShadowAtlas.SampleCmp(
+				ShadowSampler,
+				SampleCoords,
+				ShadowCoords.z - Light.ShadowBias
+		   );
+		}
+		else if (Light.LightType == LIGHT_TYPE_POINT)
+		{
+			float3 LightToPixelDir = WorldPos - Light.Position;
+			float PixelDepth = length(LightToPixelDir);
+			//    (방향 벡터 3D + 큐브 인덱스 1D)
+			float4 ShadowCoord = float4(LightToPixelDir, Light.ShadowMapIndex);
+
+			ShadowFactor = PointShadowAtlas.SampleCmpLevelZero(
+				ShadowSampler,
+				ShadowCoord,
+				PixelDepth - Light.ShadowBias
+			);
+		}
 	}
 
 	Result.Diffuse *= ShadowFactor;

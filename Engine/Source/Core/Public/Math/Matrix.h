@@ -110,6 +110,16 @@ struct FMatrix
 	static FVector VectorMultiply(const FVector& v, const FMatrix& m);
 
 	/**
+	 * 이미 계산된 축(Axes) 벡터와 위치를 기반으로 뷰 행렬(View Matrix)을 생성
+	 *
+	 * @param Position  카메라(라이트)의 월드 위치
+	 * @param Right     카메라의 X축 (월드 기준)
+	 * @param Up        카메라의 Y축 (월드 기준)
+	 * @param Forward   카메라의 Z축 (월드 기준)
+	 * @return 계산된 뷰 행렬 (FMatrix)
+	 */
+	static FMatrix CreateViewFromAxes(const FVector& Position, const FVector& Right, const FVector& Up, const FVector& Forward);
+	/**
 	 * @brief (LH) 원근 투영 행렬을 생성합니다. (Z: 0-1 범위)
 	 * @param FovYRadians 세로 화각 (라디안 단위)
 	 * @param AspectRatio 종횡비 (Width / Height)

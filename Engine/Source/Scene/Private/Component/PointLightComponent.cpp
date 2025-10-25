@@ -8,6 +8,11 @@
 
 IMPLEMENT_CLASS(UPointLightComponent, ULightComponentBase)
 
+UPointLightComponent::UPointLightComponent()
+{
+	CachedLightViewProjection.reserve(6);
+}
+
 void UPointLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
 	Super::Serialize(bInIsLoading, InOutHandle);
@@ -62,7 +67,6 @@ FUnifiedDynamicLight UPointLightComponent::GetUnifiedLightData() const
 	LightData.AttenuationRadius = GetAttenuationRadius();
     LightData.FalloffExponent = GetLightFalloffExponent();
     LightData.LightType = static_cast<uint32>(EDynamicLightType::Point);
-	LightData.LightViewProjection = GetLightViewProjectionMatrix();
 	LightData.ShadowBias = 0.001f;
 	LightData.bCastShadows = bCastShadows;
 	LightData.ShadowMapIndex = ShadowMapIdx;
@@ -84,4 +88,47 @@ void UPointLightComponent::SetAttenuationRadius(float InAttenuationRadius)
 UTexture* UPointLightComponent::GetLightBillboardTexture()
 {
 	return UAssetManager::GetInstance().LoadTexture("Data/Icons/PointLight_64x.png");
+}
+
+const TArray<FMatrix>& UPointLightComponent::GetLightViewProjectionMatrices() const
+{
+	if (bIsLightVPDirty)
+    {
+        CachedLightViewProjection.clear();
+
+        float NearZ = 0.1f;
+        float FarZ = GetAttenuationRadius();
+        float FOV = 90.0f * ToRad;
+        float AspectRatio = 1.0f;
+        FMatrix ProjMatrix = FMatrix::CreatePerspectiveFOV(FOV, AspectRatio, NearZ, FarZ);
+
+		const FVector LightPosition = GetWorldLocation();
+		const FVector Right = FVector::RightVector();
+		const FVector Up = FVector::UpVector();
+		const FVector Forward = FVector::ForwardVector();
+
+        FMatrix ViewMatrices[6];
+
+        // +X (Forward)
+        ViewMatrices[0] = FMatrix::CreateViewFromAxes(LightPosition, Right, Up, Forward);
+        // -X (Backward)
+        ViewMatrices[1] = FMatrix::CreateViewFromAxes(LightPosition, -Right, Up, -Forward);
+        // +Y (Right)
+        ViewMatrices[2] = FMatrix::CreateViewFromAxes(LightPosition, -Forward, Up, Right);
+        // -Y (Left)
+        ViewMatrices[3] = FMatrix::CreateViewFromAxes(LightPosition, Forward, Up, -Right);
+        // +Z (Up)
+        ViewMatrices[4] = FMatrix::CreateViewFromAxes(LightPosition, Right, -Forward, Up);
+        // -Z (Down)
+        ViewMatrices[5] = FMatrix::CreateViewFromAxes(LightPosition, Right, Forward, -Up);
+
+        for (const auto& ViewMatrix : ViewMatrices)
+        {
+            CachedLightViewProjection.emplace_back(ViewMatrix * ProjMatrix);
+        }
+
+        bIsLightVPDirty = false;
+    }
+
+    return CachedLightViewProjection;
 }

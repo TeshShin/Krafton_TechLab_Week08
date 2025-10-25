@@ -10,36 +10,87 @@ public:
 	FShadowMapManager& operator=(FShadowMapManager const&) = delete;
 
 	static FShadowMapManager& GetInstance();
-
 public:
-	void Initalize(uint32 InMaxShadows, uint32 InResolution);
-	void Release();
+    /**
+     * @param InMaxSpotShadows - 최대 스포트라이트 섀도우 개수 (슬라이스 수)
+     * @param InSpotResolution - 스포트라이트 섀도우 해상도
+     * @param InMaxPointShadowCubes - 최대 포인트라이트 섀도우 개수 (큐브 수)
+     * @param InPointResolution - 포인트라이트 섀도우 해상도
+     */
+    void Initialize(uint32 InMaxSpotShadows, uint32 InSpotResolution, uint32 InMaxPointShadowCubes, uint32 InPointResolution);
+	void InitializeSpotShadows(uint32 InMaxSpotShadows, uint32 InSpotResolution);
+	void InitializePointShadows(uint32 InMaxPointShadowCubes, uint32 InPointResolution);
 
-	void ClearShadowMaps();
-	void AllocateShadowMap(class ULightComponentBase* Light);
+    void ReleaseSpotShadows();
+    void ReleasePointShadows();
+    void Release();
 
-	ID3D11ShaderResourceView* GetSRV() const { return ShadowMapArraySRV; }
-	ID3D11DepthStencilView* GetDSV(uint32 ShadowMapIdx) const;
-	ID3D11SamplerState* GetSamplerState() const { return ShadowMapSamplerState; }
+    /**
+     * 다음 프레임을 위해 현재 할당 인덱스를 초기화
+     * (리소스 해제는 아님)
+     */
+    void ClearShadowMaps();
 
-	uint32 GetResolution() const { return Resolution; }
+    /**
+     * 라이트 컴포넌트의 타입에 맞춰 적절한 섀도우 맵 인덱스를 할당
+     */
+    void AllocateShadowMap(class ULightComponentBase* Light);
+
+    /**
+     * 공용 섀도우 샘플러 반환
+     */
+    ID3D11SamplerState* GetSamplerState() const { return ShadowMapSamplerState; }
+
+	void GetDSVs(class ULightComponentBase* Light, TArray<ID3D11DepthStencilView*>& OutDSVs) const;
+	uint32 GetResolution(class ULightComponentBase* Light) const;
+
+    // --- Spot Light Getters ---
+    ID3D11ShaderResourceView* GetSpotLightSRV() const { return SpotShadowMapArraySRV; }
+    uint32 GetSpotResolution() const { return SpotResolution; }
+	uint32 GetMaxSpotShadows() const { return MaxSpotShadows; }
+
+    // --- Point Light Getters ---
+    ID3D11ShaderResourceView* GetPointLightSRV() const { return PointShadowCubeArraySRV; }
+    uint32 GetPointResolution() const { return PointResolution; }
+	uint32 GetMaxPointShadowCubes() const { return MaxPointShadowCubes; }
 
 private:
-	uint32 MaxShadows;
-	uint32 Resolution;
-	uint32 CurrentShadowIdx = 0;
+    // D3D11 핵심 오브젝트
+    ID3D11Device* Device = nullptr;
+    ID3D11DeviceContext* Context = nullptr;
 
-	ID3D11Texture2D* ShadowMapArrayTexture;
-	ID3D11ShaderResourceView* ShadowMapArraySRV;
-	TArray<ID3D11DepthStencilView*> ShadowMapSliceDSVs;
-	ID3D11SamplerState* ShadowMapSamplerState;
+    // 공용 샘플러
+    ID3D11SamplerState* ShadowMapSamplerState = nullptr;
+
+    // --- SpotLight 리소스 풀 ---
+    uint32 MaxSpotShadows = 0;
+    uint32 SpotResolution = 0;
+    uint32 CurrentSpotShadowIdx = 0;
+
+    ID3D11Texture2D* SpotShadowMapArrayTexture = nullptr;
+    ID3D11ShaderResourceView* SpotShadowMapArraySRV = nullptr; // D3D11_SRV_DIMENSION_TEXTURE2DARRAY
+    TArray<ID3D11DepthStencilView*> SpotShadowMapSliceDSVs;
+
+    // --- PointLight 리소스 풀 ---
+    uint32 MaxPointShadowCubes = 0;
+    uint32 PointResolution = 0;
+    uint32 CurrentPointCubeIdx = 0; // 큐브 기준 인덱스
+
+    ID3D11Texture2D* PointShadowCubeArrayTexture = nullptr; // D3D11_RESOURCE_MISC_TEXTURECUBE 플래그 포함
+    ID3D11ShaderResourceView* PointShadowCubeArraySRV = nullptr; // D3D11_SRV_DIMENSION_TEXTURECUBEARRAY
+    TArray<ID3D11DepthStencilView*> PointShadowCubeSliceDSVs; // (크기: MaxPointShadowCubes * 6)
 
 // Debug Section
 public:
-	void InitializeForDebug(ID3D11Device* Device);
-	ID3D11ShaderResourceView* GetSRVForImGuiDebug(uint32 ShadowMapIdx);
+	void InitializeForDebug();
+	ID3D11ShaderResourceView* GetSpotSRVForImGuiDebug(uint32 SpotIndex);
+	ID3D11ShaderResourceView* GetPointSRVForImGuiDebug(uint32 CubeIndex, uint32 FaceIndex); // FaceIndex: 0~5
 
 private:
-	ID3D11Texture2D* ImGuiDebugTexture;
-	ID3D11ShaderResourceView* ImGuiDebugSRV;
+    // --- 디버그용 리소스 ---
+    ID3D11Texture2D* ImGuiDebugTexture_Spot = nullptr;
+    ID3D11ShaderResourceView* ImGuiDebugSRV_Spot = nullptr;
+
+    ID3D11Texture2D* ImGuiDebugTexture_Point = nullptr;
+    ID3D11ShaderResourceView* ImGuiDebugSRV_Point = nullptr;
 };

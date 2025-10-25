@@ -37,6 +37,11 @@ private:
 
 	TArray<FUnifiedDynamicLight> UnifiedLights;
 
+	ID3D11Buffer* SpotLightMatricesStructuredBuffer = nullptr;
+	ID3D11ShaderResourceView* SpotLightMatricesSRV = nullptr;
+    uint32 SpotLightMatricesCapacity;
+	TArray<FMatrix> SpotLightMatrices;
+
 	ID3D11ComputeShader* LightTilesCS = nullptr;
 
 	ID3D11Buffer* ClusterCountBuffer = nullptr;
@@ -63,7 +68,7 @@ private:
 
 	uint32 TileSize = 16;
 	uint32 NumZSlices = 24;
-	uint32 MaxLightsPerCluster = 128;
+	uint32 MaxLightsPerCluster = 32;
 
     // Cached cluster dimensions to avoid reallocating every frame
     uint32 CachedNumTilesX = 0;

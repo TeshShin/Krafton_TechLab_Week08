@@ -60,7 +60,19 @@ void ULightComponentWidget::RenderWidget()
             if (ShadowMapIdx > -1)
             {
             	ImGui::Text("Shadow Map Idx: %d", ShadowMapIdx);
-            	ImGui::Image(FShadowMapManager::GetInstance().GetSRVForImGuiDebug(ShadowMapIdx), ImVec2(512, 512));
+            	switch (LightComponent->GetLightType())
+            	{
+            	case ELightComponentType::LightType_Spot:
+            		ImGui::Image(FShadowMapManager::GetInstance().GetSpotSRVForImGuiDebug(ShadowMapIdx), ImVec2(512, 512));
+            		break;
+            	case ELightComponentType::LightType_Point:
+            		for (uint32 Idx = 0; Idx < 6; ++Idx)
+            		{
+            			ImGui::Image(FShadowMapManager::GetInstance().GetPointSRVForImGuiDebug(ShadowMapIdx, Idx), ImVec2(512, 512));
+            		}
+            		break;
+	            default: ;
+            	}
             }
 
             ImGui::Separator();
