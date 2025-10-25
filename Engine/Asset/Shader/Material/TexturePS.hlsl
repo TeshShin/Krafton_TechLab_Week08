@@ -63,7 +63,6 @@ struct PS_OUTPUT
 //--------------------------------------------------------------------------------------
 // Functions
 //--------------------------------------------------------------------------------------
-
 uint FP_ComputeClusterID(float4 svpos /* SV_POSITION */, float3 worldPos)
 {
     // Tile X/Y from pixel coords relative to viewport origin

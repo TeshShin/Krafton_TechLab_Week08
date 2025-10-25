@@ -129,11 +129,11 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 			&LocalLightCountForHeatmapSRV,
 			&LocalLightCountForHeatmapUAV);
 
-	        // Cache
-	        CachedNumTilesX = NumTilesX;
-	        CachedNumTilesY = NumTilesY;
-	        CachedNumZSlices = NumZSlices;
-	        CachedMaxLightsPerCluster = MaxLightsPerCluster;
+        // Cache
+        CachedNumTilesX = NumTilesX;
+        CachedNumTilesY = NumTilesY;
+        CachedNumZSlices = NumZSlices;
+        CachedMaxLightsPerCluster = MaxLightsPerCluster;
     }
 
 	auto* CurrentCamera = Context.CurrentCamera;
@@ -416,7 +416,7 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 
 	// Collect all dynamic lights into unified buffer
 	TArray<FUnifiedDynamicLight> UnifiedLights;
-	SpotLightMatrices.clear();
+	SpotLightMatrices.resize(FShadowMapManager::GetInstance().GetMaxSpotShadows());
 
 	for (ULightComponentBase* Light : Context.Lights)
 	{
@@ -426,9 +426,9 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 		FUnifiedDynamicLight UnifiedLight = Light->GetUnifiedLightData();
 		UnifiedLights.push_back(UnifiedLight);
 
-		if (Light->DoesCastShadows() || Light->GetLightType() == ELightComponentType::LightType_Spot)
+		if (Light->DoesCastShadows() && Light->GetLightType() == ELightComponentType::LightType_Spot)
 		{
-			SpotLightMatrices.emplace_back(Light->GetLightViewProjectionMatrices()[0]);
+			SpotLightMatrices[Light->GetShadowMapIdx()] = Light->GetLightViewProjectionMatrices()[0];
 		}
 	}
 

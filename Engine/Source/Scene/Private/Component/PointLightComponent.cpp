@@ -10,6 +10,7 @@ IMPLEMENT_CLASS(UPointLightComponent, ULightComponentBase)
 
 UPointLightComponent::UPointLightComponent()
 {
+	bCastShadows = true;
 	CachedLightViewProjection.reserve(6);
 }
 

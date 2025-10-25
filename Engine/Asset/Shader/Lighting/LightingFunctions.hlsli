@@ -187,7 +187,8 @@ FLightingResult CalculateDynamicLightWithShadows(FUnifiedDynamicLight Light, flo
 	{
 		if (Light.LightType == LIGHT_TYPE_SPOT)
 		{
-			float4 LightSpacePos = mul(float4(WorldPos, 1.0f), SpotLightShadowMatrices[Light.ShadowMapIndex]);
+			// column_major로 전달되어 곱셈 순서 반대
+			float4 LightSpacePos = mul(SpotLightShadowMatrices[Light.ShadowMapIndex], float4(WorldPos, 1.0f));
 			float3 ShadowCoords = LightSpacePos.xyz / LightSpacePos.w;
 
 			ShadowCoords.x = ShadowCoords.x * 0.5f + 0.5f;
