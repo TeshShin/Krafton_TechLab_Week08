@@ -8,6 +8,7 @@
 #include "Asset/Public/Texture.h"
 #include "Editor/Public/Camera.h"
 #include "Renderer/Public/ShadowMapManager.h"
+#include "Scene/Public/Component/SpotLightComponent.h"
 
 FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS, ID3D11DepthStencilState* InDisabledDS)
 	: FRenderPass(InPipeline), DS(InDS), DisabledDS(InDisabledDS)
@@ -414,6 +415,14 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 
 		// [UNIFIED FORWARD RENDERING] All light types (including Ambient) go through StructuredBuffer
 		FUnifiedDynamicLight UnifiedLight = Light->GetUnifiedLightData();
+		if (USpotLightComponent* Spot = Cast<USpotLightComponent>(Light))
+		{
+			if (Spot->IsUsingPSM() && Context.CurrentCamera)
+			{
+				const FMatrix PsmVP = Spot->ComputePSMLightViewProjection(*Context.CurrentCamera);
+				UnifiedLight.LightViewProjection = PsmVP;
+			}
+		}
 		UnifiedLights.push_back(UnifiedLight);
 
 		if (Light->DoesCastShadows())

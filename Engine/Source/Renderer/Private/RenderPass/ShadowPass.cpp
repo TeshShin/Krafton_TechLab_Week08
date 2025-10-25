@@ -1,10 +1,12 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Renderer/Public/RenderPass/ShadowPass.h"
 #include "Renderer/Public/RenderResourceFactory.h"
 #include "Renderer/Public/ShadowMapManager.h"
 #include "Renderer/Public/RenderPass/DecalPass.h"
 #include "Scene/Public/Component/LightComponentBase.h"
 #include "Scene/Public/Component/StaticMeshComponent.h"
+#include "Scene/Public/Component/SpotLightComponent.h"
+#include "Editor/Public/Camera.h"
 
 FShadowPass::FShadowPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS) : FRenderPass(InPipeline), DS(InDS)
 {
@@ -60,7 +62,22 @@ void FShadowPass::Execute(FRenderingContext& Context)
 			ID3D11DepthStencilView* ShadowMapDSV = ShadowMapManager.GetDSV(Light->GetShadowMapIdx());
 			Pipeline->SetRenderTargets(0, nullptr, ShadowMapDSV);
 
-			FRenderResourceFactory::UpdateConstantBufferData(CBLightViewProj, Light->GetLightViewProjectionMatrix());
+			if (USpotLightComponent* Spot = Cast<USpotLightComponent>(Light))
+			{
+				if (Spot->IsUsingPSM() && Context.CurrentCamera)
+				{
+					const FMatrix PsmVP = Spot->ComputePSMLightViewProjection(*Context.CurrentCamera);
+					FRenderResourceFactory::UpdateConstantBufferData(CBLightViewProj, PsmVP);
+				}
+				else
+				{
+					FRenderResourceFactory::UpdateConstantBufferData(CBLightViewProj, Spot->GetLightViewProjectionMatrix());
+				}
+			}
+			else
+			{
+				FRenderResourceFactory::UpdateConstantBufferData(CBLightViewProj, Light->GetLightViewProjectionMatrix());
+			}
 			RenderAllStaticMeshes(Context);
 		}
 	}

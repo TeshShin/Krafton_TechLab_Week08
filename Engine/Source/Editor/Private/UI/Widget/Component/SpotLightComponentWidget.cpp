@@ -42,6 +42,11 @@ void USpotLightComponentWidget::RenderWidget()
 	{
 		SpotLightComponent->SetOuterConeAngle(OuterConeAngle);
 	}
-
+	bool bUsePSM = SpotLightComponent->IsUsingPSM();
+	if (ImGui::Checkbox("Use PSM (Perspective Shadow Map)", &bUsePSM))
+	{
+		SpotLightComponent->SetUsePSM(bUsePSM);
+	}
     ImGui::Separator();
+
 }

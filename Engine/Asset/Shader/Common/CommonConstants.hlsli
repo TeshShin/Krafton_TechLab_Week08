@@ -1,3 +1,4 @@
+#pragma once
 #ifndef COMMON_CONSTANTS_INCLUDE
 #define COMMON_CONSTANTS_INCLUDE
 

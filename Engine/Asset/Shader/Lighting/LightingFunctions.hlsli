@@ -1,3 +1,4 @@
+#pragma once
 //--------------------------------------------------------------------------------------
 // [LIGHTING FUNCTIONS] Common Lighting Calculations
 // This file contains reusable lighting functions for both vertex and pixel shaders

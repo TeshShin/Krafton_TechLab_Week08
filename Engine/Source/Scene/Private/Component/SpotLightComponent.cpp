@@ -6,6 +6,7 @@
 #include "Editor/Public/UI/Widget/Component/SpotLightComponentWidget.h"
 #include "Manager/Public/AssetManager.h"
 #include "Renderer/Public/LightData.h"
+#include "Editor/Public/Camera.h"
 
 IMPLEMENT_CLASS(USpotLightComponent, UPointLightComponent)
 
@@ -23,11 +24,13 @@ void USpotLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 	{
 		FJsonSerializer::ReadFloat(InOutHandle, "InnerConeAngle", InnerConeAngle);
 		FJsonSerializer::ReadFloat(InOutHandle, "OuterConeAngle", OuterConeAngle);
+		FJsonSerializer::ReadBool(InOutHandle, "UsePSM", bUsePSM, false);
 	}
 	else
 	{
 		InOutHandle["InnerConeAngle"] = InnerConeAngle;
 		InOutHandle["OuterConeAngle"] = OuterConeAngle;
+		InOutHandle["UsePSM"] = bUsePSM;
 	}
 }
 
@@ -144,4 +147,86 @@ const FMatrix& USpotLightComponent::GetLightViewProjectionMatrix() const
 	}
 
 	return CachedLightViewProjection;
+}
+
+FMatrix USpotLightComponent::ComputePSMLightViewProjection(const UCamera& InCamera) const
+{
+	// 1) 라이트 뷰 행렬 구성 (기존 방식과 동일)
+	const FVector LightPosition = GetWorldLocation();
+	const FVector Right = GetWorldRightVector();
+	const FVector Up = GetWorldUpVector();
+	const FVector Forward = GetWorldForwardVector();
+
+	FMatrix T = FMatrix::TranslationMatrixInverse(LightPosition);
+	FMatrix R = FMatrix(Right, Up, Forward);
+	R = R.Transpose();
+	const FMatrix LightView = T * R;
+
+	// 2) 카메라 역 뷰/역 투영 행렬
+	const FCameraConstants Inv = InCamera.GetFViewProjConstantsInverse();
+	const FMatrix InvView = Inv.View;
+	const FMatrix InvProj = Inv.Projection;
+
+	// 3) 카메라 절두체 8 코너를 월드 → 라이트 뷰로 변환
+	const float Ndc[2] = { -1.0f, 1.0f };
+	float MaxAngleRad = 0.0f;
+	float MinZ = FLT_MAX;
+	float MaxZ = -FLT_MAX;
+
+	for (int iz = 0; iz < 2; ++iz)
+	{
+		const float Z = (iz == 0) ? 0.0f : 1.0f; // D3D 클립 z [0..1]
+		for (int iy = 0; iy < 2; ++iy)
+		{
+			for (int ix = 0; ix < 2; ++ix)
+			{
+				const FVector4 CornerNDC(Ndc[ix], Ndc[iy], Z, 1.0f);
+				// NDC -> View -> World
+				FVector4 CornerView = CornerNDC * InvProj;
+				if (CornerView.W != 0.0f) { CornerView = CornerView * (1.0f / CornerView.W); }
+				FVector4 CornerWorld = CornerView * InvView;
+				if (CornerWorld.W != 0.0f) { CornerWorld = CornerWorld * (1.0f / CornerWorld.W); }
+
+				// 라이트 시점 Z 범위
+				FVector4 CornerLight = CornerWorld * LightView;
+				MinZ = std::min(MinZ, CornerLight.Z);
+				MaxZ = std::max(MaxZ, CornerLight.Z);
+
+				// 라이트 전방축과의 최대 각도 측정
+				const FVector ToCorner = FVector(CornerWorld.X, CornerWorld.Y, CornerWorld.Z) - LightPosition;
+				FVector DirToCorner = ToCorner;
+				if (DirToCorner.LengthSquared() > MATH_EPSILON) { DirToCorner.Normalize(); }
+				const float CosTheta = std::clamp(Forward.Dot(DirToCorner), -1.0f, 1.0f);
+				const float Angle = std::acos(CosTheta); // [0..pi]
+				MaxAngleRad = std::max(MaxAngleRad, Angle);
+			}
+		}
+	}
+
+	// 4) FOV/near/far 결정 및 콘 제한
+	const float OuterConeDeg = GetOuterConeAngle();
+	const float OuterConeRad = OuterConeDeg * ToRad;
+
+	// 절두체를 덮는 최소 FOV, 단 콘을 넘지 않게 클램프
+	float FovRad = std::min(2.0f * MaxAngleRad, 2.0f * OuterConeRad);
+
+	// z 범위 정리: D3D RH 계열 투영을 가정(현재 카메라/라이트 투영과 동일)
+	const float Atten = GetAttenuationRadius();
+	float NearZ = std::max(0.1f, MinZ);
+	float FarZ = std::min(Atten, MaxZ);
+
+	if (!(FarZ > NearZ + 1e-3f))
+	{
+		// 퇴행 케이스: 기본(기존) 설정으로 폴백
+		FovRad = OuterConeRad * 2.0f;
+		NearZ = 0.1f;
+		FarZ = Atten;
+	}
+
+	// 5) 투영 행렬 생성 (정사각 shadow map이므로 aspect=1)
+	const float Aspect = 1.0f;
+	const FMatrix Proj = FMatrix::CreatePerspectiveFOV(FovRad, Aspect, NearZ, FarZ);
+
+	return LightView * Proj;
+
 }

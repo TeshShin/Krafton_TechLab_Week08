@@ -81,4 +81,13 @@ private:
 	 -----------------------------------------------------------------------------*/
 public:
     const FMatrix& GetLightViewProjectionMatrix() const override;
+
+	bool IsUsingPSM() const { return bUsePSM; }
+	void SetUsePSM(bool bInUsePSM) { bUsePSM = bInUsePSM; bIsLightVPDirty = true; }
+
+	// 카메라 의존형 PSM Light VP 계산 (라이트 콘과 카메라 절두체를 기반으로 타이트하게 맞춤)
+	FMatrix ComputePSMLightViewProjection(const class UCamera& InCamera) const;
+
+private:
+	bool bUsePSM = false;
 };
