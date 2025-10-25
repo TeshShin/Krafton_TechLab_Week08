@@ -202,9 +202,9 @@ FLightingResult CalculateDynamicLightWithShadows(FUnifiedDynamicLight Light, flo
 			// 1. 픽셀에서 라이트까지의 '실제 거리' (선형 깊이) 계산
 			float3 LightToPixelDir = WorldPos - Light.Position;
 			float PixelDepth = length(LightToPixelDir);
-			//float3 SwizzledDir = float3(LightToPixelDir.y, LightToPixelDir.z, LightToPixelDir.x);
+			float3 SwizzledDir = float3(LightToPixelDir.y, LightToPixelDir.z, LightToPixelDir.x);
 
-			float4 ShadowCoord = float4(LightToPixelDir, Light.ShadowMapIndex);
+			float4 ShadowCoord = float4(SwizzledDir, Light.ShadowMapIndex);
 			// 3. (선형 깊이) vs (섀도우맵에 저장된 선형 깊이) 비교
 			ShadowFactor = PointShadowAtlas.SampleCmpLevelZero(
 			   ShadowSampler,
