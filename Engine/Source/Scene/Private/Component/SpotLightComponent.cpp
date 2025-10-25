@@ -25,12 +25,18 @@ void USpotLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		FJsonSerializer::ReadFloat(InOutHandle, "InnerConeAngle", InnerConeAngle);
 		FJsonSerializer::ReadFloat(InOutHandle, "OuterConeAngle", OuterConeAngle);
 		FJsonSerializer::ReadBool(InOutHandle, "UsePSM", bUsePSM, false);
+		FJsonSerializer::ReadFloat(InOutHandle, "PSMFovScale", PSMFovScale, 1.0f);
+		FJsonSerializer::ReadFloat(InOutHandle, "PSMNearOffset", PSMNearOffset, 0.0f);
+		FJsonSerializer::ReadFloat(InOutHandle, "PSMFarOffset", PSMFarOffset, 0.0f);
 	}
 	else
 	{
 		InOutHandle["InnerConeAngle"] = InnerConeAngle;
 		InOutHandle["OuterConeAngle"] = OuterConeAngle;
 		InOutHandle["UsePSM"] = bUsePSM;
+		InOutHandle["PSMFovScale"] = PSMFovScale;
+		InOutHandle["PSMNearOffset"] = PSMNearOffset;
+		InOutHandle["PSMFarOffset"] = PSMFarOffset;
 	}
 }
 
@@ -208,12 +214,12 @@ FMatrix USpotLightComponent::ComputePSMLightViewProjection(const UCamera& InCame
 	const float OuterConeRad = OuterConeDeg * ToRad;
 
 	// 절두체를 덮는 최소 FOV, 단 콘을 넘지 않게 클램프
-	float FovRad = std::min(2.0f * MaxAngleRad, 2.0f * OuterConeRad);
+	float FovRad = std::min(2.0f * MaxAngleRad * PSMFovScale, 2.0f * OuterConeRad);
 
 	// z 범위 정리: D3D RH 계열 투영을 가정(현재 카메라/라이트 투영과 동일)
 	const float Atten = GetAttenuationRadius();
-	float NearZ = std::max(0.1f, MinZ);
-	float FarZ = std::min(Atten, MaxZ);
+	float NearZ = std::max(0.1f, MinZ + PSMNearOffset);
+	float FarZ = std::min(Atten, MaxZ + PSMFarOffset);
 
 	if (!(FarZ > NearZ + 1e-3f))
 	{

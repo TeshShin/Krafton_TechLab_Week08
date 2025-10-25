@@ -88,6 +88,18 @@ public:
 	// 카메라 의존형 PSM Light VP 계산 (라이트 콘과 카메라 절두체를 기반으로 타이트하게 맞춤)
 	FMatrix ComputePSMLightViewProjection(const class UCamera& InCamera) const;
 
+	// PSM 조절 파라미터
+	float GetPSMFovScale() const { return PSMFovScale; }
+	void SetPSMFovScale(float InScale) { PSMFovScale = std::clamp(InScale, 0.5f, 1.5f); bIsLightVPDirty = true; }
+
+	float GetPSMNearOffset() const { return PSMNearOffset; }
+	void SetPSMNearOffset(float InOffset) { PSMNearOffset = InOffset; bIsLightVPDirty = true; }
+
+	float GetPSMFarOffset() const { return PSMFarOffset; }
+	void SetPSMFarOffset(float InOffset) { PSMFarOffset = InOffset; bIsLightVPDirty = true; }
 private:
 	bool bUsePSM = false;
+	float PSMFovScale = 1.0f;   // 0.5~1.5 권장
+	float PSMNearOffset = 0.0f; // 단위: world units
+	float PSMFarOffset = 0.0f;  // 단위: world units
 };

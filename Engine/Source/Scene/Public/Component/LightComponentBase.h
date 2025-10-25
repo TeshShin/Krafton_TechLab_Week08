@@ -126,11 +126,17 @@ public:
 
 	int32 GetShadowMapIdx() const { return ShadowMapIdx; }
 	void SetShadowMapIdx(int32 InShadowIdx) { ShadowMapIdx = InShadowIdx; }
-
+	// Shadow Bias Getter/Setter
+	float GetShadowBias() const { return ShadowBias; }
+	void SetShadowBias(float InShadowBias)
+	{
+		ShadowBias = std::clamp(InShadowBias, 0.0f, 0.01f);
+	}
 protected:
 	mutable FMatrix CachedLightViewProjection;
 	mutable bool bIsLightVPDirty = true;
 
 	bool bCastShadows = false; // 일단 SpotLight만 true로 함
 	int32 ShadowMapIdx = -1;
+	float ShadowBias = 0.001f;
 };
