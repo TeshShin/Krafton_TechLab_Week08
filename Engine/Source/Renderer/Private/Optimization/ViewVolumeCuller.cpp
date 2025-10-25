@@ -38,7 +38,7 @@ void ViewVolumeCuller::Cull(FOctree* StaticOctree, TArray<UPrimitiveComponent*>&
 
 		if (Length > -MATH_EPSILON && Length < MATH_EPSILON) { return; }
 
-		CurrentFrustum.Planes[i] /= -Length;
+		CurrentFrustum.Planes[i] /= Length;
 	}
 
 	// 2. 옥트리를 이용해 보이는 객체만 RenderableObjects에 저장한다.
@@ -59,8 +59,14 @@ void ViewVolumeCuller::Cull(FOctree* StaticOctree, TArray<UPrimitiveComponent*>&
 const TArray<UPrimitiveComponent*>& ViewVolumeCuller::GetRenderableObjects()
 {
 	// Octree에 없는 DynamicPrimitives들 추가
-	TArray<UPrimitiveComponent*>& DynamicPrimitives = GWorld->GetLevel()->GetDynamicPrimitives();
-	RenderableObjects.insert(RenderableObjects.end(), DynamicPrimitives.begin(), DynamicPrimitives.end());
+	//TArray<UPrimitiveComponent*>& DynamicPrimitives = GWorld->GetLevel()->GetDynamicPrimitives();
+	//RenderableObjects.insert(RenderableObjects.end(), DynamicPrimitives.begin(), DynamicPrimitives.end());
+	/*
+		Cull()에서 이미 DynamicPrimitives를 절두체와 비교해 Outside가 아닌 것만 RenderableObjects에 넣습니다.
+		- 그런데 GetRenderableObjects()에서 다시 한 번 Level의 DynamicPrimitives를
+		  전부 RenderableObjects 끝에 무조건 삽입한다.
+		- 결과: 프러스텀 컬링 결과가 무력화되고, 동적 프리미티브가 2번 들어가 중복, 오버드로우, 성능 저하가 발생합니다.
+	*/
 	return RenderableObjects;
 }
 

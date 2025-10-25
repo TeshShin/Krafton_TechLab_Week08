@@ -86,13 +86,9 @@ void FGizmo::Update(UCamera* InCamera)
 		P[Idx].Scale = FVector(Scale, Scale, Scale);
 	}
 
-	// 2) 드래그 중에는 나머지 축 유지되는 모드 (회전 후 새로운 로컬 기즈모 보여줌)
+	// 2) 로컬 회전 중에도 기즈모를 실시간으로 갱신
 	FQuaternion LocalRot;
-	if (GizmoMode == EGizmoMode::Rotate && !bIsWorld && bIsDragging)
-	{
-		LocalRot = FQuaternion::FromEuler(DragStartActorRotation);
-	}
-	else if (GizmoMode == EGizmoMode::Scale)
+	if (GizmoMode == EGizmoMode::Scale)
 	{
 		LocalRot = TargetComponent->GetWorldRotationAsQuaternion();
 	}
