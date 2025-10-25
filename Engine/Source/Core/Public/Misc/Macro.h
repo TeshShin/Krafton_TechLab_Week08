@@ -1,5 +1,6 @@
 #pragma once
 
+#define SMALL_NUMBER (1.e-8f)
 #define DT UTimeManager::GetInstance().GetDeltaTime()
 
 // UE_LOG Macro 시스템

@@ -59,6 +59,7 @@ FUnifiedDynamicLight USpotLightComponent::GetUnifiedLightData() const
     LightData.Param0 = InnerConeAngle;
     LightData.Param1 = OuterConeAngle;
     LightData.LightType = static_cast<uint32>(EDynamicLightType::Spot);
+	LightData.ShadowBias = 0.001f;
 
     return LightData;
 }
@@ -115,7 +116,7 @@ UTexture* USpotLightComponent::GetLightBillboardTexture()
 	return UAssetManager::GetInstance().LoadTexture("Data/Icons/SpotLight_64x.png");
 }
 
-const TArray<FMatrix>& USpotLightComponent::GetLightViewProjectionMatrices() const
+const TArray<FMatrix>& USpotLightComponent::GetLightViewProjectionMatrices(const FMatrix& InCameraInverseVP) const
 {
 	if (bIsLightVPDirty)
 	{

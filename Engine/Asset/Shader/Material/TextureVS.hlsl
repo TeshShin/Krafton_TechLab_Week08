@@ -25,7 +25,6 @@ cbuffer MaterialConstants : register(b1)
 };
 
 StructuredBuffer<FUnifiedDynamicLight> DynamicLights : register(t6);
-StructuredBuffer<float4x4> SpotLightShadowMatrices : register(t7);
 //--------------------------------------------------------------------------------------
 
 struct VS_INPUT

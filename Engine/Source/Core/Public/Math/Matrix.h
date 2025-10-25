@@ -127,6 +127,19 @@ struct FMatrix
 	 * @param FarZ 먼 클립 평면
 	 */
 	static FMatrix CreatePerspectiveFOV(float FovYRadians, float AspectRatio, float NearZ, float FarZ);
+	/**
+	 * 지정된 경계를 가지는 직교 투영(Orthographic) 행렬을 생성합니다.
+	 * (DirectX, 왼손 좌표계, Z: 0~1 기준)
+	 *
+	 * @param Left   뷰 볼륨의 왼쪽 경계
+	 * @param Right  뷰 볼륨의 오른쪽 경계
+	 * @param Bottom 뷰 볼륨의 아래쪽 경계
+	 * @param Top    뷰 볼륨의 위쪽 경계
+	 * @param Near   뷰 볼륨의 가까운 경계
+	 * @param Far    뷰 볼륨의 먼 경계
+	 * @return 직교 투영 행렬
+	 */
+	static FMatrix CreateOrthographicOffCenter(float Left, float Right, float Bottom, float Top, float Near, float Far);
 
 	FMatrix Transpose() const;
 

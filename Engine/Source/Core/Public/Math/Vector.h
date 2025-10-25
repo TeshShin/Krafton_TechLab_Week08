@@ -35,7 +35,7 @@ struct FVector
 	 * @brief 두 벡터를 뺀 새로운 벡터를 반환하는 함수
 	 */
 	FVector operator-(const FVector& InOther) const;
-	
+
 	/**
 	 * @brief 두 벡터를 곱한 새로운 벡터를 반환하는 함수
 	 */
@@ -119,7 +119,7 @@ struct FVector
 			Z /= Length;
 		}
 	}
-	
+
 	/**
 	 * @brief 단위 벡터 반환하는 함수
 	 */
@@ -134,7 +134,12 @@ struct FVector
 	{
 		return X==0.f && Y==0.f && Z==0.f;
 	}
-	
+
+	bool IsNearlyZero() const
+	{
+		return abs(X) < SMALL_NUMBER && abs(Y) < SMALL_NUMBER && abs(Z) < SMALL_NUMBER;
+	}
+
 	/**
 	 * @brief 각도를 라디안으로 변환한 값을 반환하는 함수
 	 */
@@ -152,12 +157,12 @@ struct FVector
 	{
 		return FVector{ Rad.X * (180.0f / PI), Rad.Y * (180.0f / PI), Rad.Z * (180.0f / PI) };
 	}
-	static float Dist(const FVector& V1, const FVector& V2) 
+	static float Dist(const FVector& V1, const FVector& V2)
 	{
 		FVector Diff = V1 - V2;
 		return Diff.Length();
 	}
-	static float DistSquared(const FVector& V1, const FVector& V2) 
+	static float DistSquared(const FVector& V1, const FVector& V2)
 	{
 		FVector Diff = V1 - V2;
 		return Diff.LengthSquared();

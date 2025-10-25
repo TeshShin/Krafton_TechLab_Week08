@@ -338,6 +338,32 @@ FMatrix FMatrix::CreatePerspectiveFOV(float FovYRadians, float AspectRatio, floa
 	return Proj;
 }
 
+FMatrix FMatrix::CreateOrthographicOffCenter(float Left, float Right, float Bottom, float Top, float Near, float Far)
+{
+	FMatrix Result = Identity();
+
+	const float Width = Right - Left;
+	const float Height = Top - Bottom;
+	const float Depth = Far - Near;
+
+	// X 스케일링
+	Result.Data[0][0] = 2.0f / Width;
+	// Y 스케일링
+	Result.Data[1][1] = 2.0f / Height;
+	// Z 스케일링
+	Result.Data[2][2] = 1.0f / Depth;
+
+	// X 이동 (Translation)
+	Result.Data[3][0] = -(Right + Left) / Width;
+	// Y 이동 (Translation)
+	Result.Data[3][1] = -(Top + Bottom) / Height;
+	// Z 이동 (Translation)
+	Result.Data[3][2] = -Near / Depth;
+	Result.Data[3][3] = 1.0f;
+
+	return Result;
+}
+
 FMatrix FMatrix::Transpose() const
 {
 	// 1. 4개 행을 SIMD 레지스터에 로드

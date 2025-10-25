@@ -91,7 +91,7 @@ UTexture* UPointLightComponent::GetLightBillboardTexture()
 	return UAssetManager::GetInstance().LoadTexture("Data/Icons/PointLight_64x.png");
 }
 
-const TArray<FMatrix>& UPointLightComponent::GetLightViewProjectionMatrices() const
+const TArray<FMatrix>& UPointLightComponent::GetLightViewProjectionMatrices(const FMatrix& InCameraInverseVP) const
 {
 	if (bIsLightVPDirty)
     {

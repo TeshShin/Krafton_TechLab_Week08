@@ -8,7 +8,7 @@ class UDirectionalLightComponent : public ULightComponent
     DECLARE_CLASS(UDirectionalLightComponent, ULightComponent)
 
 public:
-    UDirectionalLightComponent() = default;
+    UDirectionalLightComponent();
     virtual ~UDirectionalLightComponent() = default;
 
     /*-----------------------------------------------------------------------------
@@ -24,4 +24,10 @@ public:
 
 protected:
 	virtual class UTexture* GetLightBillboardTexture() override;
+
+	/*-----------------------------------------------------------------------------
+		Shadow Features
+	 -----------------------------------------------------------------------------*/
+public:
+	const TArray<FMatrix>& GetLightViewProjectionMatrices(const FMatrix& InCameraInverseVP) const override;
 };

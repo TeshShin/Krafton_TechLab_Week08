@@ -65,6 +65,9 @@ void ULightComponentWidget::RenderWidget()
             	case ELightComponentType::LightType_Spot:
             		ImGui::Image(FShadowMapManager::GetInstance().GetSpotSRVForImGuiDebug(ShadowMapIdx), ImVec2(512, 512));
             		break;
+            	case ELightComponentType::LightType_Directional:
+            		ImGui::Image(FShadowMapManager::GetInstance().GetDirectionalSRVForImGuiDebug(), ImVec2(512, 512));
+            		break;
             	case ELightComponentType::LightType_Point:
             		for (uint32 Idx = 0; Idx < 6; ++Idx)
             		{

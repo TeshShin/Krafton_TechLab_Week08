@@ -178,44 +178,57 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
 }
 
 FLightingResult CalculateDynamicLightWithShadows(FUnifiedDynamicLight Light, float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower,
-	Texture2DArray SpotShadowAtlas, StructuredBuffer<float4x4> SpotLightShadowMatrices, TextureCubeArray PointShadowAtlas, SamplerComparisonState ShadowSampler)
+	Texture2DArray SpotShadowAtlas, StructuredBuffer<float4x4> SpotLightShadowMatrices, TextureCubeArray PointShadowAtlas,
+	Texture2D DirectionalTexture, float4x4 DirectionalShadowMatrix, SamplerComparisonState ShadowSampler)
 {
-    FLightingResult Result = CalculateDynamicLight(Light, WorldPos, Normal, ViewDir, SpecularPower);
+	FLightingResult Result = CalculateDynamicLight(Light, WorldPos, Normal, ViewDir, SpecularPower);
 
-	float ShadowFactor = 1.0f;
-	if (Light.bCastShadows > 0)
-	{
-		if (Light.LightType == LIGHT_TYPE_SPOT)
-		{
-			// column_major로 전달되어 곱셈 순서 반대
-			float4 LightSpacePos = mul(SpotLightShadowMatrices[Light.ShadowMapIndex], float4(WorldPos, 1.0f));
-			float3 ShadowCoords = LightSpacePos.xyz / LightSpacePos.w;
+    float ShadowFactor = 1.0f;
+    if (Light.bCastShadows > 0 && Light.ShadowMapIndex >= 0)
+    {
+       if (Light.LightType == LIGHT_TYPE_SPOT)
+       {
+          // column_major로 전달되어 곱셈 순서 반대
+          float4 LightSpacePos = mul(SpotLightShadowMatrices[Light.ShadowMapIndex], float4(WorldPos, 1.0f));
+          float3 ShadowCoords = LightSpacePos.xyz / LightSpacePos.w;
 
-			ShadowCoords.x = ShadowCoords.x * 0.5f + 0.5f;
-			ShadowCoords.y = ShadowCoords.y * -0.5f + 0.5f;
+          ShadowCoords.x = ShadowCoords.x * 0.5f + 0.5f;
+          ShadowCoords.y = ShadowCoords.y * -0.5f + 0.5f;
 
-			float3 SampleCoords = float3(ShadowCoords.xy, Light.ShadowMapIndex);
-			ShadowFactor = SpotShadowAtlas.SampleCmp(ShadowSampler, SampleCoords, ShadowCoords.z - Light.ShadowBias);
-		}
-		else if (Light.LightType == LIGHT_TYPE_POINT)
-		{
-			// 1. 픽셀에서 라이트까지의 '실제 거리' (선형 깊이) 계산
-			float3 LightToPixelDir = WorldPos - Light.Position;
-			float PixelDepth = length(LightToPixelDir);
-			float3 SwizzledDir = float3(LightToPixelDir.y, LightToPixelDir.z, LightToPixelDir.x);
+          float3 SampleCoords = float3(ShadowCoords.xy, Light.ShadowMapIndex);
+          ShadowFactor = SpotShadowAtlas.SampleCmp(ShadowSampler, SampleCoords, ShadowCoords.z - Light.ShadowBias);
+       }
+       else if (Light.LightType == LIGHT_TYPE_POINT)
+       {
+          // 픽셀에서 라이트까지의 '실제 거리' (선형 깊이) 계산
+          float3 LightToPixelDir = WorldPos - Light.Position;
+          float PixelDepth = length(LightToPixelDir);
+       	  float3 SwizzledDir = float3(LightToPixelDir.y, LightToPixelDir.z, LightToPixelDir.x);
 
-			float4 ShadowCoord = float4(SwizzledDir, Light.ShadowMapIndex);
-			// 3. (선형 깊이) vs (섀도우맵에 저장된 선형 깊이) 비교
-			ShadowFactor = PointShadowAtlas.SampleCmpLevelZero(
-			   ShadowSampler,
-			   ShadowCoord,
-			   PixelDepth - Light.ShadowBias
-			);
-		}
-	}
+          float4 ShadowCoord = float4(SwizzledDir, Light.ShadowMapIndex);
+          // (선형 깊이) vs (섀도우맵에 저장된 선형 깊이) 비교
+          ShadowFactor = PointShadowAtlas.SampleCmpLevelZero(ShadowSampler, ShadowCoord, PixelDepth - Light.ShadowBias);
+       }
+       else if (Light.LightType == LIGHT_TYPE_DIRECTIONAL)
+       {
+          float4 LightSpacePos = mul(float4(WorldPos, 1.0f), DirectionalShadowMatrix);
+          float3 ShadowCoords = LightSpacePos.xyz / LightSpacePos.w;
 
-	Result.Diffuse *= ShadowFactor;
-	Result.Specular *= ShadowFactor;
+          ShadowCoords.x = ShadowCoords.x * 0.5f + 0.5f;
+          ShadowCoords.y = ShadowCoords.y * -0.5f + 0.5f;
+
+          float2 SampleCoords = ShadowCoords.xy;
+
+          ShadowFactor = DirectionalTexture.SampleCmp(
+              ShadowSampler,
+              SampleCoords,
+              ShadowCoords.z - Light.ShadowBias
+          );
+       }
+    }
+
+    Result.Diffuse *= ShadowFactor;
+    Result.Specular *= ShadowFactor;
 
     return Result;
 }

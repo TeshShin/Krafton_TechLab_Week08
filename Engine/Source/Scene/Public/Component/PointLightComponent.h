@@ -80,5 +80,5 @@ private:
 		Shadow Features
 	 -----------------------------------------------------------------------------*/
 public:
-	const TArray<FMatrix>& GetLightViewProjectionMatrices() const override;
+	const TArray<FMatrix>& GetLightViewProjectionMatrices(const FMatrix& InCameraInverseVP) const override;
 };

@@ -118,7 +118,7 @@ private:
 		Shadow Features
 	 -----------------------------------------------------------------------------*/
 public:
-	virtual const TArray<FMatrix>& GetLightViewProjectionMatrices() const { return TArray<FMatrix>(); }
+	virtual const TArray<FMatrix>& GetLightViewProjectionMatrices(const FMatrix& InCameraInverseVP) const { return TArray<FMatrix>(); }
 
 	bool DoesCastShadows() const { return bCastShadows; }
 	void SetCastShadows(bool bInCastShadows) { bCastShadows = bInCastShadows; }

@@ -16,13 +16,17 @@ public:
      * @param InSpotResolution - 스포트라이트 섀도우 해상도
      * @param InMaxPointShadowCubes - 최대 포인트라이트 섀도우 개수 (큐브 수)
      * @param InPointResolution - 포인트라이트 섀도우 해상도
+     * @param InDirLightResolution - Directional Light 섀도우 해상도
      */
-    void Initialize(uint32 InMaxSpotShadows, uint32 InSpotResolution, uint32 InMaxPointShadowCubes, uint32 InPointResolution);
+    void Initialize(uint32 InMaxSpotShadows, uint32 InSpotResolution, uint32 InMaxPointShadowCubes, uint32 InPointResolution,
+    	uint32 InDirLightResolution);
 	void InitializeSpotShadows(uint32 InMaxSpotShadows, uint32 InSpotResolution);
 	void InitializePointShadows(uint32 InMaxPointShadowCubes, uint32 InPointResolution);
+	void InitializeDirectionalShadow(uint32 InResolution);
 
     void ReleaseSpotShadows();
     void ReleasePointShadows();
+	void ReleaseDirectionalShadow();
     void Release();
 
     /**
@@ -56,6 +60,11 @@ public:
     uint32 GetPointResolution() const { return PointResolution; }
 	uint32 GetMaxPointShadowCubes() const { return MaxPointShadowCubes; }
 
+	// --- Directional Light Getters ---
+	ID3D11ShaderResourceView* GetDirectionalLightSRV() const { return DirLightShadowSRV; }
+	ID3D11DepthStencilView* GetDirectionalLightDSV() const { return DirLightShadowDSV; }
+	uint32 GetDirectionalResolution() const { return DirLightResolution; }
+
 private:
     // D3D11 핵심 오브젝트
     ID3D11Device* Device = nullptr;
@@ -84,11 +93,19 @@ private:
 	ID3D11Texture2D* PointShadowDepthTexture = nullptr;
 	ID3D11DepthStencilView* PointShadowDepthDSV = nullptr;
 
+	// --- Directional Light 리소스 ---
+	bool bIsDirShadowAllocated = false;
+	uint32 DirLightResolution = 0;
+	ID3D11Texture2D* DirLightShadowTexture = nullptr;
+	ID3D11ShaderResourceView* DirLightShadowSRV = nullptr;
+	ID3D11DepthStencilView* DirLightShadowDSV = nullptr;
+
 	// Debug Section
 public:
 	void InitializeForDebug();
 	ID3D11ShaderResourceView* GetSpotSRVForImGuiDebug(uint32 SpotIndex);
 	ID3D11ShaderResourceView* GetPointSRVForImGuiDebug(uint32 CubeIndex, uint32 FaceIndex); // FaceIndex: 0~5
+	ID3D11ShaderResourceView* GetDirectionalSRVForImGuiDebug();
 
 private:
     // --- 디버그용 리소스 ---
@@ -97,4 +114,7 @@ private:
 
     ID3D11Texture2D* ImGuiDebugTexture_Point = nullptr;
     ID3D11ShaderResourceView* ImGuiDebugSRV_Point = nullptr;
+
+	ID3D11Texture2D* ImGuiDebugTexture_Dir = nullptr;
+	ID3D11ShaderResourceView* ImGuiDebugSRV_Dir = nullptr;
 };

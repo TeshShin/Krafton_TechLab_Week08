@@ -42,8 +42,14 @@ Texture2D BumpTexture : register(t5);		// map_bump
 SamplerState SamplerWrap : register(s0);
 
 // Shadow
+cbuffer DirectionalLightConstants : register(b4)
+{
+	row_major float4x4 DirectionalShadowMatrix;
+};
+StructuredBuffer<float4x4> SpotLightShadowMatrices : register(t7);
 Texture2DArray SpotShadowAtlas : register(t12);
 TextureCubeArray PointShadowAtlas : register(t13);
+Texture2D DirectionalTexture : register(t14);
 SamplerComparisonState ShadowSampler : register(s1);
 
 // Material flags
@@ -185,7 +191,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 		uint li = FP_ClusterIndex[base + i];
 		FLightingResult LightResult = CalculateDynamicLightWithShadows(
 			DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, max(Ns, 1.0f),
-            SpotShadowAtlas, SpotLightShadowMatrices, PointShadowAtlas, ShadowSampler);
+            SpotShadowAtlas, SpotLightShadowMatrices, PointShadowAtlas, DirectionalTexture, DirectionalShadowMatrix, ShadowSampler);
 		TotalDiffuse  += LightResult.Diffuse;
 		TotalSpecular += LightResult.Specular;
 		TotalAmbient  += LightResult.Ambient;

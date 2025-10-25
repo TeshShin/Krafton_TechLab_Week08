@@ -41,6 +41,7 @@ private:
 	ID3D11ShaderResourceView* SpotLightMatricesSRV = nullptr;
     uint32 SpotLightMatricesCapacity;
 	TArray<FMatrix> SpotLightMatrices;
+	ID3D11Buffer* CBDirectionalShadowMatrix;
 
 	ID3D11ComputeShader* LightTilesCS = nullptr;
 
@@ -68,7 +69,7 @@ private:
 
 	uint32 TileSize = 16;
 	uint32 NumZSlices = 24;
-	uint32 MaxLightsPerCluster = 32;
+	uint32 MaxLightsPerCluster = 16;
 
     // Cached cluster dimensions to avoid reallocating every frame
     uint32 CachedNumTilesX = 0;
