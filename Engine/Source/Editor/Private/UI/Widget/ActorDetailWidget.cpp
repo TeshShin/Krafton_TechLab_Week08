@@ -6,6 +6,27 @@
 #include "Scene/Public/Actor/Actor.h"
 #include "Scene/Public/Component/SceneComponent.h"
 
+// 각도를 [-180, 180]로 정규화
+static float NormalizeDegreesToSigned(float Degrees)
+{
+	float Wrapped = fmodf(Degrees + 180.0f, 360.0f);
+	if (Wrapped < 0.0f)
+	{
+		Wrapped += 360.0f;
+	}
+	return Wrapped - 180.0f;
+}
+
+// 기준 각도(Reference)와 가장 가까운 각으로 Current를 언랩
+static float UnwrapAngleNearest(float CurrentDegrees, float ReferenceDegrees)
+{
+	float CurrentNorm = NormalizeDegreesToSigned(CurrentDegrees);
+	float ReferenceNorm = NormalizeDegreesToSigned(ReferenceDegrees);
+	float Delta = CurrentNorm - ReferenceNorm;
+	Delta = NormalizeDegreesToSigned(Delta);
+	return ReferenceDegrees + Delta;
+}
+
 IMPLEMENT_CLASS(UActorDetailWidget, UWidget)
 UActorDetailWidget::UActorDetailWidget()
 {
@@ -539,11 +560,50 @@ void UActorDetailWidget::RenderTransformEdit()
 		SceneComponent->SetRelativeLocation(ComponentPosition);
 	}
 
-	// Relative Rotation
-	FVector ComponentRotation = SceneComponent->GetRelativeRotation().ToEuler();
-	if (ImGui::DragFloat3("Relative Rotation", &ComponentRotation.X, 1.0f))
+	// Relative Rotation (연속 각도 캐시 사용, Y는 -180~180 유지)
+	const FQuaternion CurrentQuaternion = SceneComponent->GetRelativeRotation();
+
+	// 캐시 레퍼런스 확보/초기화
+	FQuaternion& LastQuaternion = RotationLastQuaternionCache[SceneComponent];
+	FVector& CachedEulerDegrees = RotationEditCache[SceneComponent];
+
+	if (LastQuaternion.W == 0.0f && LastQuaternion.X == 0.0f && LastQuaternion.Y == 0.0f && LastQuaternion.Z == 0.0f)
 	{
-		SceneComponent->SetRelativeRotation(FQuaternion::FromEuler(ComponentRotation));
+		// 최초 초기화 시점
+		CachedEulerDegrees = CurrentQuaternion.ToEuler();
+		CachedEulerDegrees.X = NormalizeDegreesToSigned(CachedEulerDegrees.X);
+		CachedEulerDegrees.Y = NormalizeDegreesToSigned(CachedEulerDegrees.Y);
+		CachedEulerDegrees.Z = NormalizeDegreesToSigned(CachedEulerDegrees.Z);
+		LastQuaternion = CurrentQuaternion;
+	}
+
+	// 외부 변경 감지: 쿼터니언이 바뀌었으면 캐시를 현재 값에 맞춰 언랩
+	if (!(LastQuaternion == CurrentQuaternion))
+	{
+		FVector NowEuler = CurrentQuaternion.ToEuler();
+		CachedEulerDegrees.X = UnwrapAngleNearest(NowEuler.X, CachedEulerDegrees.X);
+		CachedEulerDegrees.Y = UnwrapAngleNearest(NowEuler.Y, CachedEulerDegrees.Y); // Y가 -180~180 유지되도록 언랩
+		CachedEulerDegrees.Z = UnwrapAngleNearest(NowEuler.Z, CachedEulerDegrees.Z);
+		LastQuaternion = CurrentQuaternion;
+	}
+
+	// 편집용 로컬 복사본
+	FVector EditedEulerDegrees = CachedEulerDegrees;
+
+	if (ImGui::DragFloat3("Relative Rotation", &EditedEulerDegrees.X, 1.0f))
+	{
+		// 입력값을 -180~180 범위로 정규화 (요구사항: 특히 Y를 -180~180)
+		EditedEulerDegrees.X = NormalizeDegreesToSigned(EditedEulerDegrees.X);
+		EditedEulerDegrees.Y = NormalizeDegreesToSigned(EditedEulerDegrees.Y);
+		EditedEulerDegrees.Z = NormalizeDegreesToSigned(EditedEulerDegrees.Z);
+
+		// 적용
+		const FQuaternion NewQuaternion = FQuaternion::FromEuler(EditedEulerDegrees);
+		SceneComponent->SetRelativeRotation(NewQuaternion);
+
+		// 캐시 업데이트
+		CachedEulerDegrees = EditedEulerDegrees;
+		RotationLastQuaternionCache[SceneComponent] = NewQuaternion;
 	}
 
 	// Relative Scale
