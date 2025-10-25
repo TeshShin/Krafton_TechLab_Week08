@@ -177,8 +177,35 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
 
     return Result;
 }
+ 
 
-FLightingResult CalculateDynamicLightWithShadows(FUnifiedDynamicLight Light, float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower, Texture2DArray ShadowMapArray, SamplerComparisonState ShadowSampler)
+float PCF(Texture2DArray<float> ShadowMap, SamplerComparisonState Sampler, float3 uvw, float RefZ, int FilterSize)
+{ 
+	float2 texSize;;
+	
+	ShadowMap.GetDimensions(0, texSize.x, texSize.y);
+	 
+	int R = FilterSize / 2;
+	float ShadowSamples= 0.0;
+	 
+	float2 st = floor(uvw.xy * texSize);
+
+	for (int y = -R; y <= R; ++y)
+	{
+		for (int x = -R; x <= R; ++x)
+		{
+			float2 uv = (st + float2(x, y) + 0.5) / texSize;
+			ShadowSamples += ShadowMap.SampleCmp(Sampler, float3(uv, uvw.z), RefZ);
+		}
+	}
+	
+	return ShadowSamples / ((2 * R + 1) * (2 * R + 1)); 
+}
+
+
+FLightingResult
+	CalculateDynamicLightWithShadows(FUnifiedDynamicLight Light, 
+	float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower, Texture2DArray<float> ShadowMapArray, SamplerComparisonState ShadowSampler)
 {
     FLightingResult Result = CalculateDynamicLight(Light, WorldPos, Normal, ViewDir, SpecularPower);
 
@@ -191,12 +218,10 @@ FLightingResult CalculateDynamicLightWithShadows(FUnifiedDynamicLight Light, flo
 		ShadowCoords.x = ShadowCoords.x * 0.5f + 0.5f;
 		ShadowCoords.y = ShadowCoords.y * -0.5f + 0.5f;
 
-		float3 SampleCoords = float3(ShadowCoords.xy, Light.ShadowMapIndex);
-		ShadowFactor = ShadowMapArray.SampleCmp(
-					ShadowSampler,
-					SampleCoords,
-					ShadowCoords.z - Light.ShadowBias
-			   );
+		float3 SampleCoords = float3(ShadowCoords.xy, Light.ShadowMapIndex); 
+
+		ShadowFactor = PCF(ShadowMapArray, ShadowSampler, SampleCoords, (ShadowCoords.z - Light.ShadowBias), 11);
+
 	}
 
 	Result.Diffuse *= ShadowFactor;
@@ -219,3 +244,4 @@ struct PS_INPUT
 };
 
 #endif // LIGHTING_FUNCTIONS_HLSL
+

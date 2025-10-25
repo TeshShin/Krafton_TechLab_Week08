@@ -1,5 +1,5 @@
-#include "Asset/Shader/Common/CommonConstants.hlsli"
-#include "Asset/Shader/Lighting/LightingFunctions.hlsli"
+#include "../Common/CommonConstants.hlsli"
+#include "../Lighting/LightingFunctions.hlsli"
 
 // Light Constants (ConstantBuffer b10)
 cbuffer LightConstants : register(b0)

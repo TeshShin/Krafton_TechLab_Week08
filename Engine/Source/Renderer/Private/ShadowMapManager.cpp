@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Renderer/Public/ShadowMapManager.h"
 #include "Renderer/Public/Renderer.h"
 #include "Scene/Public/Component/LightComponentBase.h"
@@ -77,6 +77,7 @@ void FShadowMapManager::Initalize(uint32 InMaxShadows, uint32 InResolution)
     }
 
 	D3D11_SAMPLER_DESC SamplerDesc = {};
+	//SamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
 	SamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 	SamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
 	SamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
