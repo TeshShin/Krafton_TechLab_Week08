@@ -32,9 +32,21 @@ void FShadowPass::SetRenderTargets(class UDeviceResources* DeviceResources)
 
 void FShadowPass::Execute(FRenderingContext& Context)
 {
-	ID3D11DeviceContext* DeviceContext = URenderer::GetInstance().GetDeviceContext();
-	FPipelineInfo PipelineInfo = { InputLayout, VS, FRenderResourceFactory::GetRasterizerState({ ECullMode::Back, EFillMode::Solid }),
-		DS, nullptr };
+	URenderer& Renderer = URenderer::GetInstance();
+	ID3D11DeviceContext* DeviceContext = Renderer.GetDeviceContext();
+	FRenderState ShadowRSState;
+	ShadowRSState.CullMode = ECullMode::Back;
+	ShadowRSState.FillMode = EFillMode::Solid;
+	ShadowRSState.DepthBias = Renderer.GetShadowDepthBias();
+	ShadowRSState.DepthBiasClamp = Renderer.GetShadowDepthBiasClamp();
+	ShadowRSState.SlopeScaledDepthBias = Renderer.GetShadowSlopeScaledDepthBias();
+	FPipelineInfo PipelineInfo = {
+		InputLayout,
+		VS,
+		FRenderResourceFactory::GetRasterizerState(ShadowRSState),
+		DS,
+		nullptr
+	};
 	Pipeline->UpdatePipeline(PipelineInfo);
 	Pipeline->SetConstantBuffer(0, EShaderType::EST_Vertex, CBLightViewProj);
 

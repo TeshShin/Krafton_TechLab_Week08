@@ -302,10 +302,16 @@ private:
 	{
 		D3D11_FILL_MODE FillMode = {};
 		D3D11_CULL_MODE CullMode = {};
-
+		int32 DepthBias = 0;
+		float DepthBiasClamp = 0.0f;
+		float SlopeScaledDepthBias = 0.0f;
 		bool operator==(const FRasterKey& InKey) const
 		{
-			return FillMode == InKey.FillMode && CullMode == InKey.CullMode;
+			return FillMode == InKey.FillMode &&
+				CullMode == InKey.CullMode &&
+				DepthBias == InKey.DepthBias &&
+				DepthBiasClamp == InKey.DepthBiasClamp &&
+				SlopeScaledDepthBias == InKey.SlopeScaledDepthBias;
 		}
 	};
 
@@ -317,11 +323,16 @@ private:
 			{
 				H ^= V + 0x9e3779b97f4a7c15ULL + (H << 6) + (H << 2);
 			};
-
+			auto F2U = [](float f)
+			{
+				return *reinterpret_cast<const uint32_t*>(&f);
+			};
 			size_t H = 0;
 			Mix(H, (size_t)InKey.FillMode);
 			Mix(H, (size_t)InKey.CullMode);
-
+			Mix(H, static_cast<size_t>(InKey.DepthBias));
+			Mix(H, static_cast<size_t>(F2U(InKey.DepthBiasClamp)));
+			Mix(H, static_cast<size_t>(F2U(InKey.SlopeScaledDepthBias)));
 			return H;
 		}
 	};

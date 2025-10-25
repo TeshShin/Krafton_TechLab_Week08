@@ -174,65 +174,91 @@ FMatrix USpotLightComponent::ComputePSMLightViewProjection(const UCamera& InCame
 	const FMatrix InvProj = Inv.Projection;
 
 	// 3) 카메라 절두체 8 코너를 월드 → 라이트 뷰로 변환
-	const float Ndc[2] = { -1.0f, 1.0f };
+	const float NdcXY[2] = { -1.0f, 1.0f };
+	const float OuterConeRad = GetOuterConeAngle() * ToRad;
+
 	float MaxAngleRad = 0.0f;
 	float MinZ = FLT_MAX;
 	float MaxZ = -FLT_MAX;
+	bool bFoundValidPoints = false;
 
-	for (int iz = 0; iz < 2; ++iz)
+	for (int Iz = 0; Iz < 2; ++Iz)
 	{
-		const float Z = (iz == 0) ? 0.0f : 1.0f; // D3D 클립 z [0..1]
-		for (int iy = 0; iy < 2; ++iy)
+		const float ClipZ = (Iz == 0) ? 0.0f : 1.0f; // D3D 클립 z [0..1]
+		for (int Iy = 0; Iy < 2; ++Iy)
 		{
-			for (int ix = 0; ix < 2; ++ix)
+			for (int Ix = 0; Ix < 2; ++Ix)
 			{
-				const FVector4 CornerNDC(Ndc[ix], Ndc[iy], Z, 1.0f);
+				FVector4 CornerNDC(NdcXY[Ix], NdcXY[Iy], ClipZ, 1.0f);
+
 				// NDC -> View -> World
 				FVector4 CornerView = CornerNDC * InvProj;
 				if (CornerView.W != 0.0f) { CornerView = CornerView * (1.0f / CornerView.W); }
+
 				FVector4 CornerWorld = CornerView * InvView;
 				if (CornerWorld.W != 0.0f) { CornerWorld = CornerWorld * (1.0f / CornerWorld.W); }
 
-				// 라이트 시점 Z 범위
+				// World -> LightView
 				FVector4 CornerLight = CornerWorld * LightView;
+
+				// 라이트 뒤쪽(Z<=0)은 제외
+				if (CornerLight.Z <= 0.0f)
+				{
+					continue;
+				}
+
+				// 라이트 콘(OuterCone) 경계 내로 XY를 클램프
+				const float Radial = sqrtf(CornerLight.X * CornerLight.X + CornerLight.Y * CornerLight.Y);
+				const float MaxRadial = tanf(OuterConeRad) * CornerLight.Z;
+				if (Radial > MaxRadial && Radial > 1e-6f)
+				{
+					const float Scale = MaxRadial / Radial;
+					CornerLight.X *= Scale;
+					CornerLight.Y *= Scale;
+				}
+
+				// Z 범위 갱신
 				MinZ = std::min(MinZ, CornerLight.Z);
 				MaxZ = std::max(MaxZ, CornerLight.Z);
 
-				// 라이트 전방축과의 최대 각도 측정
-				const FVector ToCorner = FVector(CornerWorld.X, CornerWorld.Y, CornerWorld.Z) - LightPosition;
-				FVector DirToCorner = ToCorner;
-				if (DirToCorner.LengthSquared() > MATH_EPSILON) { DirToCorner.Normalize(); }
-				const float CosTheta = std::clamp(Forward.Dot(DirToCorner), -1.0f, 1.0f);
-				const float Angle = std::acos(CosTheta); // [0..pi]
+				// 라이트 전방과의 최대 각도 갱신 (atan(r/z))
+				const float NewRadial = sqrtf(CornerLight.X * CornerLight.X + CornerLight.Y * CornerLight.Y);
+				const float Angle = (CornerLight.Z > 1e-6f) ? atanf(NewRadial / CornerLight.Z) : 0.0f;
 				MaxAngleRad = std::max(MaxAngleRad, Angle);
+
+				bFoundValidPoints = true;
 			}
 		}
 	}
 
-	// 4) FOV/near/far 결정 및 콘 제한
-	const float OuterConeDeg = GetOuterConeAngle();
-	const float OuterConeRad = OuterConeDeg * ToRad;
+	// 4) FOV/near/far 결정
+	const float Aspect = 1.0f;
+	const float Attenuation = GetAttenuationRadius();
+	const float MinNear = 0.1f;
+	const float MinGap = 0.5f;
 
-	// 절두체를 덮는 최소 FOV, 단 콘을 넘지 않게 클램프
+	// 유효 코너가 없으면 안전 폴백(기존 방식)
+	if (!bFoundValidPoints)
+	{
+		const float FovRadFallback = OuterConeRad * 2.0f;
+		const float NearZFallback = MinNear;
+		const float FarZFallback = Attenuation;
+		const FMatrix ProjFallback = FMatrix::CreatePerspectiveFOV(FovRadFallback, Aspect, NearZFallback, FarZFallback);
+		return LightView * ProjFallback;
+	}
+
+	// PSM 스케일 반영, 콘 각도 상한으로 클램프
 	float FovRad = std::min(2.0f * MaxAngleRad * PSMFovScale, 2.0f * OuterConeRad);
 
-	// z 범위 정리: D3D RH 계열 투영을 가정(현재 카메라/라이트 투영과 동일)
-	const float Atten = GetAttenuationRadius();
-	float NearZ = std::max(0.1f, MinZ + PSMNearOffset);
-	float FarZ = std::min(Atten, MaxZ + PSMFarOffset);
+	float NearZ = std::max(MinNear, MinZ + PSMNearOffset);
+	float FarZ = std::min(Attenuation, MaxZ + PSMFarOffset);
 
-	if (!(FarZ > NearZ + 1e-3f))
+	if (FarZ <= NearZ + MinGap)
 	{
-		// 퇴행 케이스: 기본(기존) 설정으로 폴백
-		FovRad = OuterConeRad * 2.0f;
-		NearZ = 0.1f;
-		FarZ = Atten;
+		FarZ = NearZ + MinGap;
 	}
 
 	// 5) 투영 행렬 생성 (정사각 shadow map이므로 aspect=1)
-	const float Aspect = 1.0f;
 	const FMatrix Proj = FMatrix::CreatePerspectiveFOV(FovRad, Aspect, NearZ, FarZ);
-
 	return LightView * Proj;
-
 }

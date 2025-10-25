@@ -69,6 +69,14 @@ public:
 
 	void SetIsResizing(bool isResizing) { bIsResizing = isResizing; }
 
+	// Shadow rasterizer bias (global)
+	void SetShadowSlopeScaledDepthBias(float InValue) { ShadowSlopeScaledDepthBias = InValue; }
+	void SetShadowDepthBiasClamp(float InValue) { ShadowDepthBiasClamp = InValue; }
+	void SetShadowDepthBias(int32 InValue) { ShadowDepthBias = InValue; }
+
+	float GetShadowSlopeScaledDepthBias() const { return ShadowSlopeScaledDepthBias; }
+	float GetShadowDepthBiasClamp() const { return ShadowDepthBiasClamp; }
+	int32 GetShadowDepthBias() const { return ShadowDepthBias; }
 private:
 	void RenderBegin() const;
 
@@ -122,4 +130,9 @@ private:
 	// Shader Hot-Reload
 	float ShaderCheckAccumulator = 0.0f;           ///< Time accumulator for periodic shader checks
 	const float ShaderCheckInterval = 0.5f;        ///< Check shader files every 0.5 seconds (configurable)
+// Shadow rasterizer bias parameters
+private:
+	float ShadowSlopeScaledDepthBias = 1.5f;
+	float ShadowDepthBiasClamp = 0.0f;
+	int32 ShadowDepthBias = 0;
 };

@@ -13,7 +13,7 @@ FUnifiedDynamicLight UAmbientLightComponent::GetUnifiedLightData() const
     LightData.Color = GetLightColor();
 	LightData.LightType = static_cast<uint32>(EDynamicLightType::Ambient);
 	LightData.LightViewProjection = GetLightViewProjectionMatrix();
-	LightData.ShadowBias = 0;
+	LightData.ShadowBias = GetShadowBias();
 	LightData.bCastShadows = bCastShadows;
 	LightData.ShadowMapIndex = ShadowMapIdx;
 

@@ -83,6 +83,10 @@ struct FRenderState
 {
 	ECullMode CullMode = ECullMode::None;
 	EFillMode FillMode = EFillMode::Solid;
+	// Shadow rasterizer bias
+	int32_t DepthBias = 0;
+	float   DepthBiasClamp = 0.0f;
+	float   SlopeScaledDepthBias = 0.0f;
 };
 
 /**

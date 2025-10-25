@@ -63,7 +63,7 @@ FUnifiedDynamicLight UPointLightComponent::GetUnifiedLightData() const
     LightData.FalloffExponent = GetLightFalloffExponent();
     LightData.LightType = static_cast<uint32>(EDynamicLightType::Point);
 	LightData.LightViewProjection = GetLightViewProjectionMatrix();
-	LightData.ShadowBias = 0.001f;
+	LightData.ShadowBias = GetShadowBias();
 	LightData.bCastShadows = bCastShadows;
 	LightData.ShadowMapIndex = ShadowMapIdx;
 
