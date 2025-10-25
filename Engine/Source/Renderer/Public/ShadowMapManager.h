@@ -41,15 +41,17 @@ public:
      */
     ID3D11SamplerState* GetSamplerState() const { return ShadowMapSamplerState; }
 
-	void GetDSVs(class ULightComponentBase* Light, TArray<ID3D11DepthStencilView*>& OutDSVs) const;
 	uint32 GetResolution(class ULightComponentBase* Light) const;
 
     // --- Spot Light Getters ---
     ID3D11ShaderResourceView* GetSpotLightSRV() const { return SpotShadowMapArraySRV; }
+    ID3D11DepthStencilView* GetSpotLightDSV(uint32 SpotShadowIdx) const;
     uint32 GetSpotResolution() const { return SpotResolution; }
 	uint32 GetMaxSpotShadows() const { return MaxSpotShadows; }
 
     // --- Point Light Getters ---
+	void GetPointShadowRTVs(class ULightComponentBase* Light, TArray<ID3D11RenderTargetView*>& OutRTVs) const;
+	ID3D11DepthStencilView* GetPointShadowDepthDSV() const { return PointShadowDepthDSV; }
     ID3D11ShaderResourceView* GetPointLightSRV() const { return PointShadowCubeArraySRV; }
     uint32 GetPointResolution() const { return PointResolution; }
 	uint32 GetMaxPointShadowCubes() const { return MaxPointShadowCubes; }
@@ -78,9 +80,11 @@ private:
 
     ID3D11Texture2D* PointShadowCubeArrayTexture = nullptr; // D3D11_RESOURCE_MISC_TEXTURECUBE 플래그 포함
     ID3D11ShaderResourceView* PointShadowCubeArraySRV = nullptr; // D3D11_SRV_DIMENSION_TEXTURECUBEARRAY
-    TArray<ID3D11DepthStencilView*> PointShadowCubeSliceDSVs; // (크기: MaxPointShadowCubes * 6)
+    TArray<ID3D11RenderTargetView*> PointShadowCubeSliceRTVs; // (크기: MaxPointShadowCubes * 6)
+	ID3D11Texture2D* PointShadowDepthTexture = nullptr;
+	ID3D11DepthStencilView* PointShadowDepthDSV = nullptr;
 
-// Debug Section
+	// Debug Section
 public:
 	void InitializeForDebug();
 	ID3D11ShaderResourceView* GetSpotSRVForImGuiDebug(uint32 SpotIndex);

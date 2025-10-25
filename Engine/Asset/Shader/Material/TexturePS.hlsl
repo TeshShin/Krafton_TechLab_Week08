@@ -17,7 +17,7 @@ cbuffer FP_CameraCB : register(b2)
 	uint    FP_NumZSlices;     // dispatch dim Z
 	float   FP_NearZ;          // view-space near (>= 0)
 	float   FP_FarZ;           // view-space far  (>  NearZ)
-};
+}
 
 // Forward+ control parameters
 cbuffer FP_ForwardPlusCB : register(b3)

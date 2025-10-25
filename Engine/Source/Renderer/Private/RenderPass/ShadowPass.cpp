@@ -12,9 +12,11 @@ FShadowPass::FShadowPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS) :
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
-	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/Lighting/ShadowMapVS.hlsl", Layout, &VS, &InputLayout);
+	FRenderResourceFactory::CreateVertexShaderAndInputLayout(L"Asset/Shader/Lighting/ShadowMapShader.hlsl", Layout, &VS, &InputLayout);
+	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/Lighting/ShadowMapShader.hlsl", &PS);
 
 	CBLightViewProj = FRenderResourceFactory::CreateConstantBuffer<FMatrix>();
+	CBLightPosition = FRenderResourceFactory::CreateConstantBuffer<FVector>();
 	FShadowMapManager::GetInstance().Initialize(32, 2048, 32, 2048);
 }
 
@@ -32,9 +34,10 @@ void FShadowPass::Execute(FRenderingContext& Context)
 {
 	ID3D11DeviceContext* DeviceContext = URenderer::GetInstance().GetDeviceContext();
 	FPipelineInfo PipelineInfo = { InputLayout, VS, FRenderResourceFactory::GetRasterizerState({ ECullMode::Back, EFillMode::Solid }),
-		DS, nullptr };
+		DS, PS };
 	Pipeline->UpdatePipeline(PipelineInfo);
 	Pipeline->SetConstantBuffer(0, EShaderType::EST_Vertex, CBLightViewProj);
+	Pipeline->SetConstantBuffer(1, EShaderType::EST_Pixel, CBLightPosition);
 
 	FShadowMapManager& ShadowMapManager = FShadowMapManager::GetInstance();
 	ShadowMapManager.ClearShadowMaps();
@@ -44,41 +47,67 @@ void FShadowPass::Execute(FRenderingContext& Context)
 	ShadowViewport.TopLeftY = 0.0f;
 	ShadowViewport.MinDepth = 0.0f;
 	ShadowViewport.MaxDepth = 1.0f;
-	TArray<ID3D11DepthStencilView*> ShadowMaps;
 
-	for (ULightComponentBase* Light : Context.Lights)
-	{
-		Light->SetShadowMapIdx(-1);
-		if (Light->DoesCastShadows())
-		{
-			ShadowMapManager.AllocateShadowMap(Light);
-			if (Light->GetShadowMapIdx() == -1) { continue; }
+    TArray<ID3D11RenderTargetView*> PointRTVs;
 
-			const uint32 Resolution = ShadowMapManager.GetResolution(Light);
-			ShadowViewport.Width = static_cast<float>(Resolution);
-			ShadowViewport.Height = static_cast<float>(Resolution);
-			DeviceContext->RSSetViewports(1, &ShadowViewport);
+    for (ULightComponentBase* Light : Context.Lights)
+    {
+        Light->SetShadowMapIdx(-1);
+        if (Light->DoesCastShadows())
+        {
+            ShadowMapManager.AllocateShadowMap(Light);
+            if (Light->GetShadowMapIdx() == -1) { continue; }
 
-			ShadowMapManager.GetDSVs(Light, ShadowMaps);
-			const TArray<FMatrix>& VPs = Light->GetLightViewProjectionMatrices();
-			for (uint32 Idx = 0; Idx < ShadowMaps.size(); Idx++)
-			{
-				Pipeline->SetRenderTargets(0, nullptr, ShadowMaps[Idx]);
-				FRenderResourceFactory::UpdateConstantBufferData(CBLightViewProj, VPs[Idx]);
+            const uint32 Resolution = ShadowMapManager.GetResolution(Light);
+            ShadowViewport.Width = static_cast<float>(Resolution);
+            ShadowViewport.Height = static_cast<float>(Resolution);
+            DeviceContext->RSSetViewports(1, &ShadowViewport);
 
-				RenderAllStaticMeshes(Context);
-			}
-		}
-	}
+            const TArray<FMatrix>& VPs = Light->GetLightViewProjectionMatrices();
 
-	DeviceContext->RSSetViewports(1, &Context.Viewport);
+            if (Light->GetLightType() == ELightComponentType::LightType_Spot)
+            {
+                PipelineInfo.PixelShader = nullptr;
+                Pipeline->UpdatePipeline(PipelineInfo);
+                Pipeline->SetConstantBuffer(0, EShaderType::EST_Vertex, CBLightViewProj);
+
+                ID3D11DepthStencilView* DSV = ShadowMapManager.GetSpotLightDSV(Light->GetShadowMapIdx());
+
+            	Pipeline->SetRenderTargets(0, nullptr, DSV);
+            	FRenderResourceFactory::UpdateConstantBufferData(CBLightViewProj, VPs[0]);
+            	RenderAllStaticMeshes(Context);
+            }
+            else if (Light->GetLightType() == ELightComponentType::LightType_Point)
+            {
+                PipelineInfo.PixelShader = PS;
+                Pipeline->UpdatePipeline(PipelineInfo);
+                Pipeline->SetConstantBuffer(0, EShaderType::EST_Vertex, CBLightViewProj);
+                Pipeline->SetConstantBuffer(1, EShaderType::EST_Pixel, CBLightPosition);
+
+                ShadowMapManager.GetPointShadowRTVs(Light, PointRTVs);
+                ID3D11DepthStencilView* SharedDSV = ShadowMapManager.GetPointShadowDepthDSV();
+                FRenderResourceFactory::UpdateConstantBufferData(CBLightPosition, Light->GetWorldLocation());
+
+                for (uint32 Idx = 0; Idx < PointRTVs.size(); Idx++)
+                {
+                    Pipeline->SetRenderTargets(1, &PointRTVs[Idx], SharedDSV);
+                    FRenderResourceFactory::UpdateConstantBufferData(CBLightViewProj, VPs[Idx]);
+                    RenderAllStaticMeshes(Context);
+                }
+            }
+        }
+    }
+
+    DeviceContext->RSSetViewports(1, &Context.Viewport);
 }
 
 void FShadowPass::Release()
 {
 	SafeRelease(InputLayout);
 	SafeRelease(VS);
+	SafeRelease(PS);
 	SafeRelease(CBLightViewProj);
+	SafeRelease(CBLightPosition);
 }
 
 void FShadowPass::RenderAllStaticMeshes(const FRenderingContext& Context) const

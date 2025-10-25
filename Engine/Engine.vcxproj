@@ -806,7 +806,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <FxCompile Include="Asset\Shader\Lighting\LightTilesCS.hlsl">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="Asset\Shader\Lighting\ShadowMapVS.hlsl">
+    <FxCompile Include="Asset\Shader\Lighting\ShadowMapShader.hlsl">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Asset\Shader\Material\TextureVS.hlsl">

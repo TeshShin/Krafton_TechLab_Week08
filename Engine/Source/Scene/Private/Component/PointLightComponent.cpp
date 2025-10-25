@@ -68,7 +68,7 @@ FUnifiedDynamicLight UPointLightComponent::GetUnifiedLightData() const
 	LightData.AttenuationRadius = GetAttenuationRadius();
     LightData.FalloffExponent = GetLightFalloffExponent();
     LightData.LightType = static_cast<uint32>(EDynamicLightType::Point);
-	LightData.ShadowBias = 0.001f;
+	LightData.ShadowBias = 0.05f;
 	LightData.bCastShadows = bCastShadows;
 	LightData.ShadowMapIndex = ShadowMapIdx;
 
@@ -109,19 +109,23 @@ const TArray<FMatrix>& UPointLightComponent::GetLightViewProjectionMatrices() co
 		const FVector Forward = FVector::ForwardVector();
 
         FMatrix ViewMatrices[6];
+		// D3D Slice 0: (+X) = Unreal +Y (Right)
+		ViewMatrices[0] = FMatrix::CreateViewFromAxes(LightPosition, -Forward, Up, Right);
 
-        // +X (Forward)
-        ViewMatrices[0] = FMatrix::CreateViewFromAxes(LightPosition, Right, Up, Forward);
-        // -X (Backward)
-        ViewMatrices[1] = FMatrix::CreateViewFromAxes(LightPosition, -Right, Up, -Forward);
-        // +Y (Right)
-        ViewMatrices[2] = FMatrix::CreateViewFromAxes(LightPosition, -Forward, Up, Right);
-        // -Y (Left)
-        ViewMatrices[3] = FMatrix::CreateViewFromAxes(LightPosition, Forward, Up, -Right);
-        // +Z (Up)
-        ViewMatrices[4] = FMatrix::CreateViewFromAxes(LightPosition, Right, -Forward, Up);
-        // -Z (Down)
-        ViewMatrices[5] = FMatrix::CreateViewFromAxes(LightPosition, Right, Forward, -Up);
+		// D3D Slice 1: (-X) = Unreal -Y (Left)
+		ViewMatrices[1] = FMatrix::CreateViewFromAxes(LightPosition, Forward, Up, -Right);
+
+		// D3D Slice 2: (+Y) = Unreal +Z (Up)
+		ViewMatrices[2] = FMatrix::CreateViewFromAxes(LightPosition, Right, -Forward, Up);
+
+		// D3D Slice 3: (-Y) = Unreal -Z (Down)
+		ViewMatrices[3] = FMatrix::CreateViewFromAxes(LightPosition, Right, Forward, -Up);
+
+		// D3D Slice 4: (+Z) = Unreal +X (Forward)
+		ViewMatrices[4] = FMatrix::CreateViewFromAxes(LightPosition, Right, Up, Forward);
+
+		// D3D Slice 5: (-Z) = Unreal -X (Backward)
+		ViewMatrices[5] = FMatrix::CreateViewFromAxes(LightPosition, -Right, Up, -Forward);
 
         for (const auto& ViewMatrix : ViewMatrices)
         {

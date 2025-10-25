@@ -118,35 +118,33 @@ void FShadowMapManager::InitializeSpotShadows(uint32 InMaxSpotShadows, uint32 In
 
 void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uint32 InPointResolution)
 {
-	ReleasePointShadows();
-	MaxPointShadowCubes = InMaxPointShadowCubes;
-	PointResolution = InPointResolution;
+    ReleasePointShadows();
+    MaxPointShadowCubes = InMaxPointShadowCubes;
+    PointResolution = InPointResolution;
 
-    // --- Texture2DArray ---
-    D3D11_TEXTURE2D_DESC PointTexDesc = {};
-    PointTexDesc.Width = PointResolution;
-    PointTexDesc.Height = PointResolution;
-    PointTexDesc.MipLevels = 1;
-    PointTexDesc.ArraySize = MaxPointShadowCubes * 6;
-    PointTexDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-    PointTexDesc.SampleDesc.Count = 1;
-    PointTexDesc.SampleDesc.Quality = 0;
-    PointTexDesc.Usage = D3D11_USAGE_DEFAULT;
-    PointTexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
-    PointTexDesc.CPUAccessFlags = 0;
-    PointTexDesc.MiscFlags = 0;
-	PointTexDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+    D3D11_TEXTURE2D_DESC RTVTexDesc = {};
+    RTVTexDesc.Width = PointResolution;
+    RTVTexDesc.Height = PointResolution;
+    RTVTexDesc.MipLevels = 1;
+    RTVTexDesc.ArraySize = MaxPointShadowCubes * 6;
+    RTVTexDesc.Format = DXGI_FORMAT_R32_FLOAT;
+    RTVTexDesc.SampleDesc.Count = 1;
+    RTVTexDesc.SampleDesc.Quality = 0;
+    RTVTexDesc.Usage = D3D11_USAGE_DEFAULT;
+    RTVTexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+    RTVTexDesc.CPUAccessFlags = 0;
+    RTVTexDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 
-    HRESULT hr = Device->CreateTexture2D(&PointTexDesc, nullptr, &PointShadowCubeArrayTexture);
+    HRESULT hr = Device->CreateTexture2D(&RTVTexDesc, nullptr, &PointShadowCubeArrayTexture);
     if (FAILED(hr))
     {
-        UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE TEXTURE");
-	    return;
+        UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE RTV TEXTURE");
+        return;
     }
 
-	// --- SRV ---
+    // --- SRV ---
     D3D11_SHADER_RESOURCE_VIEW_DESC PointSrvDesc = {};
-    PointSrvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+    PointSrvDesc.Format = RTVTexDesc.Format;
     PointSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
     PointSrvDesc.TextureCubeArray.MostDetailedMip = 0;
     PointSrvDesc.TextureCubeArray.MipLevels = 1;
@@ -157,28 +155,61 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
     if (FAILED(hr))
     {
         UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE SRV");
-	    return;
+        return;
     }
 
-	// --- DSV ---
-    D3D11_DEPTH_STENCIL_VIEW_DESC PointDsvDesc = {};
-    PointDsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
-    PointDsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-    PointDsvDesc.Texture2DArray.MipSlice = 0;
-    PointShadowCubeSliceDSVs.resize(MaxPointShadowCubes * 6);
+    // --- RTV Array ---
+    D3D11_RENDER_TARGET_VIEW_DESC PointRtvDesc = {};
+    PointRtvDesc.Format = RTVTexDesc.Format;
+    PointRtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+    PointRtvDesc.Texture2DArray.MipSlice = 0;
+
+    PointShadowCubeSliceRTVs.resize(MaxPointShadowCubes * 6);
 
     for (uint32 i = 0; i < MaxPointShadowCubes * 6; ++i)
     {
-        PointDsvDesc.Texture2DArray.FirstArraySlice = i;
-        PointDsvDesc.Texture2DArray.ArraySize = 1;
+        PointRtvDesc.Texture2DArray.FirstArraySlice = i;
+        PointRtvDesc.Texture2DArray.ArraySize = 1;
 
-        hr = Device->CreateDepthStencilView(PointShadowCubeArrayTexture, &PointDsvDesc, &PointShadowCubeSliceDSVs[i]);
+        hr = Device->CreateRenderTargetView(PointShadowCubeArrayTexture, &PointRtvDesc, &PointShadowCubeSliceRTVs[i]);
         if (FAILED(hr))
         {
-            PointShadowCubeSliceDSVs.clear();
-        	UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE DSV");
+            PointShadowCubeSliceRTVs.clear();
+            UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE RTV");
             return;
         }
+    }
+
+    // --- 섀도우 패스 전용 DSV ---
+    D3D11_TEXTURE2D_DESC DepthTexDesc = {};
+    DepthTexDesc.Width = PointResolution;
+    DepthTexDesc.Height = PointResolution;
+    DepthTexDesc.MipLevels = 1;
+    DepthTexDesc.ArraySize = 1;
+    DepthTexDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+    DepthTexDesc.SampleDesc.Count = 1;
+    DepthTexDesc.Usage = D3D11_USAGE_DEFAULT;
+    DepthTexDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    DepthTexDesc.CPUAccessFlags = 0;
+    DepthTexDesc.MiscFlags = 0;
+
+    hr = Device->CreateTexture2D(&DepthTexDesc, nullptr, &PointShadowDepthTexture);
+    if (FAILED(hr))
+    {
+        UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE SHADOW DSV TEXTURE");
+        return;
+    }
+
+    D3D11_DEPTH_STENCIL_VIEW_DESC PointDsvDesc = {};
+    PointDsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+    PointDsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    PointDsvDesc.Texture2D.MipSlice = 0;
+
+    hr = Device->CreateDepthStencilView(PointShadowDepthTexture, &PointDsvDesc, &PointShadowDepthDSV);
+    if (FAILED(hr))
+    {
+        UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE SHADOW DSV");
+        return;
     }
 }
 
@@ -198,8 +229,10 @@ void FShadowMapManager::ReleasePointShadows()
 	SafeRelease(PointShadowCubeArraySRV);
 	for (uint32 Idx = 0; Idx < MaxPointShadowCubes * 6; ++Idx)
 	{
-		SafeRelease(PointShadowCubeSliceDSVs[Idx]);
+		SafeRelease(PointShadowCubeSliceRTVs[Idx]);
 	}
+	SafeRelease(PointShadowDepthTexture);
+	SafeRelease(PointShadowDepthDSV);
 }
 
 void FShadowMapManager::Release()
@@ -216,11 +249,13 @@ void FShadowMapManager::ClearShadowMaps()
 	}
 	CurrentSpotShadowIdx = 0;
 
+	constexpr float ClearColor[4] = { FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX };
 	for (uint32 Idx = 0; Idx < CurrentPointCubeIdx * 6; ++Idx)
 	{
-		Context->ClearDepthStencilView(PointShadowCubeSliceDSVs[Idx], D3D11_CLEAR_DEPTH, 1.0f, 0);
+		Context->ClearRenderTargetView(PointShadowCubeSliceRTVs[Idx], ClearColor);
 	}
 	CurrentPointCubeIdx = 0;
+	Context->ClearDepthStencilView(PointShadowDepthDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
 }
 
 void FShadowMapManager::AllocateShadowMap(class ULightComponentBase* Light)
@@ -250,37 +285,6 @@ void FShadowMapManager::AllocateShadowMap(class ULightComponentBase* Light)
 	Light->SetShadowMapIdx(-1);
 }
 
-void FShadowMapManager::GetDSVs(class ULightComponentBase* Light, TArray<ID3D11DepthStencilView*>& OutDSVs) const
-{
-	OutDSVs.clear();
-	int32 ShadowMapIdx = Light->GetShadowMapIdx();
-
-	if (ShadowMapIdx < 0) { return; }
-
-	switch (Light->GetLightType())
-	{
-	case ELightComponentType::LightType_Spot:
-		if (CurrentSpotShadowIdx < MaxSpotShadows)
-		{
-			OutDSVs.emplace_back(SpotShadowMapSliceDSVs[ShadowMapIdx]);
-		}
-		break;
-	case ELightComponentType::LightType_Point:
-		if (CurrentPointCubeIdx < MaxPointShadowCubes)
-		{
-			for (uint32 Idx = 0; Idx < 6; ++Idx)
-			{
-				OutDSVs.emplace_back(PointShadowCubeSliceDSVs[ShadowMapIdx * 6 + Idx]);
-			}
-		}
-		break;
-	case ELightComponentType::LightType_Directional:
-		break;
-	default:
-		break;
-	}
-}
-
 uint32 FShadowMapManager::GetResolution(class ULightComponentBase* Light) const
 {
 	switch (Light->GetLightType())
@@ -295,6 +299,31 @@ uint32 FShadowMapManager::GetResolution(class ULightComponentBase* Light) const
 		break;
 	}
 	return 0;
+}
+
+ID3D11DepthStencilView* FShadowMapManager::GetSpotLightDSV(uint32 SpotShadowIdx) const
+{
+	if (SpotShadowIdx < 0 || SpotShadowIdx >= MaxSpotShadows)
+	{
+		return nullptr;
+	}
+	return SpotShadowMapSliceDSVs[SpotShadowIdx];
+}
+
+void FShadowMapManager::GetPointShadowRTVs(class ULightComponentBase* Light, TArray<ID3D11RenderTargetView*>& OutRTVs) const
+{
+	OutRTVs.clear();
+	int32 ShadowMapIdx = Light->GetShadowMapIdx();
+
+	if (ShadowMapIdx < 0) { return; }
+
+	if (CurrentPointCubeIdx < MaxPointShadowCubes)
+	{
+		for (uint32 Idx = 0; Idx < 6; ++Idx)
+		{
+			OutRTVs.emplace_back(PointShadowCubeSliceRTVs[ShadowMapIdx * 6 + Idx]);
+		}
+	}
 }
 
 void FShadowMapManager::InitializeForDebug()
