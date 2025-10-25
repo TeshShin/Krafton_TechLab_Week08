@@ -50,6 +50,7 @@ void FShadowPass::Execute(FRenderingContext& Context)
 
 	for (ULightComponentBase* Light : Context.Lights)
 	{
+		Light->SetShadowMapIdx(-1);
 		if (Light->DoesCastShadows())
 		{
 			ShadowMapManager.AllocateShadowMap(Light);

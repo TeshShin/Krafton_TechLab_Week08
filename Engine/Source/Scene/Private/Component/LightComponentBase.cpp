@@ -20,6 +20,7 @@ void ULightComponentBase::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		FJsonSerializer::ReadFloat(InOutHandle, "Intensity", Intensity);
 		FJsonSerializer::ReadVector(InOutHandle, "LightColor", LightColor);
 		FJsonSerializer::ReadBool(InOutHandle, "bVisible", bVisible, true);
+		FJsonSerializer::ReadBool(InOutHandle, "bCastShadows", bCastShadows, true);
 		SetLightColor(LightColor);
 	}
 	else
@@ -27,6 +28,7 @@ void ULightComponentBase::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		InOutHandle["Intensity"] = Intensity;
 		InOutHandle["LightColor"] = FJsonSerializer::VectorToJson(LightColor);
 		InOutHandle["bVisible"] = bVisible;
+		InOutHandle["bCastShadows"] = bCastShadows;
 	}
 }
 
@@ -36,6 +38,7 @@ UObject* ULightComponentBase::Duplicate()
 	LightComponent->Intensity = Intensity;
 	LightComponent->LightColor = LightColor;
 	LightComponent->bVisible = bVisible;
+	LightComponent->bCastShadows = bCastShadows;
 
 	return LightComponent;
 }

@@ -120,7 +120,10 @@ private:
 	 -----------------------------------------------------------------------------*/
 public:
 	virtual const FMatrix& GetLightViewProjectionMatrix() const { return FMatrix(); }
+
 	bool DoesCastShadows() const { return bCastShadows; }
+	void SetCastShadows(bool bInCastShadows) { bCastShadows = bInCastShadows; }
+
 	int32 GetShadowMapIdx() const { return ShadowMapIdx; }
 	void SetShadowMapIdx(int32 InShadowIdx) { ShadowMapIdx = InShadowIdx; }
 
@@ -129,7 +132,5 @@ protected:
 	mutable bool bIsLightVPDirty = true;
 
 	bool bCastShadows = false; // 일단 SpotLight만 true로 함
-	int32 ShadowMapWidth = 2048;
-	int32 ShadowMapHeight = 2048;
 	int32 ShadowMapIdx = -1;
 };

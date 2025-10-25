@@ -91,7 +91,7 @@ void USpotLightComponent::DrawDebugLines()
 
 void USpotLightComponent::SetInnerConeAngle(float InInnerConeAngle)
 {
-	InnerConeAngle = std::clamp(InInnerConeAngle, 0.0f, OuterConeAngle - 1.0f);
+	InnerConeAngle = std::clamp(InInnerConeAngle, 0.0f, OuterConeAngle);
 	if (bIsSelected)
 	{
 		ClearDebugLines();
@@ -101,7 +101,7 @@ void USpotLightComponent::SetInnerConeAngle(float InInnerConeAngle)
 
 void USpotLightComponent::SetOuterConeAngle(float InOuterConeAngle)
 {
-	OuterConeAngle = std::clamp(InOuterConeAngle, InnerConeAngle + 1.0f, 90.0f);
+	OuterConeAngle = std::clamp(InOuterConeAngle, InnerConeAngle, 90.0f);
 	if (bIsSelected)
 	{
 		ClearDebugLines();

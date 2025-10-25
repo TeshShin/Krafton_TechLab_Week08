@@ -36,5 +36,5 @@ public:
 	 * @brief Base implementation returns dummy data
 	 * @note Derived classes should override this to provide specific light data
 	 */
-	virtual struct FUnifiedDynamicLight GetUnifiedLightData() const = 0;
+	struct FUnifiedDynamicLight GetUnifiedLightData() const override = 0;
 };

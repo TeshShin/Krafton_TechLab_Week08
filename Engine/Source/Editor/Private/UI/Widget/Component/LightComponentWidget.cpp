@@ -1,13 +1,14 @@
 ﻿#include "pch.h"
 #include "Editor/Public/UI/Widget/Component/LightComponentWidget.h"
 #include "Editor/Public/Editor.h"
+#include "Renderer/Public/ShadowMapManager.h"
 #include "Scene/Public/Component/LightComponentBase.h"
 
 IMPLEMENT_CLASS(ULightComponentWidget, UComponentWidget)
 
 void ULightComponentWidget::Initialize()
 {
-    
+
 }
 void ULightComponentWidget::Update()
 {
@@ -45,6 +46,21 @@ void ULightComponentWidget::RenderWidget()
             if (ImGui::DragFloat("Intensity", &Intensity, 0.1f, 0.0f, 20.0f))
             {
                 LightComponent->SetIntensity(Intensity);
+            }
+
+            // bCastShadows
+            bool bCastShadows = LightComponent->DoesCastShadows();
+            if (ImGui::Checkbox("Cast Shadows", &bCastShadows))
+            {
+				LightComponent->SetCastShadows(bCastShadows);
+            }
+
+            // Light Depth Map
+            int32 ShadowMapIdx = LightComponent->GetShadowMapIdx();
+            if (ShadowMapIdx > -1)
+            {
+            	ImGui::Text("Shadow Map Idx: %d", ShadowMapIdx);
+            	ImGui::Image(FShadowMapManager::GetInstance().GetSRVForImGuiDebug(ShadowMapIdx), ImVec2(512, 512));
             }
 
             ImGui::Separator();

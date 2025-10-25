@@ -7,7 +7,7 @@
 #include "Scene/Public/Component/ActorComponent.h"
 #include "ImGui/imgui.h"
 
-IMPLEMENT_CLASS(UPointLightComponentWidget, UComponentWidget)
+IMPLEMENT_CLASS(UPointLightComponentWidget, ULightComponentWidget)
 
 void UPointLightComponentWidget::Initialize()
 {
@@ -32,22 +32,6 @@ void UPointLightComponentWidget::RenderWidget()
     if (!PointLightComponent)
     {
         return;
-    }
-
-    ImGui::Separator();
-
-    // Light Color
-    FVector LightColor = PointLightComponent->GetLightColor();
-    if (ImGui::ColorEdit3("Light Color", &LightColor.X))
-    {
-        PointLightComponent->SetLightColor(LightColor);
-    }
-
-    // Intensity
-    float Intensity = PointLightComponent->GetIntensity();
-    if (ImGui::DragFloat("Intensity", &Intensity, 0.1f, 0.0f, 20.0f))
-    {
-        PointLightComponent->SetIntensity(Intensity);
     }
 
     // Attenuation Radius

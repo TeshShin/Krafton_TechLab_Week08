@@ -33,4 +33,13 @@ private:
 	ID3D11ShaderResourceView* ShadowMapArraySRV;
 	TArray<ID3D11DepthStencilView*> ShadowMapSliceDSVs;
 	ID3D11SamplerState* ShadowMapSamplerState;
+
+// Debug Section
+public:
+	void InitializeForDebug(ID3D11Device* Device);
+	ID3D11ShaderResourceView* GetSRVForImGuiDebug(uint32 ShadowMapIdx);
+
+private:
+	ID3D11Texture2D* ImGuiDebugTexture;
+	ID3D11ShaderResourceView* ImGuiDebugSRV;
 };
