@@ -115,17 +115,26 @@ private:
 
 	class UBillBoardComponent* IconBillboard = nullptr;
 
+public:
+	// ... other public methods
+	virtual float GetShadowNearClip() const { return 0.1f; }
+	virtual float GetShadowFarClip() const { return 1000.0f; }
+
 	/*-----------------------------------------------------------------------------
 		Shadow Features
 	 -----------------------------------------------------------------------------*/
 public:
 	virtual const FMatrix& GetLightViewProjectionMatrix() const { return FMatrix(); }
+	virtual const FMatrix& GetLightViewMatrix() const { return FMatrix(); }
+	virtual const FMatrix& GetLightProjectionMatrix() const { return FMatrix(); }
 	bool DoesCastShadows() const { return bCastShadows; }
 	int32 GetShadowMapIdx() const { return ShadowMapIdx; }
 	void SetShadowMapIdx(int32 InShadowIdx) { ShadowMapIdx = InShadowIdx; }
 
 protected:
 	mutable FMatrix CachedLightViewProjection;
+	mutable FMatrix CachedLightView;
+	mutable FMatrix CachedLightProjection;
 	mutable bool bIsLightVPDirty = true;
 
 	bool bCastShadows = false; // 일단 SpotLight만 true로 함

@@ -1,5 +1,10 @@
 #include "../Material/TextureVS.hlsl"
 
+// Toggle VSM shadows (uses RG moments and linear sampler)
+#ifndef USE_VSM
+#define USE_VSM 1
+#endif
+
 //--------------------------------------------------------------------------------------
 // [FORWARD PLUS RENDERING] Light Tile Clustering Data Structures
 //--------------------------------------------------------------------------------------
@@ -39,8 +44,13 @@ Texture2D ShininessTexture : register(t3);   // map_Ns
 Texture2D AlphaTexture : register(t4);		// map_d
 Texture2D BumpTexture : register(t5);		// map_bump
 
+#ifdef USE_VSM
+Texture2DArray<float2> ShadowMomentsArray : register(t13);
+SamplerState ShadowLinearSampler : register(s2);
+#else
 Texture2DArray<float> ShadowMapArray : register(t12);
 SamplerComparisonState ShadowSampler : register(s1);
+#endif
 
 SamplerState SamplerWrap : register(s0);
 
@@ -123,7 +133,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 	{
 		AmbientColor *= DiffuseTexture.Sample(SamplerWrap, UV);
 	}
-
+	 
     // Specular color for material
 	float4 SpecularColor = Ks;
 	if (MaterialFlags & HAS_SPECULAR_MAP)
@@ -132,7 +142,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 	}
 
 	float4 FinalColor = float4(0, 0, 0, 1);
-
+	 
 	// Accumulate separated diffuse and specular contributions
 	float3 TotalAmbient = float3(0, 0, 0);
 	float3 TotalDiffuse = float3(0, 0, 0);
@@ -154,19 +164,19 @@ PS_OUTPUT mainPS(PS_INPUT Input)
         // Sample and unpack tangent-space normal (assumes XYZ in texture)
 		float3 nTS = BumpTexture.Sample(SamplerWrap, UV).xyz * 2.0f - 1.0f;
 		nTS = normalize(nTS);
-
+		 
 		float3 N = normalize(Input.WorldNormal);
 		float3 T = normalize(Input.WorldTangent);
         // Recompute B using handedness (stored in TangentSign)
 		float3 B = normalize(cross(N, T)) * Input.TangentSign;
-
+		   
 		float3x3 TBN = float3x3(T, B, N);
 		wsNormal = normalize(mul(nTS, TBN));
-	}
+	}   
 	else
-	{
+	{   
 		wsNormal = normalize(Input.WorldNormal);
-	}
+	} 
 
     float3 ViewDir = normalize(ViewWorldLocation - Input.WorldPosition);
     float SpecularPower = max(Ns, 1.0f); // Prevent division by zero
@@ -176,21 +186,52 @@ PS_OUTPUT mainPS(PS_INPUT Input)
     // Clamp to avoid reading past FP_ClusterIndex allocation when clusters overflow
     uint maxCount = FP_MaxLightsPerCluster;
     uint safeCount = (count < maxCount) ? count : maxCount;
-    uint base  = cid * FP_MaxLightsPerCluster;
-
-	[loop]
+    uint base  = cid * FP_MaxLightsPerCluster; 
+	        
+ 	[loop]
 	for (uint i = 0; i < safeCount; ++i)
 	{
 		uint li = FP_ClusterIndex[base + i];
-		FLightingResult LightResult = CalculateDynamicLightWithShadows(
-			DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, max(Ns, 1.0f),
-            ShadowMapArray, ShadowSampler);		TotalDiffuse  += LightResult.Diffuse;
-		
-		TotalSpecular += LightResult.Specular;
-		TotalAmbient  += LightResult.Ambient;
-	}
-#endif
+		  
 
+		// Project world position into the light's clip space for sampling
+		float4x4 VPMatrix = mul(DynamicLights[li].LightView, DynamicLights[li].LightProjection);
+		float4 LightSpacePos = mul(float4(Input.WorldPosition, 1.0f), VPMatrix);
+		float3 ShadowCoords = LightSpacePos.xyz / LightSpacePos.w; 
+		 
+		ShadowCoords.x = ShadowCoords.x * 0.5f + 0.5f;
+		ShadowCoords.y = ShadowCoords.y * -0.5f + 0.5f; 
+		  
+		// Sample coordinates into VSM texture array (xy + slice index)
+		float3 SampleCoords = float3(ShadowCoords.xy, DynamicLights[li].ShadowMapIndex);
+
+		// VSM expects the same depth domain as the stored moments.
+		// We store moments using LIGHT VIEW-SPACE z in ShadowMapPS, so compute t as that here.
+		float t = mul(float4(Input.WorldPosition, 1.0f), DynamicLights[li].LightView).z ;
+	
+		#ifdef USE_VSM
+		FLightingResult LightResult = CalculateDynamicLightWithShadows(
+            DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, max(Ns, 1.0f),
+            ShadowMomentsArray, ShadowLinearSampler, SampleCoords, t);
+		#else
+		//PCF
+		//FLightingResult LightResult = CalculateDynamicLightWithShadows2(
+		//	DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, max(Ns, 1.0f),
+        //    ShadowMapArray, ShadowSampler);
+
+		//Hard Sampling
+		FLightingResult LightResult = HardShadow(DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, max(Ns, 1.0f),
+        ShadowMapArray, SamplerWrap);
+		 
+		 
+		#endif
+		
+		TotalDiffuse  += LightResult.Diffuse;      
+		TotalSpecular += LightResult.Specular;
+		TotalAmbient  += LightResult.Ambient; 
+	} 
+#endif 
+	 
 	// [PHYSICALLY CORRECT] Apply material properties separately
     // Ambient term: Ka * GlobalAmbient
 	FinalColor.rgb = AmbientColor.rgb * TotalAmbient;

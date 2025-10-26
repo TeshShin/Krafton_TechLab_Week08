@@ -81,4 +81,8 @@ private:
 	 -----------------------------------------------------------------------------*/
 public:
     const FMatrix& GetLightViewProjectionMatrix() const override;
+    const FMatrix& GetLightViewMatrix() const override;
+    const FMatrix& GetLightProjectionMatrix() const override;
+
+	virtual float GetShadowFarClip() const override;
 };

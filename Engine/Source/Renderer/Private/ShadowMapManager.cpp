@@ -19,12 +19,12 @@ FShadowMapManager& FShadowMapManager::GetInstance()
 
 void FShadowMapManager::Initalize(uint32 InMaxShadows, uint32 InResolution)
 {
-	Release();
-	ID3D11Device* Device = URenderer::GetInstance().GetDevice();
+    Release();
+    ID3D11Device* Device = URenderer::GetInstance().GetDevice();
 
     Resolution = InResolution;
     MaxShadows = InMaxShadows;
-
+	    
     // --- Texture2DArray ---
     D3D11_TEXTURE2D_DESC TexDesc = {};
     TexDesc.Width = Resolution;
@@ -41,7 +41,7 @@ void FShadowMapManager::Initalize(uint32 InMaxShadows, uint32 InResolution)
 
     HRESULT hr = Device->CreateTexture2D(&TexDesc, nullptr, &ShadowMapArrayTexture);
     if (FAILED(hr))
-    	{ return; }
+        { return; }
 
 	// --- SRV ---
     D3D11_SHADER_RESOURCE_VIEW_DESC SrvDesc = {};
@@ -76,7 +76,7 @@ void FShadowMapManager::Initalize(uint32 InMaxShadows, uint32 InResolution)
         }
     }
 
-	D3D11_SAMPLER_DESC SamplerDesc = {};
+    D3D11_SAMPLER_DESC SamplerDesc = {};
 	//SamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
 	SamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 	SamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
@@ -92,29 +92,104 @@ void FShadowMapManager::Initalize(uint32 InMaxShadows, uint32 InResolution)
 	SamplerDesc.MinLOD = 0;
 	SamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 
-	hr = Device->CreateSamplerState(&SamplerDesc, &ShadowMapSamplerState);
-	if (FAILED(hr))
-		{ return; }
+    hr = Device->CreateSamplerState(&SamplerDesc, &ShadowMapSamplerState);
+    if (FAILED(hr))
+        { return; }
+
+    // --- Moments Texture2DArray (RG32_FLOAT) for VSM ---
+    D3D11_TEXTURE2D_DESC MomentsDesc = {};
+    MomentsDesc.Width = Resolution;
+    MomentsDesc.Height = Resolution;
+    MomentsDesc.MipLevels = 1;
+    MomentsDesc.ArraySize = MaxShadows;
+    MomentsDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+    MomentsDesc.SampleDesc.Count = 1;
+    MomentsDesc.SampleDesc.Quality = 0;
+    MomentsDesc.Usage = D3D11_USAGE_DEFAULT;
+    MomentsDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+    MomentsDesc.CPUAccessFlags = 0;
+    MomentsDesc.MiscFlags = 0;
+
+    hr = Device->CreateTexture2D(&MomentsDesc, nullptr, &ShadowMomentsArrayTexture);
+    if (FAILED(hr)) { return; }
+
+    // SRV for moments
+    D3D11_SHADER_RESOURCE_VIEW_DESC MomentsSRVDesc = {};
+    MomentsSRVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+    MomentsSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+    MomentsSRVDesc.Texture2DArray.MostDetailedMip = 0;
+    MomentsSRVDesc.Texture2DArray.MipLevels = 1;
+    MomentsSRVDesc.Texture2DArray.FirstArraySlice = 0;
+    MomentsSRVDesc.Texture2DArray.ArraySize = MaxShadows;
+    hr = Device->CreateShaderResourceView(ShadowMomentsArrayTexture, &MomentsSRVDesc, &ShadowMomentsSRV);
+    if (FAILED(hr)) { return; }
+
+    // RTVs for moments per slice
+    D3D11_RENDER_TARGET_VIEW_DESC RTVDesc = {};
+    RTVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+    RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+    RTVDesc.Texture2DArray.MipSlice = 0;
+    ShadowMomentsSliceRTVs.resize(MaxShadows);
+    for (uint32 i = 0; i < MaxShadows; ++i)
+    {
+        RTVDesc.Texture2DArray.FirstArraySlice = i;
+        RTVDesc.Texture2DArray.ArraySize = 1;
+        hr = Device->CreateRenderTargetView(ShadowMomentsArrayTexture, &RTVDesc, &ShadowMomentsSliceRTVs[i]);
+        if (FAILED(hr))
+        {
+            ShadowMomentsSliceRTVs.clear();
+            return;
+        }
+    }
+
+    // Linear sampler for moments sampling (non-comparison)
+    D3D11_SAMPLER_DESC LinearSamp = {};
+    LinearSamp.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+    LinearSamp.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+    LinearSamp.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+    LinearSamp.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+    LinearSamp.BorderColor[0] = 1.0f;
+    LinearSamp.BorderColor[1] = 1.0f;
+    LinearSamp.BorderColor[2] = 1.0f;
+    LinearSamp.BorderColor[3] = 1.0f;
+    LinearSamp.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    LinearSamp.MinLOD = 0.0f;
+    LinearSamp.MaxLOD = D3D11_FLOAT32_MAX;
+    hr = Device->CreateSamplerState(&LinearSamp, &ShadowLinearSamplerState);
+    if (FAILED(hr)) { return; }
 }
 
 void FShadowMapManager::Release()
 {
-	SafeRelease(ShadowMapArrayTexture);
-	SafeRelease(ShadowMapArraySRV);
-	for (uint32 i = 0; i < MaxShadows; ++i)
-	{
-		SafeRelease(ShadowMapSliceDSVs[i]);
-	}
+    SafeRelease(ShadowMapArrayTexture);
+    SafeRelease(ShadowMapArraySRV);
+    for (uint32 i = 0; i < MaxShadows; ++i)
+    {
+        SafeRelease(ShadowMapSliceDSVs[i]);
+    }
+    // Release moments resources
+    SafeRelease(ShadowMomentsArrayTexture);
+    SafeRelease(ShadowMomentsSRV);
+    for (uint32 i = 0; i < ShadowMomentsSliceRTVs.size(); ++i)
+    {
+        SafeRelease(ShadowMomentsSliceRTVs[i]);
+    }
+    SafeRelease(ShadowLinearSamplerState);
 }
 
 void FShadowMapManager::ClearShadowMaps()
 {
-	ID3D11DeviceContext* Context = URenderer::GetInstance().GetDeviceContext();
-	for (uint32 Idx = 0; Idx < CurrentShadowIdx; ++Idx)
-	{
-		Context->ClearDepthStencilView(GetDSV(Idx), D3D11_CLEAR_DEPTH, 1.0f, 0);
-	}
-	CurrentShadowIdx = 0;
+    ID3D11DeviceContext* Context = URenderer::GetInstance().GetDeviceContext();
+    for (uint32 Idx = 0; Idx < CurrentShadowIdx; ++Idx)
+    {
+        Context->ClearDepthStencilView(GetDSV(Idx), D3D11_CLEAR_DEPTH, 1.0f, 0);
+        if (Idx < ShadowMomentsSliceRTVs.size() && ShadowMomentsSliceRTVs[Idx])
+        {
+            const float ClearColor[4] = { 1.0f, 1.0f, 0.0f, 0.0f }; // M1=1, M2=1 initializes no-occluder
+            Context->ClearRenderTargetView(ShadowMomentsSliceRTVs[Idx], ClearColor);
+        }
+    }
+    CurrentShadowIdx = 0;
 }
 
 void FShadowMapManager::AllocateShadowMap(class ULightComponentBase* Light)

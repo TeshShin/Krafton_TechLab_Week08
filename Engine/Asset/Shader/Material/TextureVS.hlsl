@@ -6,12 +6,12 @@ cbuffer LightConstants : register(b0)
 {
 	uint UnifiedLightCount; // 4 bytes  - Number of lights in StructuredBuffer
 	float3 Padding; // 12 bytes - Alignment padding
-};
+}; 
 
 //--------------------------------------------------------------------------------------
 // Material Constants
 //--------------------------------------------------------------------------------------
-
+ 
 cbuffer MaterialConstants : register(b1)
 {
 	float4 Ka; // Ambient color
@@ -43,7 +43,7 @@ PS_INPUT mainVS(VS_INPUT Input)
 	Output.Position = mul(mul(mul(float4(Input.Position, 1.0f), ModelWorld), View), Projection);
 	Output.WorldNormal = normalize(mul(Input.Normal, (float3x3)ModelWorldInverseTranspose));
 	Output.Tex = Input.Tex;
-
+	  
 //#define LIGHTING_MODEL_GOURAUD // for coding
 #if defined(LIGHTING_MODEL_GOURAUD)
 	float3 wsNormal = Output.WorldNormal;
