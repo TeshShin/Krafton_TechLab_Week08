@@ -49,7 +49,7 @@ Texture2DArray<float2> ShadowMomentsArray : register(t13);
 SamplerState ShadowLinearSampler : register(s2);
 #else
 Texture2DArray<float> ShadowMapArray : register(t12);
-SamplerComparisonState ShadowSampler : register(s1);
+SamplerComparisonState ShadowSampler : register(s1);	
 #endif
 
 SamplerState SamplerWrap : register(s0);
@@ -160,7 +160,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
     // -----------------------
 	float3 wsNormal = Input.WorldNormal;
 	if (MaterialFlags & HAS_BUMP_MAP)
-	{
+	{ 
         // Sample and unpack tangent-space normal (assumes XYZ in texture)
 		float3 nTS = BumpTexture.Sample(SamplerWrap, UV).xyz * 2.0f - 1.0f;
 		nTS = normalize(nTS);
@@ -169,12 +169,12 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 		float3 T = normalize(Input.WorldTangent);
         // Recompute B using handedness (stored in TangentSign)
 		float3 B = normalize(cross(N, T)) * Input.TangentSign;
-		   
+		    
 		float3x3 TBN = float3x3(T, B, N);
 		wsNormal = normalize(mul(nTS, TBN));
-	}   
+	}       
 	else
-	{   
+	{    
 		wsNormal = normalize(Input.WorldNormal);
 	} 
 

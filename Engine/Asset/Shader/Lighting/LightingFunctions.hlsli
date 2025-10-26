@@ -7,6 +7,19 @@
 #define LIGHTING_FUNCTIONS_HLSL
 
 //--------------------------------------------------------------------------------------
+// [VSM FILTER CONFIG]
+//--------------------------------------------------------------------------------------
+// Set to 1 to use a simple box filter over the VSM moments when sampling.
+#ifndef VSM_USE_BOX_FILTER
+#define VSM_USE_BOX_FILTER 1
+#endif
+
+// Box filter kernel size (must be odd). Typical values: 3, 5, 7, 9, 11
+#ifndef VSM_FILTER_SIZE
+#define VSM_FILTER_SIZE 35
+#endif
+
+//--------------------------------------------------------------------------------------
 // [MODULAR LIGHTING SYSTEM] Lighting Result Structure
 //--------------------------------------------------------------------------------------
 
@@ -206,7 +219,7 @@ float PCF(Texture2DArray<float> ShadowMap, SamplerComparisonState Sampler, float
 // M1 = E(x), M2 = E(x^2) 
 float VSM_Visibility(float2 Moments, float t)
 {
-	// m1(기본 depth)?� 비교 먼�?, 그림??or �??�단
+	// m1(湲곕낯 depth)? 鍮꾧탳 癒쇱?, 洹몃┝??or 鍮??먮떒
 	if (t <= Moments.x)
 	{
 		return 1.0f;
@@ -228,8 +241,40 @@ float VSM_Visibility(float2 Moments, float t)
 	return saturate(pMax);
 }
 
+//--------------------------------------------------------------------------------------
+// [VSM] Box-filtered moments sampling
+//--------------------------------------------------------------------------------------
+float2 SampleVSMBox(Texture2DArray<float2> ShadowMomentsArray,
+                    SamplerState Sampler,
+                    float3 uvw,
+                    int KernelSize)
+{
+	int radius = max(0, (KernelSize & 1) ? KernelSize / 2 : (KernelSize - 1) / 2);
+
+	uint2 texSize;
+	float element;
+	ShadowMomentsArray.GetDimensions(texSize.x, texSize.y, element);
+
+	float2 st = texSize * uvw.xy;
+	
+	float2 sum = float2(0.0, 0.0);
+	int count = (2 * radius + 1) * (2 * radius + 1);
+
+	
+	for (int i = -radius; i <= radius; i++)
+	{
+		for (int j = -radius; j <= radius; j++)
+		{
+			float2 uv = (st + float2(i, j) + 0.5f) / texSize;
+			sum += ShadowMomentsArray.Sample(Sampler, float3(uv, uvw.z)).xy;  
+			
+		}
+	}
+	return (count > 0) ? (sum / count) : ShadowMomentsArray.Sample(Sampler, uvw).xy;
+}
+
 // Sample VSM moments from Texture2DArray<float2> 
-//  ?�반 SamplerState (non-comparison)�??�용?�자 
+//  일반 SamplerState (non-comparison)를 사용하자
 float ShadowVisibilityVSM(Texture2DArray<float2> ShadowMomentsArray,
 						   SamplerState ShadowSampler,
 						   float3 sampleUVW,
@@ -238,6 +283,17 @@ float ShadowVisibilityVSM(Texture2DArray<float2> ShadowMomentsArray,
 	float2 moments = ShadowMomentsArray.Sample(ShadowSampler, sampleUVW).xy;
 	return VSM_Visibility(moments, t);
 }  
+
+// Box-filtered variant: averages moments over an NxN kernel, then evaluates VSM visibility
+float ShadowVisibilityVSM_BoxFiltered(Texture2DArray<float2> ShadowMomentsArray,
+                                      SamplerState ShadowSampler,
+                                      float3 sampleUVW,
+                                      float t,
+                                      int KernelSize)
+{
+    float2 moments = SampleVSMBox(ShadowMomentsArray, ShadowSampler, sampleUVW, KernelSize);
+    return VSM_Visibility(moments, t);
+}
 
 FLightingResult CalculateDynamicLightWithShadows(FUnifiedDynamicLight Light,
 	float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower, Texture2DArray<float2> ShadowMapArray, SamplerState ShadowSampler, float3 SampleCoords, float t)
@@ -250,9 +306,13 @@ FLightingResult CalculateDynamicLightWithShadows(FUnifiedDynamicLight Light,
 		
 		// Compute receiver depth normalized to match stored moments 
 		// PCF path (hardware depth comparison)
-		// Texture2D format + sampler State ?�눌 ?�요가 ?�다 .
+		// Texture2D format + sampler State ?섎닃 ?꾩슂媛 ?덈떎 .
 		//ShadowFactor = PCF(ShadowMapArray, ShadowSampler, SampleCoords, (ShadowCoords.z - Light.ShadowBias), 11);
+		#if VSM_USE_BOX_FILTER
+		ShadowFactor = ShadowVisibilityVSM_BoxFiltered(ShadowMapArray, ShadowSampler, SampleCoords, t, VSM_FILTER_SIZE);
+		#else
 		ShadowFactor = ShadowVisibilityVSM(ShadowMapArray, ShadowSampler, SampleCoords, t);
+		#endif
 	}
 
 	Result.Diffuse *= ShadowFactor;
@@ -355,4 +415,6 @@ FLightingResult HardShadow(
     return Result;
 }
 #endif // LIGHTING_FUNCTIONS_HLSL
+
+
 

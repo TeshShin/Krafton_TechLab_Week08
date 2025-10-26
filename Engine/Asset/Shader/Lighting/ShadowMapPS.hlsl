@@ -38,6 +38,6 @@ float4 mainPS(PS_INPUT Input) : SV_Target0
 	// Use light view-space depth directly for VSM moments
 	float depthVS = Input.LightPos.z;
 	float2 m = ComputeMomentsVSM(depthVS);
-	//return float4(m.x, m.y, depthVS, 0;
-	return float4(depthVS, depthVS * depthVS , depthVS, 0);
+	return float4(m.x, m.y, depthVS, 0);
+	//return float4(depthVS, depthVS * depthVS , depthVS, 0);
 }
