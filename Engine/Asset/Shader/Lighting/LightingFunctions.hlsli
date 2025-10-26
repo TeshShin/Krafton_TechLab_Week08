@@ -19,6 +19,22 @@
 #define VSM_FILTER_SIZE 35
 #endif
 
+// Light bleeding reduction amount for VSM (0 = none, 1 = full cutoff)
+#ifndef VSM_LIGHT_BLEED_REDUCTION
+#define VSM_LIGHT_BLEED_REDUCTION 0.8f
+#endif
+
+float linstep(float minV, float maxV, float v)
+{
+    return saturate((v - minV) / (maxV - minV));
+}
+
+float ReduceLightBleeding(float p_max, float Amount)
+{
+	// [0, Amount] 구간을 제거하고 (Amount, 1] 구간을 선형 rescale
+    return linstep(Amount, 1.0f, p_max);
+}
+
 //--------------------------------------------------------------------------------------
 // [MODULAR LIGHTING SYSTEM] Lighting Result Structure
 //--------------------------------------------------------------------------------------
@@ -232,13 +248,12 @@ float VSM_Visibility(float2 Moments, float t)
 
 	// Chebyshev/Cantelli upper bound term
 	float d = t - Moments.x; 
-	float pMax = variance / (d * d + variance);
+    float pMax = variance / (d * d + variance);
 
-	// Light bleeding reduction (optional, tune Amount between 0-1)
-	//const float LightBleedReduction = 0.2f;
-	//pMax = smoothstep(LightBleedReduction, 1.0f, pMax);
-	
-	return saturate(pMax);
+    // Reduce light bleeding: remap p_max to suppress low probabilities
+    pMax = ReduceLightBleeding(pMax, VSM_LIGHT_BLEED_REDUCTION);
+
+    return saturate(pMax);
 }
 
 //--------------------------------------------------------------------------------------
