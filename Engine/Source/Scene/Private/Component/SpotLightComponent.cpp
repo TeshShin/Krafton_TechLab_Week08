@@ -9,23 +9,21 @@
 #include "Renderer/Public/Renderer.h"
 #include "Editor/Public/Viewport.h"
 #include "Editor/Public/Camera.h"
-// 카메라 NDC 코너 8개 생성 (z=0: Near, z=1: Far)
+#include "Renderer/Public/ShadowMapManager.h"
+// 카메라 NDC 8코너
 static void BuildCameraNDCCorners(FVector4 OutCorners[8])
 {
-	// Near plane (z=0)
 	OutCorners[0] = FVector4(-1.0f, -1.0f, 0.0f, 1.0f);
 	OutCorners[1] = FVector4(1.0f, -1.0f, 0.0f, 1.0f);
 	OutCorners[2] = FVector4(1.0f, 1.0f, 0.0f, 1.0f);
 	OutCorners[3] = FVector4(-1.0f, 1.0f, 0.0f, 1.0f);
-	// Far plane (z=1)
 	OutCorners[4] = FVector4(-1.0f, -1.0f, 1.0f, 1.0f);
 	OutCorners[5] = FVector4(1.0f, -1.0f, 1.0f, 1.0f);
 	OutCorners[6] = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
 	OutCorners[7] = FVector4(-1.0f, 1.0f, 1.0f, 1.0f);
 }
 
-// 행렬 곱 후 w로 나눠주는 안전한 역투영 유틸
-static FVector4 MultiplyAndProject(const FVector4& Point, const FMatrix& Matrix)
+static FVector4 MultiplyAndDoPerspectiveDivide(const FVector4& Point, const FMatrix& Matrix)
 {
 	FVector4 Result = FMatrix::VectorMultiply(Point, Matrix);
 	if (Result.W != 0.0f)
@@ -38,112 +36,62 @@ static FVector4 MultiplyAndProject(const FVector4& Point, const FMatrix& Matrix)
 	return Result;
 }
 
-// 카메라 절두체 8코너를 월드 공간으로 변환
+// 카메라 역행렬(에디터 카메라 제공)로 NDC 코너 → 월드
 static void BuildCameraFrustumCornersWorld(const UCamera* InCamera, FVector4 OutWorld[8])
 {
-	FCameraConstants Inv = InCamera->GetFViewProjConstantsInverse(); // View=View^-1, Projection=Proj^-1
+	FCameraConstants Inverse = InCamera->GetFViewProjConstantsInverse(); // View=V^-1, Projection=P^-1
 	FVector4 Ndc[8];
 	BuildCameraNDCCorners(Ndc);
 
-	for (int i = 0; i < 8; ++i)
+	for (int32 i = 0; i < 8; ++i)
 	{
-		FVector4 View = MultiplyAndProject(Ndc[i], Inv.Projection);
-		OutWorld[i] = MultiplyAndProject(View, Inv.View);
+		FVector4 View = MultiplyAndDoPerspectiveDivide(Ndc[i], Inverse.Projection);
+		OutWorld[i] = MultiplyAndDoPerspectiveDivide(View, Inverse.View);
 	}
 
 }
 
-// 라이트 투영 뒤 NDC 영역을 [-1,1]^2로 정규화하는 Crop/Warp 행렬 (post-projection 2D warp)
-static FMatrix BuildCropMatrixFromNDC(float MinX, float MaxX, float MinY, float MaxY)
+// 워프된 XY 바운드를 직교 투영으로 하는 행렬(D3D LH, z: 0..1)
+static FMatrix BuildOrthographicFromBounds(float Left, float Right, float Bottom, float Top, float NearZ, float FarZ)
 {
-	// 안전장치: 면적이 0에 가까우면 단위 행렬 반환
-	const float Epsilon = 1e-6f;
-	float ScaleX = 2.0f / std::max(MaxX - MinX, Epsilon);
-	float ScaleY = 2.0f / std::max(MaxY - MinY, Epsilon);
-	float OffsetX = -(MaxX + MinX) * 0.5f;
-	float OffsetY = -(MaxY + MinY) * 0.5f;
-
-	// row-major, row-vector 기준: x' = x*Sx + w*Tx, y' = y*Sy + w*Ty, z' = z, w'=w
-	FMatrix Crop = FMatrix::Identity();
-	Crop.Data[0][0] = ScaleX;
-	Crop.Data[1][1] = ScaleY;
-	Crop.Data[3][0] = OffsetX * ScaleX;
-	Crop.Data[3][1] = OffsetY * ScaleY;
-	// z, w는 그대로
-	return Crop;
-
+	FMatrix P = FMatrix::Identity();
+	P.Data[0][0] = 2.0f / (Right - Left);
+	P.Data[1][1] = 2.0f / (Top - Bottom);
+	P.Data[2][2] = 1.0f / (FarZ - NearZ);
+	P.Data[3][0] = -(Right + Left) / (Right - Left);
+	P.Data[3][1] = -(Top + Bottom) / (Top - Bottom);
+	P.Data[3][2] = -NearZ / (FarZ - NearZ);
+	P.Data[3][3] = 1.0f;
+	return P;
 }
 
-// PSM: View * Proj(Spot FOV) 뒤, 카메라 절두체 기반 Crop/Warp 를 곱해 LightViewProjection 구성
-static FMatrix BuildSpotPSMLightViewProjection(const FMatrix& LightView, float OuterConeAngleDeg, float LightFar)
+// 스포트라이트용 PSM 워프(카메라 근거리 확대 유도): w' = z 형태(프로젝티브), 라이트 View와 SpotPerspective 사이에 둠
+static FMatrix BuildSpotPSMWarp(float NearZ, float FarZ, float Lambda /* 0..1 */ )
 {
-	// 1) 활성 카메라
-	UCamera* ActiveCamera = nullptr;
-	if (URenderer::GetInstance().GetViewportClient())
-	{
-		ActiveCamera = URenderer::GetInstance().GetViewportClient()->GetActiveCamera();
-	}
-	if (!ActiveCamera)
-	{
-		// 카메라가 없으면 기본 대칭 투영으로 반환
-		float Aspect = 1.0f;
-		float FovRad = OuterConeAngleDeg * 2.0f * ToRad;
-		float NearZ = 0.1f;
-		float FarZ = std::max(LightFar, NearZ + 0.1f);
-		FMatrix Proj = FMatrix::CreatePerspectiveFOV(FovRad, Aspect, NearZ, FarZ);
-		return LightView * Proj;
-	}
+	NearZ = std::max(0.01f, NearZ);
+	FarZ = std::max(FarZ, NearZ + 0.01f);
 
-	// 2) 카메라 절두체 8코너 월드 좌표
-	FVector4 CameraWorld[8];
-	BuildCameraFrustumCornersWorld(ActiveCamera, CameraWorld);
+	const float Den = (FarZ - NearZ);
+	const float A = FarZ / Den;
+	const float B = -NearZ * FarZ / Den;
 
-	// 3) 월드 → 라이트 View 변환
-	FVector4 CornersLightView[8];
-	for (int i = 0; i < 8; ++i)
-	{
-		CornersLightView[i] = FMatrix::VectorMultiply(CameraWorld[i], LightView);
-	}
+	// Full PSM: w' = z, z' = A*z + 1*w  (row-vector * matrix)
+	FMatrix Full = FMatrix::Identity();
+	Full.Data[2][2] = A;
+	Full.Data[2][3] = 1.0f;
+	Full.Data[3][2] = B;
+	Full.Data[3][3] = 0.0f;
 
-	// 4) 라이트 투영 근/원거리 안정화: 카메라 절두체 z 범위와 라이트 도달 반경을 고려
-	float MinZ = FLT_MAX;
-	float MaxZ = -FLT_MAX;
-	for (int i = 0; i < 8; ++i)
-	{
-		MinZ = std::min(MinZ, CornersLightView[i].Z);
-		MaxZ = std::max(MaxZ, CornersLightView[i].Z);
-	}
-	// 스포트라이트는 +Z(라이트 전방) 방향으로 보는 것으로 구성했으므로, Near>0이 되도록 보정
-	const float Epsilon = 0.05f;
-	float NearZ = std::max(Epsilon, MinZ);
-	float FarZ = std::max(NearZ + Epsilon, std::min(MaxZ + Epsilon, LightFar));
+	if (Lambda <= 0.0f) return FMatrix::Identity();
+	if (Lambda >= 1.0f) return Full;
 
-	// 5) 기본 대칭 투영(Spot FOV, Aspect=1)
-	float Aspect = 1.0f;
-	float FovRad = OuterConeAngleDeg * 2.0f * ToRad;
-	FMatrix LightProj = FMatrix::CreatePerspectiveFOV(FovRad, Aspect, NearZ, FarZ);
-
-	// 6) 코너들을 Clip→NDC로 변환하여 XY 박스 구하기
-	float MinX = FLT_MAX, MinY = FLT_MAX;
-	float MaxX = -FLT_MAX, MaxY = -FLT_MAX;
-	for (int i = 0; i < 8; ++i)
-	{
-		FVector4 Clip = FMatrix::VectorMultiply(CornersLightView[i], LightProj);
-		// 퍼스펙티브 나눗셈
-		if (Clip.W != 0.0f)
-		{
-			float X = Clip.X / Clip.W;
-			float Y = Clip.Y / Clip.W;
-			MinX = std::min(MinX, X);  MaxX = std::max(MaxX, X);
-			MinY = std::min(MinY, Y);  MaxY = std::max(MaxY, Y);
-		}
-	}
-
-	// 7) 카메라 절두체가 차지하는 NDC 영역을 [-1,1]^2로 누르는 Crop/Warp
-	FMatrix Crop = BuildCropMatrixFromNDC(MinX, MaxX, MinY, MaxY);
-
-	// 최종: View * Proj * Crop  (post-projection 워핑)
-	return LightView * LightProj * Crop;
+	// 람다 보간(안정화)
+	FMatrix Lerp = FMatrix::Identity();
+	Lerp.Data[2][2] = 1.0f + Lambda * (Full.Data[2][2] - 1.0f);
+	Lerp.Data[2][3] = 0.0f + Lambda * (Full.Data[2][3] - 0.0f);
+	Lerp.Data[3][2] = 0.0f + Lambda * (Full.Data[3][2] - 0.0f);
+	Lerp.Data[3][3] = 1.0f + Lambda * (Full.Data[3][3] - 1.0f);
+	return Lerp;
 
 }
 IMPLEMENT_CLASS(USpotLightComponent, UPointLightComponent)
@@ -285,25 +233,93 @@ const FMatrix& USpotLightComponent::GetLightViewProjectionMatrix() const
 
 	return CachedLightViewProjection;
 	*/
-	// 라이트 View 구성(기존 코드 그대로)
+	// 1) LightView
 	const FVector LightPosition = GetWorldLocation();
 	const FVector Right = GetWorldRightVector();
 	const FVector Up = GetWorldUpVector();
 	const FVector Forward = GetWorldForwardVector();
 
 	FMatrix T = FMatrix::TranslationMatrixInverse(LightPosition);
-	FMatrix R = FMatrix(Right, Up, Forward);
-	R = R.Transpose();
-	FMatrix ViewMatrix = T * R;
+	FMatrix R = FMatrix(Right, Up, Forward).Transpose();
+	FMatrix LightView = T * R;
 
-	// 라이트 도달 반경(Spot의 최대 깊이)
-	const float LightFar = GetAttenuationRadius();
+	// 2) 활성 카메라
+	UCamera* ActiveCamera = nullptr;
+	if (URenderer::GetInstance().GetViewportClient())
+	{
+		ActiveCamera = URenderer::GetInstance().GetViewportClient()->GetActiveCamera();
+	}
 
-	// PSM: 카메라 절두체 기반 Crop/Warp를 적용하여 LightViewProjection 생성
-	CachedLightViewProjection =
-		BuildSpotPSMLightViewProjection(ViewMatrix, GetOuterConeAngle(), LightFar);
+	// 카메라가 없으면 유니폼(기존 스팟)으로 폴백
+	if (!ActiveCamera)
+	{
+		float Aspect = 1.0f;
+		float FovRad = GetOuterConeAngle() * 2.0f * ToRad;
+		float NearZ = 0.1f;
+		float FarZ = GetAttenuationRadius();
+		CachedLightViewProjection = LightView * FMatrix::CreatePerspectiveFOV(FovRad, Aspect, NearZ, FarZ);
+		bIsLightVPDirty = false;
+		return CachedLightViewProjection;
+	}
 
-	// 카메라 종속이므로 캐시는 실질적으로 의미가 적습니다. 필요 시 항상 true로 유지해도 됩니다.
+	// 3) 카메라 절두체 코너(World) → 라이트 뷰로 변환
+	FVector4 FrustumWorld[8];
+	BuildCameraFrustumCornersWorld(ActiveCamera, FrustumWorld);
+
+	FVector4 InLightView[8];
+	for (int32 i = 0; i < 8; ++i)
+	{
+		InLightView[i] = FMatrix::VectorMultiply(FrustumWorld[i], LightView);
+	}
+
+	// 4) 워프용 z 범위(라이트 뷰 z) 추정 + 안정화
+	float MinZ = FLT_MAX, MaxZ = -FLT_MAX;
+	for (int32 i = 0; i < 8; ++i)
+	{
+		MinZ = std::min(MinZ, InLightView[i].Z);
+		MaxZ = std::max(MaxZ, InLightView[i].Z);
+	}
+	const float Eps = 0.05f;
+	float WarpNear = std::max(Eps, MinZ);
+	float WarpFar = std::max(WarpNear + Eps, std::min(MaxZ + Eps, GetAttenuationRadius()));
+
+	// 5) 스포트라이트 퍼스펙티브(Spot FOV 유지)
+	const float Aspect = 1.0f;
+	const float FovRad = GetOuterConeAngle() * 2.0f * ToRad;
+	FMatrix SpotPerspective = FMatrix::CreatePerspectiveFOV(FovRad, Aspect, WarpNear, WarpFar);
+
+	// 6) 카메라 기반 PSM 워프(라이트 뷰와 SpotPerspective 사이에 둠)
+	const float Lambda = 0.9f; // 0~1, 0.7~0.9 추천
+	FMatrix WarpPSM = BuildSpotPSMWarp(WarpNear, WarpFar, Lambda);
+
+	// 7) 카메라 절두체를 LightView → WarpPSM → SpotPerspective로 보내 NDC XY 바운드 구함
+	float MinX = FLT_MAX, MinY = FLT_MAX;
+	float MaxX = -FLT_MAX, MaxY = -FLT_MAX;
+	float MinZW = FLT_MAX, MaxZW = -FLT_MAX;
+
+	for (int32 i = 0; i < 8; ++i)
+	{
+		FVector4 Clip = FMatrix::VectorMultiply(InLightView[i], WarpPSM);
+		Clip = FMatrix::VectorMultiply(Clip, SpotPerspective);
+		if (Clip.W != 0.0f)
+		{
+			float X = Clip.X / Clip.W;
+			float Y = Clip.Y / Clip.W;
+			float Z = Clip.Z / Clip.W;
+			MinX = std::min(MinX, X);  MaxX = std::max(MaxX, X);
+			MinY = std::min(MinY, Y);  MaxY = std::max(MaxY, Y);
+			MinZW = std::min(MinZW, Z); MaxZW = std::max(MaxZW, Z);
+		}
+	}
+	// 깊이 여유
+	float OrthoNear = MinZW;
+	float OrthoFar = MaxZW + Eps;
+
+	// 8) 워프 후 XY 바운드를 딱 맞게 채우는 2D Crop(직교)
+	FMatrix Crop = BuildOrthographicFromBounds(MinX, MaxX, MinY, MaxY, OrthoNear, OrthoFar);
+
+	// 9) 최종: LightView × WarpPSM × SpotPerspective × Crop
+	CachedLightViewProjection = LightView * WarpPSM * SpotPerspective * Crop;
 	bIsLightVPDirty = false;
 	return CachedLightViewProjection;
 }
