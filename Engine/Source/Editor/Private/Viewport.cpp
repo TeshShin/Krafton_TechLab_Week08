@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "Editor/Public/Viewport.h"
-#include "Renderer/Public/Renderer.h"
 #include "Manager/Public/ConfigManager.h"
 
 FViewport::~FViewport()
@@ -14,37 +13,16 @@ void FViewport::UpdateCameraSettingsToConfig()
 {
 	auto& ConfigManager = UConfigManager::GetInstance();
 
-	// 현재 이 코드는 Week04에 작성된 코드입니다.
-	//for (int32 Index = 0; Index < ViewportClients.size(); ++Index)
-	//{
-	//	FViewportCameraData Data;
-	//	FViewportClient& Viewport = ViewportClients[Index];
-	//	UCamera& Camera = Viewport.Camera;
-
-	//	// 현재 뷰포트와 카메라의 상태를 FViewportCameraData 구조체에 담습니다.
-	//	Data.ViewportCameraType = Viewport.GetCameraType();
-	//	Data.Location = Camera.GetLocation();
-	//	Data.Rotation = Camera.GetRotation();
-	//	Data.FovY = Camera.GetFovY();
-	//	Data.NearClip = Camera.GetNearZ();
-	//	Data.FarClip = Camera.GetFarZ();
-	//	Data.OrthoWidth = Camera.GetOrthoWidth();
-	//	Data.FocusLocation = this->FocusPoint;
-
-	//	// 완성된 데이터를 ConfigManager에 전달합니다.
-	//	ConfigManager.SetViewportCameraData(Index, Data);
-	//}
-
-
 	for (int32 Index = 0; Index < ViewportClients.size(); ++Index)
-	{		FViewportCameraData Data;
+	{
+		FViewportCameraData Data;
 		FViewportClient& Viewport = ViewportClients[Index];
 		UCamera& Camera = Viewport.Camera;
 
 		// 현재 뷰포트와 카메라의 상태를 FViewportCameraData 구조체에 담습니다.
 		Data.ViewportCameraType = Viewport.GetCameraType();
-		Data.Location = Camera.GetLocation();
-		Data.Rotation = Camera.GetRotation();
+		Data.Location = Camera.GetCameraOnlyLocation();
+		Data.Rotation = Camera.GetCameraOnlyRotation();
 		Data.FovY = Camera.GetFovY();
 		Data.NearClip = Camera.GetNearZ();
 		Data.FarClip = Camera.GetFarZ();

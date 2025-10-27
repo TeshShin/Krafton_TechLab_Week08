@@ -55,6 +55,8 @@ public:
 	FVector CalculatePlaneNormal(const FVector& Axis);
 	const FVector& GetLocation();
 	const FVector& GetRotation();
+	const FVector& GetCameraOnlyLocation() { return RelativeLocation; }
+	const FVector& GetCameraOnlyRotation() { return RelativeRotation; }
 	const FVector& GetForward() const { return ForwardVector; }
 	const FVector& GetUp() const { return UpVector; }
 	const FVector& GetRight() const { return RightVector; }

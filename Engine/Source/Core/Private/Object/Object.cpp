@@ -29,10 +29,26 @@ UObject::~UObject()
 {
 	/** @todo: 이후에 리뷰 필요 */
 
-	// std::vector에 맞는 올바른 인덱스 유효성 검사
-	if (InternalIndex < GetUObjectArray().size())
+	TArray<UObject*>& ObjArray = GetUObjectArray();
+	const size_t IndexToRemove = this->InternalIndex;
+	const size_t LastIndex = ObjArray.size() - 1;
+
+	if (IndexToRemove > LastIndex || ObjArray[IndexToRemove] != this)
 	{
-		GetUObjectArray()[InternalIndex] = nullptr;
+		return;
+	}
+
+	if (IndexToRemove == LastIndex)
+	{
+		ObjArray.pop_back();
+	}
+	else
+	{
+		UObject* LastObject = ObjArray[LastIndex];
+		ObjArray[IndexToRemove] = LastObject;
+
+		LastObject->InternalIndex = IndexToRemove;
+		ObjArray.pop_back();
 	}
 }
 

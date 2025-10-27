@@ -35,7 +35,7 @@ public:
 	FName GetName() { return Name; }
 	void SetName(const FName& InName) { Name = InName; }
 	void SetOuter(UObject* InObject);
-	
+
 	/* *
 	* @brief PIE 시스템에 사용되는 복제 함수입니다. 상속받은 클래스에서 재정의함으로써 조율해야 합니다.
 	*/
@@ -48,6 +48,9 @@ protected:
 private:
 	// 4. Private 멤버 함수
 	void PropagateMemoryChange(uint64 InBytesDelta, uint32 InCountDelta);
+
+public:
+	uint32 GetInternalIndex() const { return InternalIndex; }
 
 private:
 	// 5. Private 멤버 변수
@@ -134,6 +137,8 @@ T* CastChecked(UObject* InObject)
 	return static_cast<T*>(InObject);
 }
 
+TArray<UObject*>& GetUObjectArray();
+
 /**
  * @brief 타입 체크 함수 (캐스팅하지 않고 체크만)
  * @tparam T 체크할 타입
@@ -154,15 +159,19 @@ bool IsA(const UObject* InObject)
 }
 
 /**
- * @brief 유효성과 타입을 동시에 체크하는 함수
- * @tparam T 체크할 타입
+ * @brief 이 Object가 현재 유효한지 확인 (UObjectArray를 전체 순회해 속도 느림)
  * @param InObject 체크할 객체
- * @return 객체가 유효하고 T 타입이면 true
+ * @return 객체가 유효하면 true
  */
-template <typename T>
-bool IsValid(const UObject* InObject)
+inline bool IsValid(const UObject* InObject)
 {
-	return InObject && IsA<T>(InObject);
-}
+	if (InObject == nullptr)
+	{
+		return false;
+	}
 
-TArray<UObject*>& GetUObjectArray();
+	const uint32 Index = InObject->GetInternalIndex();
+	const TArray<UObject*>& ObjArray = GetUObjectArray();
+
+	return (Index < ObjArray.size()) && (ObjArray[Index] == InObject);
+}

@@ -167,16 +167,16 @@ FMatrix FMatrix::ScaleMatrixInverse(const FVector& InOtherVector)
 */
 FMatrix FMatrix::RotationMatrix(const FVector& InOtherVector)
 {
-	// Dx11 yaw(y), pitch(x), roll(z)
-	// UE yaw(z), pitch(y), roll(x)
-	// 회전 축이 바뀌어서 각 회전행렬 함수에 바뀐 값을 적용
+	// InEulerRadian.X = Roll
+	// InEulerRadian.Y = Pitch
+	// InEulerRadian.Z = Yaw
 
-	const float yaw = InOtherVector.Y; // pitch
-	const float pitch = InOtherVector.X; // roll
-	const float roll = InOtherVector.Z; // yaw
-	//return RotationZ(yaw) * RotationY(pitch) * RotationX(roll);
-	//return RotationX(yaw) * RotationY(roll) * RotationZ(pitch);
-	return RotationX(pitch) * RotationY(yaw) * RotationZ(roll);
+	const float Roll = InOtherVector.X;
+	const float Pitch = InOtherVector.Y;
+	const float Yaw = InOtherVector.Z;
+
+	// 적용 순서: Z(Yaw) -> Y(Pitch) -> X(Roll)
+	return RotationX(Roll) * RotationY(Pitch) * RotationZ(Yaw);
 }
 
 FMatrix FMatrix::CreateFromYawPitchRoll(const float yaw, const float pitch, const float roll)

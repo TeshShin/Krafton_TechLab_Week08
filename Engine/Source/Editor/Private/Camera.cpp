@@ -21,6 +21,15 @@ UCamera::~UCamera()
 
 FVector UCamera::UpdateInput()
 {
+	if (bOverrideComponent)
+	{
+		if (!IsValid(OverrideTargetComponent))
+		{
+			bOverrideComponent = false;
+			OverrideTargetComponent = nullptr;
+		}
+	}
+
 	FVector MovementDelta = FVector::Zero(); // 마우스의 변화량을 반환할 객체
 	const UInputManager& Input = UInputManager::GetInstance();
 
@@ -293,7 +302,8 @@ const FVector& UCamera::GetRotation()
 {
 	if (bOverrideComponent && OverrideTargetComponent)
 	{
-		return OverrideTargetComponent->GetWorldRotation();
+		FVector Rotation = OverrideTargetComponent->GetWorldRotation();
+		return FVector(Rotation.X, -Rotation.Y, -Rotation.Z);
 	}
 	else
 	{
