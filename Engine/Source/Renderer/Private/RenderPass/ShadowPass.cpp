@@ -51,7 +51,7 @@ void FShadowPass::Execute(FRenderingContext& Context)
 	ShadowViewport.MinDepth = 0.0f;
 	ShadowViewport.MaxDepth = 1.0f;
 
-	FCameraConstants CamInv = Context.CurrentCamera->GetFViewProjConstantsInverse();
+	FCameraConstants CamInv = Context.CurrentCamera->GetCameraConstantsInverse();
 	FMatrix CameraVPInv = CamInv.Projection * CamInv.View;
     TArray<ID3D11RenderTargetView*> PointRTVs;
 

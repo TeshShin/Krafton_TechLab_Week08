@@ -34,12 +34,12 @@ FVector UCamera::UpdateInput()
 		 */
 		FVector Direction = FVector::Zero();
 
-		if (Input.IsKeyDown(EKeyInput::A)) { Direction += -Right; }
-		if (Input.IsKeyDown(EKeyInput::D)) { Direction += Right; }
-		if (Input.IsKeyDown(EKeyInput::W)) { Direction += Forward; }
-		if (Input.IsKeyDown(EKeyInput::S)) { Direction += -Forward; }
-		if (Input.IsKeyDown(EKeyInput::Q)) { Direction += -Up; }
-		if (Input.IsKeyDown(EKeyInput::E)) { Direction += Up; }
+		if (Input.IsKeyDown(EKeyInput::A)) { Direction += -RightVector; }
+		if (Input.IsKeyDown(EKeyInput::D)) { Direction += RightVector; }
+		if (Input.IsKeyDown(EKeyInput::W)) { Direction += ForwardVector; }
+		if (Input.IsKeyDown(EKeyInput::S)) { Direction += -ForwardVector; }
+		if (Input.IsKeyDown(EKeyInput::Q)) { Direction += -UpVector; }
+		if (Input.IsKeyDown(EKeyInput::E)) { Direction += UpVector; }
 		if (Direction.LengthSquared() > MATH_EPSILON)
 		{
 			Direction.Normalize();
@@ -87,12 +87,12 @@ void UCamera::Update(const D3D11_VIEWPORT& InViewport)
 	const FVector4 WorldUp4 = FVector4::UpVector() * RotationMatrix;
 	const FVector WorldUp = { WorldUp4.X, WorldUp4.Y, WorldUp4.Z };
 
-	Forward = FVector(Forward4.X, Forward4.Y, Forward4.Z);
-	Forward.Normalize();
-	Right = WorldUp.Cross(Forward);
-	Right.Normalize();
-	Up = Forward.Cross(Right);
-	Up.Normalize();
+	ForwardVector = FVector(Forward4.X, Forward4.Y, Forward4.Z);
+	ForwardVector.Normalize();
+	RightVector = WorldUp.Cross(ForwardVector);
+	RightVector.Normalize();
+	UpVector = ForwardVector.Cross(RightVector);
+	UpVector.Normalize();
 
 	// 종횡비 갱신
 	if (InViewport.Width > 0.f && InViewport.Height > 0.f)
@@ -126,31 +126,43 @@ void UCamera::Update(const D3D11_VIEWPORT& InViewport)
 void UCamera::UpdateMatrixByPers()
 {
 	/**
-	 * @brief View 행렬 연산 (헬퍼 함수로 대체)
+	 * @brief 표준 View/Projection 행렬 연산
 	 */
-	CameraConstants.View = FMatrix::CreateViewFromAxes(RelativeLocation, Right, Up, Forward);
-
-	/**
-	 * @brief Projection 행렬 연산 (기존과 동일)
-	 */
+	CameraConstants.View = FMatrix::CreateViewFromAxes(RelativeLocation, RightVector, UpVector, ForwardVector);
 	const float RadianFovY = FVector::GetDegreeToRadian(FovY);
 	CameraConstants.Projection = FMatrix::CreatePerspectiveFOV(RadianFovY, Aspect, NearZ, FarZ);
-
 	CameraConstants.ViewWorldLocation = RelativeLocation;
 	CameraConstants.NearClip = NearZ;
 	CameraConstants.FarClip = FarZ;
+
+	/**
+	 * @brief 역행렬(Inverse)을 미리 계산하여 캐시
+	 */
+	FMatrix R_Inv = FMatrix(RightVector, UpVector, ForwardVector);
+	FMatrix T_Inv = FMatrix::TranslationMatrix(RelativeLocation);
+	InverseCameraConstants.View = R_Inv * T_Inv;
+
+	const float F = 1.0f / std::tanf(RadianFovY * 0.5f);
+	FMatrix P_Inv = FMatrix::Identity();
+	P_Inv.Data[0][0] = Aspect / F;
+	P_Inv.Data[1][1] = 1.0f / F;
+	P_Inv.Data[2][2] = 0.0f;
+	P_Inv.Data[2][3] = -(FarZ - NearZ) / (NearZ * FarZ);
+	P_Inv.Data[3][2] = 1.0f;
+	P_Inv.Data[3][3] = FarZ / (NearZ * FarZ);
+	InverseCameraConstants.Projection = P_Inv;
+	InverseCameraConstants.ViewWorldLocation = RelativeLocation;
+	InverseCameraConstants.NearClip = NearZ;
+	InverseCameraConstants.FarClip = FarZ;
 }
 
 void UCamera::UpdateMatrixByOrth()
 {
 	/**
-		 * @brief View 행렬 연산 (헬퍼 함수로 대체)
+		 * @brief 표준 View/Projection 행렬 연산
 		 */
-	CameraConstants.View = FMatrix::CreateViewFromAxes(RelativeLocation, Right, Up, Forward);
+	CameraConstants.View = FMatrix::CreateViewFromAxes(RelativeLocation, RightVector, UpVector, ForwardVector);
 
-	/**
-	 * @brief Projection 행렬 연산 (헬퍼 함수로 대체)
-	 */
 	const float OrthoHeight = OrthoWidth / Aspect;
 	const float Left = -OrthoWidth * 0.5f;
 	const float Right = OrthoWidth * 0.5f;
@@ -158,64 +170,35 @@ void UCamera::UpdateMatrixByOrth()
 	const float Top = OrthoHeight * 0.5f;
 
 	CameraConstants.Projection = FMatrix::CreateOrthographicOffCenter(Left, Right, Bottom, Top, NearZ, FarZ);
-
 	CameraConstants.ViewWorldLocation = RelativeLocation;
 	CameraConstants.NearClip = NearZ;
 	CameraConstants.FarClip = FarZ;
+
+	/**
+	 * @brief 역행렬(Inverse)을 미리 계산하여 캐시
+	 */
+	// View Inverse = R * T
+	FMatrix R_Inv = FMatrix(RightVector, UpVector, ForwardVector);
+	FMatrix T_Inv = FMatrix::TranslationMatrix(RelativeLocation);
+	InverseCameraConstants.View = R_Inv * T_Inv;
+
+	FMatrix P_Inv = FMatrix::Identity();
+	P_Inv.Data[0][0] = (Right - Left) * 0.5f;  // (r-l)/2
+	P_Inv.Data[1][1] = (Top - Bottom) * 0.5f; // (t-b)/2
+	P_Inv.Data[2][2] = (FarZ - NearZ);        // (zf-zn)
+	P_Inv.Data[3][0] = (Right + Left) * 0.5f;  // (r+l)/2
+	P_Inv.Data[3][1] = (Top + Bottom) * 0.5f; // (t+b)/2
+	P_Inv.Data[3][2] = NearZ;                 // zn
+	P_Inv.Data[3][3] = 1.0f;
+	InverseCameraConstants.Projection = P_Inv;
+	InverseCameraConstants.ViewWorldLocation = RelativeLocation;
+	InverseCameraConstants.NearClip = NearZ;
+	InverseCameraConstants.FarClip = FarZ;
 }
 
-const FCameraConstants UCamera::GetFViewProjConstantsInverse() const
+const FCameraConstants& UCamera::GetCameraConstantsInverse() const
 {
-	/*
-	* @brief View^(-1) = R * T
-	*/
-	FCameraConstants Result = {};
-	FMatrix R = FMatrix(Right, Up, Forward);
-	FMatrix T = FMatrix::TranslationMatrix(RelativeLocation);
-	Result.View = R * T;
-
-	if (CameraType == ECameraType::ECT_Orthographic)
-	{
-		const float OrthoHeight = OrthoWidth / Aspect;
-		const float Left = -OrthoWidth * 0.5f;
-		const float Right = OrthoWidth * 0.5f;
-		const float Bottom = -OrthoHeight * 0.5f;
-		const float Top = OrthoHeight * 0.5f;
-
-		FMatrix P = FMatrix::Identity();
-		// A^{-1} (대각)
-		P.Data[0][0] = (Right - Left) * 0.5f;  // (r-l)/2
-		P.Data[1][1] = (Top - Bottom) * 0.5f; // (t-b)/2
-		P.Data[2][2] = (FarZ - NearZ);               // (zf-zn)
-		// -b A^{-1} (마지막 행의 x,y,z)
-		P.Data[3][0] = (Right + Left) * 0.5f;   // (r+l)/2
-		P.Data[3][1] = (Top + Bottom) * 0.5f; // (t+b)/2
-		P.Data[3][2] = NearZ;                      // zn
-		P.Data[3][3] = 1.0f;
-		Result.Projection = P;
-	}
-	else if ((CameraType == ECameraType::ECT_Perspective))
-	{
-		const float FovRadian = FVector::GetDegreeToRadian(FovY);
-		const float F = 1.0f / std::tanf(FovRadian * 0.5f);
-		FMatrix P = FMatrix::Identity();
-		// | aspect/F   0      0         0 |
-		// |    0      1/F     0         0 |
-		// |    0       0      0   -(zf-zn)/(zn*zf) |
-		// |    0       0      1        zf/(zn*zf)  |
-		P.Data[0][0] = Aspect / F;
-		P.Data[1][1] = 1.0f / F;
-		P.Data[2][2] = 0.0f;
-		P.Data[2][3] = -(FarZ - NearZ) / (NearZ * FarZ);
-		P.Data[3][2] = 1.0f;
-		P.Data[3][3] = FarZ / (NearZ * FarZ);
-		Result.Projection = P;
-	}
-
-	Result.ViewWorldLocation = RelativeLocation;
-	Result.NearClip = NearZ;
-	Result.FarClip = FarZ;
-	return Result;
+	return InverseCameraConstants;
 }
 
 FRay UCamera::ConvertToWorldRay(float NdcX, float NdcY) const
@@ -225,7 +208,7 @@ FRay UCamera::ConvertToWorldRay(float NdcX, float NdcY) const
 	 */
 	FRay Ray = {};
 
-	const FCameraConstants& ViewProjMatrix = GetFViewProjConstantsInverse();
+	const FCameraConstants& ViewProjMatrix = GetCameraConstantsInverse();
 
 	/* *
 	 * @brief NDC 좌표 정보를 행렬로 변환합니다.
@@ -279,5 +262,5 @@ FRay UCamera::ConvertToWorldRay(float NdcX, float NdcY) const
 
 FVector UCamera::CalculatePlaneNormal(const FVector& Axis)
 {
-	return FVector(Axis.X, Axis.Y, Axis.Z).Cross(Forward);
+	return FVector(Axis.X, Axis.Y, Axis.Z).Cross(ForwardVector);
 }

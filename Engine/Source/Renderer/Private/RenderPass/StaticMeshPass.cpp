@@ -143,7 +143,7 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 	FForwardPlusCameraConstants FPcam = {};
 	FPcam.View        = CurrentCamera->GetCameraConstants().View;                // row_major
 	FPcam.Proj        = CurrentCamera->GetCameraConstants().Projection;          // row_major
-	FPcam.InvProj     = CurrentCamera->GetFViewProjConstantsInverse().Projection;
+	FPcam.InvProj     = CurrentCamera->GetCameraConstantsInverse().Projection;
     FPcam.ScreenSize  = {Width, Height};
     FPcam.ViewportOrigin = { static_cast<uint32>(Context.Viewport.TopLeftX), static_cast<uint32>(Context.Viewport.TopLeftY) };
 	FPcam.NumTilesX   = NumTilesX;
@@ -424,7 +424,7 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 	TArray<FUnifiedDynamicLight> UnifiedLights;
 	SpotLightMatrices.resize(FShadowMapManager::GetInstance().GetMaxSpotShadows());
 
-	FCameraConstants CamInv = Context.CurrentCamera->GetFViewProjConstantsInverse();
+	FCameraConstants CamInv = Context.CurrentCamera->GetCameraConstantsInverse();
 	FMatrix CameraVPInv = CamInv.Projection * CamInv.View;
 	for (ULightComponentBase* Light : Context.Lights)
 	{

@@ -48,16 +48,16 @@ public:
 	 * @brief Getter
 	 */
 	const FCameraConstants& GetCameraConstants() const { return CameraConstants; }
-	const FCameraConstants GetFViewProjConstantsInverse() const;
+	const FCameraConstants& GetCameraConstantsInverse() const;
 
 	FRay ConvertToWorldRay(float NdcX, float NdcY) const;
 
 	FVector CalculatePlaneNormal(const FVector& Axis);
 	FVector& GetLocation() { return RelativeLocation; }
 	FVector& GetRotation() { return RelativeRotation; }
-	const FVector& GetForward() const { return Forward; }
-	const FVector& GetUp() const { return Up; }
-	const FVector& GetRight() const { return Right; }
+	const FVector& GetForward() const { return ForwardVector; }
+	const FVector& GetUp() const { return UpVector; }
+	const FVector& GetRight() const { return RightVector; }
 	float GetFovY() const { return FovY; }
 	float GetAspect() const { return Aspect; }
 	float GetNearZ() const { return NearZ; }
@@ -88,11 +88,12 @@ public:
 
 private:
 	FCameraConstants CameraConstants = {};
+	FCameraConstants InverseCameraConstants = {};
 	FVector RelativeLocation = {};
 	FVector RelativeRotation = {};
-	FVector Forward = { 1,0,0 };
-	FVector Up = {0,0,1};
-	FVector Right = {0,1,0};
+	FVector ForwardVector = { 1,0,0 };
+	FVector UpVector = {0,0,1};
+	FVector RightVector = {0,1,0};
 	float FovY = {};
 	float Aspect = {};
 	float NearZ = {};
