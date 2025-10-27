@@ -373,7 +373,6 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Editor\Public\UI\Widget\ActorDetailWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\ActorSpawnWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\ActorTerminationWidget.h" />
-    <ClInclude Include="Source\Editor\Public\UI\Widget\CameraControlWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\BillboardComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\ComponentWidget.h" />
     <ClInclude Include="Source\Editor\Public\UI\Widget\Component\DecalTextureSelectionWidget.h" />
@@ -577,8 +576,6 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClCompile Include="Source\Editor\Private\UI\Widget\ActorSpawnWidget.cpp">
     </ClCompile>
     <ClCompile Include="Source\Editor\Private\UI\Widget\ActorTerminationWidget.cpp">
-    </ClCompile>
-    <ClCompile Include="Source\Editor\Private\UI\Widget\CameraControlWIdget.cpp">
     </ClCompile>
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\DecalTextureSelectionWidget.cpp">
     </ClCompile>
