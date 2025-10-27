@@ -231,7 +231,7 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
     RTVTexDesc.Height = PointResolution;
     RTVTexDesc.MipLevels = 1;
     RTVTexDesc.ArraySize = MaxPointShadowCubes * 6;
-    RTVTexDesc.Format = DXGI_FORMAT_R32G32_TYPELESS;
+    RTVTexDesc.Format = DXGI_FORMAT_R32_TYPELESS;
     RTVTexDesc.SampleDesc.Count = 1;
     RTVTexDesc.SampleDesc.Quality = 0;
     RTVTexDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -248,7 +248,7 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
 
     // --- SRV ---
     D3D11_SHADER_RESOURCE_VIEW_DESC PointSrvDesc = {};
-    PointSrvDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+    PointSrvDesc.Format = DXGI_FORMAT_R32_FLOAT; // R32G32 로 바꿔야함
     PointSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
     PointSrvDesc.TextureCubeArray.MostDetailedMip = 0;
     PointSrvDesc.TextureCubeArray.MipLevels = 1;
@@ -281,7 +281,7 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
 
     // --- RTV Array ---
     D3D11_RENDER_TARGET_VIEW_DESC PointRtvDesc = {};
-    PointRtvDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+    PointRtvDesc.Format = DXGI_FORMAT_R32_FLOAT;
     PointRtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
     PointRtvDesc.Texture2DArray.MipSlice = 0;
 
@@ -376,8 +376,8 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 	D3D11_SHADER_RESOURCE_VIEW_DESC MomentsSRVDesc = {};
 	MomentsSRVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
 	MomentsSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	MomentsSRVDesc.Texture2DArray.MostDetailedMip = 0;
-	MomentsSRVDesc.Texture2DArray.MipLevels = 1;
+	MomentsSRVDesc.Texture2D.MostDetailedMip = 0;
+	MomentsSRVDesc.Texture2D.MipLevels = 1;
 	hr = Device->CreateShaderResourceView(DirShadowMomentTexture, &MomentsSRVDesc, &DirShadowMomentSRV);
 	if (FAILED(hr))
 	{
@@ -601,7 +601,7 @@ void FShadowMapManager::InitializeForDebug()
         Desc.Height = SrcDesc.Height;
         Desc.MipLevels = 1;
         Desc.ArraySize = 1;
-        Desc.Format = DXGI_FORMAT_R32G32_FLOAT;
+        Desc.Format = DXGI_FORMAT_R32_FLOAT;
         Desc.SampleDesc.Count = 1;
         Desc.Usage = D3D11_USAGE_DEFAULT;
         Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
@@ -619,15 +619,15 @@ void FShadowMapManager::InitializeForDebug()
     	}
 
         // SRV 생성
-        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-        srvDesc.Format = Desc.Format;
-        srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        srvDesc.Texture2D.MostDetailedMip = 0;
-        srvDesc.Texture2D.MipLevels = 1;
+        D3D11_SHADER_RESOURCE_VIEW_DESC SrvDesc = {};
+        SrvDesc.Format = Desc.Format;
+        SrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        SrvDesc.Texture2D.MostDetailedMip = 0;
+        SrvDesc.Texture2D.MipLevels = 1;
 
     	for (uint32 Idx = 0; Idx < 6; Idx++)
     	{
-    		hr = Device->CreateShaderResourceView(ImGuiDebugTextures_Point[Idx], &srvDesc, &ImGuiDebugSRVs_Point[Idx]);
+    		hr = Device->CreateShaderResourceView(ImGuiDebugTextures_Point[Idx], &SrvDesc, &ImGuiDebugSRVs_Point[Idx]);
     		if (FAILED(hr))
     		{
     			UE_LOG_ERROR("[ShadowMapManager] Failed to create Point Debug SRV.");

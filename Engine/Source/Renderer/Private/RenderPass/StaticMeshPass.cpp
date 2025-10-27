@@ -421,7 +421,7 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 {
 	Pipeline->SetSRV(13, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetSpotLightSRV());
 	Pipeline->SetSRV(14, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetSpotMomentsSRV());
-	Pipeline->SetSRV(15, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetPointLightSRV_PCF());
+	Pipeline->SetSRV(15, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetPointLightSRV()); // PCF 용으로 바꿔야함
 	Pipeline->SetSRV(16, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetPointLightSRV());
 	Pipeline->SetSRV(17, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetDirectionalLightSRV());
 	Pipeline->SetSRV(18, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetDirectionalMomentSRV());

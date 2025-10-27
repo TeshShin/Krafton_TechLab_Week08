@@ -73,7 +73,6 @@ public:
 	ID3D11ShaderResourceView* GetDirectionalMomentSRV() const { return DirShadowMomentSRV; }
 	ID3D11RenderTargetView* GetDirectionalMomentRTV() const { return DirShadowMomentRTV; }
 
-
 private:
     // D3D11 핵심 오브젝트
     ID3D11Device* Device = nullptr;
