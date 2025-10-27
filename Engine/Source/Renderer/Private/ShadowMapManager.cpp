@@ -24,7 +24,7 @@ void FShadowMapManager::Initalize(uint32 InMaxShadows, uint32 InResolution)
 
     Resolution = InResolution;
     MaxShadows = InMaxShadows;
-	    
+
     // --- Texture2DArray ---
     D3D11_TEXTURE2D_DESC TexDesc = {};
     TexDesc.Width = Resolution;
@@ -41,7 +41,9 @@ void FShadowMapManager::Initalize(uint32 InMaxShadows, uint32 InResolution)
 
     HRESULT hr = Device->CreateTexture2D(&TexDesc, nullptr, &ShadowMapArrayTexture);
     if (FAILED(hr))
-        { return; }
+    {
+        return;
+    }
 
 	// --- SRV ---
     D3D11_SHADER_RESOURCE_VIEW_DESC SrvDesc = {};
@@ -54,7 +56,9 @@ void FShadowMapManager::Initalize(uint32 InMaxShadows, uint32 InResolution)
 
     hr = Device->CreateShaderResourceView(ShadowMapArrayTexture, &SrvDesc, &ShadowMapArraySRV);
     if (FAILED(hr))
-    	{ return; }
+    {
+	    return;
+    }
 
 	// --- DSV ---
     D3D11_DEPTH_STENCIL_VIEW_DESC DsvDesc = {};
@@ -92,6 +96,13 @@ void FShadowMapManager::Initalize(uint32 InMaxShadows, uint32 InResolution)
 	SamplerDesc.MinLOD = 0;
 	SamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 
+	hr = Device->CreateSamplerState(&SamplerDesc, &ShadowMapSamplerState);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	InitializeForDebug(Device);
     hr = Device->CreateSamplerState(&SamplerDesc, &ShadowMapSamplerState);
     if (FAILED(hr))
         { return; }
@@ -210,4 +221,52 @@ ID3D11DepthStencilView* FShadowMapManager::GetDSV(uint32 ShadowMapIdx) const
 		return ShadowMapSliceDSVs[ShadowMapIdx];
 	}
 	return nullptr;
+}
+
+void FShadowMapManager::InitializeForDebug(ID3D11Device* Device)
+{
+	// --- ImGui 디버그용 텍스처 생성 ---
+	D3D11_TEXTURE2D_DESC DebugTexDesc = {};
+	ShadowMapArrayTexture->GetDesc(&DebugTexDesc);
+	DebugTexDesc.ArraySize = 1;
+	DebugTexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	DebugTexDesc.Usage = D3D11_USAGE_DEFAULT;
+	DebugTexDesc.MiscFlags = 0;
+	DebugTexDesc.Format = DXGI_FORMAT_R32_FLOAT;
+
+	HRESULT hr = Device->CreateTexture2D(&DebugTexDesc, nullptr, &ImGuiDebugTexture);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	// --- ImGui 디버그용 SRV 생성 ---
+	D3D11_SHADER_RESOURCE_VIEW_DESC SrvDesc = {};
+	SrvDesc.Format = DebugTexDesc.Format;
+	SrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	SrvDesc.Texture2D.MostDetailedMip = 0;
+	SrvDesc.Texture2D.MipLevels = 1;
+
+	hr = Device->CreateShaderResourceView(ImGuiDebugTexture, &SrvDesc, &ImGuiDebugSRV);
+	if (FAILED(hr))
+	{
+		return;
+	}
+}
+
+ID3D11ShaderResourceView* FShadowMapManager::GetSRVForImGuiDebug(uint32 ShadowMapIdx)
+{
+	ID3D11DeviceContext* Context = URenderer::GetInstance().GetDeviceContext();
+	if (ShadowMapIdx >= MaxShadows || !Context || !ShadowMapArrayTexture || !ImGuiDebugTexture) { return nullptr; }
+
+	UINT SrcMipLevels = 1;
+	UINT SrcSubresource = D3D11CalcSubresource(0, ShadowMapIdx, SrcMipLevels);
+	UINT DstSubresource = 0;
+
+	Context->CopySubresourceRegion(
+		ImGuiDebugTexture, DstSubresource, 0, 0, 0,
+		ShadowMapArrayTexture, SrcSubresource, nullptr
+	);
+
+	return ImGuiDebugSRV;
 }
