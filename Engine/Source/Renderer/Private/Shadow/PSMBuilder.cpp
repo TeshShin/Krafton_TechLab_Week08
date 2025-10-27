@@ -149,7 +149,7 @@ bool FPSMBuilder::BuildSpotLightPSM(
 	const float Aspect = 1.0f;
 	const float FovRad = OuterConeAngleDegrees * 2.0f * ToRad;
 	const float DotAbs = std::abs(Camera->GetForward().Dot(LightForward));
-	const float Lambda = LerpFloat(0.15f, 0.85f, DotAbs);
+	const float Lambda = 1.0f;
 
 	FMatrix Warp = BuildPSMWarp(WarpNear, WarpFar, Lambda);
 	FMatrix Persp = FMatrix::CreatePerspectiveFOV(FovRad, Aspect, WarpNear, WarpFar);
@@ -225,7 +225,7 @@ bool FPSMBuilder::BuildDirectionalLightPSM(
 	const float WarpFar = std::max(WarpNear + Eps, MaxZ + Eps);
 
 	const float DotAbs = std::abs(Camera->GetForward().Dot(Forward));
-	const float Lambda = LerpFloat(0.15f, 0.85f, DotAbs);
+	const float Lambda = 1.0f;
 	FMatrix Warp = BuildPSMWarp(WarpNear, WarpFar, Lambda);
 
 	float MinX = FLT_MAX, MinY = FLT_MAX, MinZW = FLT_MAX;
