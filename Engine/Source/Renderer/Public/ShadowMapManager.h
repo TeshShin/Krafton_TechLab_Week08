@@ -44,6 +44,7 @@ public:
      * 공용 섀도우 샘플러 반환
      */
     ID3D11SamplerState* GetSamplerState() const { return ShadowMapSamplerState; }
+	ID3D11SamplerState* GetMomentSampler() const { return MomentSamplerState; }
 
 	uint32 GetResolution(class ULightComponentBase* Light) const;
 
@@ -53,23 +54,25 @@ public:
     uint32 GetSpotResolution() const { return SpotResolution; }
 	uint32 GetMaxSpotShadows() const { return MaxSpotShadows; }
 
+	ID3D11ShaderResourceView* GetSpotMomentsSRV() const { return SpotShadowMomentsSRV; }
+	ID3D11RenderTargetView* GetSpotMomentsRTV(uint32 SpotShadowIdx) const { return SpotShadowMomentsSliceRTVs[SpotShadowIdx]; }
+
     // --- Point Light Getters ---
 	void GetPointShadowRTVs(class ULightComponentBase* Light, TArray<ID3D11RenderTargetView*>& OutRTVs) const;
 	ID3D11DepthStencilView* GetPointShadowDepthDSV() const { return PointShadowDepthDSV; }
     ID3D11ShaderResourceView* GetPointLightSRV() const { return PointShadowCubeArraySRV; }
+    ID3D11ShaderResourceView* GetPointLightSRV_PCF() const { return PointShadowCubeArraySRV_PCF; }
     uint32 GetPointResolution() const { return PointResolution; }
 	uint32 GetMaxPointShadowCubes() const { return MaxPointShadowCubes; }
 
 	// --- Directional Light Getters ---
-	ID3D11ShaderResourceView* GetDirectionalLightSRV() const { return DirLightShadowSRV; }
-	ID3D11DepthStencilView* GetDirectionalLightDSV() const { return DirLightShadowDSV; }
-	uint32 GetDirectionalResolution() const { return DirLightResolution; }
-	// VSM moments resources
-	ID3D11ShaderResourceView* GetMomentsSRV() const { return ShadowMomentsSRV; }
-	ID3D11RenderTargetView* GetMomentsRTV(uint32 ShadowMapIdx) const { return ShadowMomentsSliceRTVs[ShadowMapIdx]; }
-	ID3D11SamplerState* GetLinearSampler() const { return ShadowLinearSamplerState; }
+	ID3D11ShaderResourceView* GetDirectionalLightSRV() const { return DirShadowSRV; }
+	ID3D11DepthStencilView* GetDirectionalLightDSV() const { return DirShadowDSV; }
+	uint32 GetDirectionalResolution() const { return DirResolution; }
 
-	uint32 GetResolution() const { return Resolution; }
+	ID3D11ShaderResourceView* GetDirectionalMomentSRV() const { return DirShadowMomentSRV; }
+	ID3D11RenderTargetView* GetDirectionalMomentRTV() const { return DirShadowMomentRTV; }
+
 
 private:
     // D3D11 핵심 오브젝트
@@ -79,7 +82,7 @@ private:
     // 공용 샘플러
     ID3D11SamplerState* ShadowMapSamplerState = nullptr;
 
-    // --- SpotLight 리소스 풀 ---
+    // --- SpotLight 리소스 ---
     uint32 MaxSpotShadows = 0;
     uint32 SpotResolution = 0;
     uint32 CurrentSpotShadowIdx = 0;
@@ -88,30 +91,35 @@ private:
     ID3D11ShaderResourceView* SpotShadowMapArraySRV = nullptr; // D3D11_SRV_DIMENSION_TEXTURE2DARRAY
     TArray<ID3D11DepthStencilView*> SpotShadowMapSliceDSVs;
 
-    // --- PointLight 리소스 풀 ---
+	ID3D11Texture2D* SpotShadowMomentsArrayTexture = nullptr;
+	ID3D11ShaderResourceView* SpotShadowMomentsSRV = nullptr;
+	TArray<ID3D11RenderTargetView*> SpotShadowMomentsSliceRTVs;
+
+    // --- PointLight 리소스 ---
     uint32 MaxPointShadowCubes = 0;
     uint32 PointResolution = 0;
     uint32 CurrentPointCubeIdx = 0; // 큐브 기준 인덱스
 
     ID3D11Texture2D* PointShadowCubeArrayTexture = nullptr; // D3D11_RESOURCE_MISC_TEXTURECUBE 플래그 포함
     ID3D11ShaderResourceView* PointShadowCubeArraySRV = nullptr; // D3D11_SRV_DIMENSION_TEXTURECUBEARRAY
+    ID3D11ShaderResourceView* PointShadowCubeArraySRV_PCF = nullptr;
     TArray<ID3D11RenderTargetView*> PointShadowCubeSliceRTVs; // (크기: MaxPointShadowCubes * 6)
 	ID3D11Texture2D* PointShadowDepthTexture = nullptr;
 	ID3D11DepthStencilView* PointShadowDepthDSV = nullptr;
 
-	// --- Directional Light 리소스 ---
+	// --- DirectionalLight 리소스 ---
 	bool bIsDirShadowAllocated = false;
-	uint32 DirLightResolution = 0;
-	ID3D11Texture2D* DirLightShadowTexture = nullptr;
-	ID3D11ShaderResourceView* DirLightShadowSRV = nullptr;
-	ID3D11DepthStencilView* DirLightShadowDSV = nullptr;
+	uint32 DirResolution = 0;
+	ID3D11Texture2D* DirShadowTexture = nullptr;
+	ID3D11ShaderResourceView* DirShadowSRV = nullptr;
+	ID3D11DepthStencilView* DirShadowDSV = nullptr;
 
-	// Debug Section
-	// VSM Moments (RG32F) as color render targets
-	ID3D11Texture2D* ShadowMomentsArrayTexture = nullptr;
-	ID3D11ShaderResourceView* ShadowMomentsSRV = nullptr;
-	TArray<ID3D11RenderTargetView*> ShadowMomentsSliceRTVs;
-	ID3D11SamplerState* ShadowLinearSamplerState = nullptr;
+	ID3D11Texture2D* DirShadowMomentTexture = nullptr;
+	ID3D11ShaderResourceView* DirShadowMomentSRV = nullptr;
+	ID3D11RenderTargetView* DirShadowMomentRTV = nullptr;
+
+	// --- VSM Moments (RG32F) 리소스 ---
+	ID3D11SamplerState* MomentSamplerState = nullptr;
 
 // Debug Section
 public:

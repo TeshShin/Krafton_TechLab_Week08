@@ -27,63 +27,7 @@ void FShadowMapManager::Initialize(uint32 InMaxSpotShadows, uint32 InSpotResolut
 	InitializePointShadows(InMaxPointShadowCubes, InPointResolution);
 	InitializeDirectionalShadow(InDirLightResolution);
 
-    // --- Texture2DArray ---
-    D3D11_TEXTURE2D_DESC TexDesc = {};
-    TexDesc.Width = Resolution;
-    TexDesc.Height = Resolution;
-    TexDesc.MipLevels = 1;
-    TexDesc.ArraySize = MaxShadows;
-    TexDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-    TexDesc.SampleDesc.Count = 1;
-    TexDesc.SampleDesc.Quality = 0;
-    TexDesc.Usage = D3D11_USAGE_DEFAULT;
-    TexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
-    TexDesc.CPUAccessFlags = 0;
-    TexDesc.MiscFlags = 0;
-
-    HRESULT hr = Device->CreateTexture2D(&TexDesc, nullptr, &ShadowMapArrayTexture);
-    if (FAILED(hr))
-    {
-        return;
-    }
-
-	// --- SRV ---
-    D3D11_SHADER_RESOURCE_VIEW_DESC SrvDesc = {};
-    SrvDesc.Format = DXGI_FORMAT_R32_FLOAT;
-    SrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-    SrvDesc.Texture2DArray.MostDetailedMip = 0;
-    SrvDesc.Texture2DArray.MipLevels = 1;
-    SrvDesc.Texture2DArray.FirstArraySlice = 0;
-    SrvDesc.Texture2DArray.ArraySize = MaxShadows;
-
-    hr = Device->CreateShaderResourceView(ShadowMapArrayTexture, &SrvDesc, &ShadowMapArraySRV);
-    if (FAILED(hr))
-    {
-	    return;
-    }
-
-	// --- DSV ---
-    D3D11_DEPTH_STENCIL_VIEW_DESC DsvDesc = {};
-    DsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
-    DsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-    DsvDesc.Texture2DArray.MipSlice = 0;
-    ShadowMapSliceDSVs.resize(MaxShadows);
-
-    for (uint32 i = 0; i < MaxShadows; ++i)
-    {
-        DsvDesc.Texture2DArray.FirstArraySlice = i;
-        DsvDesc.Texture2DArray.ArraySize = 1;
-
-        hr = Device->CreateDepthStencilView(ShadowMapArrayTexture, &DsvDesc, &ShadowMapSliceDSVs[i]);
-        if (FAILED(hr))
-        {
-            ShadowMapSliceDSVs.clear();
-            return;
-        }
-    }
-
     D3D11_SAMPLER_DESC SamplerDesc = {};
-	//SamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
 	SamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 	SamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
 	SamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
@@ -110,52 +54,8 @@ void FShadowMapManager::Initialize(uint32 InMaxSpotShadows, uint32 InSpotResolut
     if (FAILED(hr))
         { return; }
 
-    // --- Moments Texture2DArray (RG32_FLOAT) for VSM ---
-    D3D11_TEXTURE2D_DESC MomentsDesc = {};
-    MomentsDesc.Width = Resolution;
-    MomentsDesc.Height = Resolution;
-    MomentsDesc.MipLevels = 1;
-    MomentsDesc.ArraySize = MaxShadows;
-    MomentsDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
-    MomentsDesc.SampleDesc.Count = 1;
-    MomentsDesc.SampleDesc.Quality = 0;
-    MomentsDesc.Usage = D3D11_USAGE_DEFAULT;
-    MomentsDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
-    MomentsDesc.CPUAccessFlags = 0;
-    MomentsDesc.MiscFlags = 0;
 
-    hr = Device->CreateTexture2D(&MomentsDesc, nullptr, &ShadowMomentsArrayTexture);
-    if (FAILED(hr)) { return; }
-
-    // SRV for moments
-    D3D11_SHADER_RESOURCE_VIEW_DESC MomentsSRVDesc = {};
-    MomentsSRVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
-    MomentsSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-    MomentsSRVDesc.Texture2DArray.MostDetailedMip = 0;
-    MomentsSRVDesc.Texture2DArray.MipLevels = 1;
-    MomentsSRVDesc.Texture2DArray.FirstArraySlice = 0;
-    MomentsSRVDesc.Texture2DArray.ArraySize = MaxShadows;
-    hr = Device->CreateShaderResourceView(ShadowMomentsArrayTexture, &MomentsSRVDesc, &ShadowMomentsSRV);
-    if (FAILED(hr)) { return; }
-
-    // RTVs for moments per slice
-    D3D11_RENDER_TARGET_VIEW_DESC RTVDesc = {};
-    RTVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
-    RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
-    RTVDesc.Texture2DArray.MipSlice = 0;
-    ShadowMomentsSliceRTVs.resize(MaxShadows);
-    for (uint32 i = 0; i < MaxShadows; ++i)
-    {
-        RTVDesc.Texture2DArray.FirstArraySlice = i;
-        RTVDesc.Texture2DArray.ArraySize = 1;
-        hr = Device->CreateRenderTargetView(ShadowMomentsArrayTexture, &RTVDesc, &ShadowMomentsSliceRTVs[i]);
-        if (FAILED(hr))
-        {
-            ShadowMomentsSliceRTVs.clear();
-        }
-    }
-
-        // --- 섀도우 패스 전용 DSV ---
+    // --- 섀도우 패스 전용 DSV ---
     D3D11_TEXTURE2D_DESC DepthTexDesc = {};
     DepthTexDesc.Width = PointResolution;
     DepthTexDesc.Height = PointResolution;
@@ -199,7 +99,7 @@ void FShadowMapManager::Initialize(uint32 InMaxSpotShadows, uint32 InSpotResolut
     LinearSamp.ComparisonFunc = D3D11_COMPARISON_NEVER;
     LinearSamp.MinLOD = 0.0f;
     LinearSamp.MaxLOD = D3D11_FLOAT32_MAX;
-    hr = Device->CreateSamplerState(&LinearSamp, &ShadowLinearSamplerState);
+    hr = Device->CreateSamplerState(&LinearSamp, &MomentSamplerState);
     if (FAILED(hr)) { return; }
 
 }
@@ -267,6 +167,57 @@ void FShadowMapManager::InitializeSpotShadows(uint32 InMaxSpotShadows, uint32 In
             return;
         }
     }
+
+	// --- Moments Texture2DArray (RG32_FLOAT) for VSM ---
+	D3D11_TEXTURE2D_DESC MomentsDesc = {};
+	MomentsDesc.Width = SpotResolution;
+	MomentsDesc.Height = SpotResolution;
+	MomentsDesc.MipLevels = 1;
+	MomentsDesc.ArraySize = MaxSpotShadows;
+	MomentsDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+	MomentsDesc.SampleDesc.Count = 1;
+	MomentsDesc.SampleDesc.Quality = 0;
+	MomentsDesc.Usage = D3D11_USAGE_DEFAULT;
+	MomentsDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+	MomentsDesc.CPUAccessFlags = 0;
+	MomentsDesc.MiscFlags = 0;
+
+	hr = Device->CreateTexture2D(&MomentsDesc, nullptr, &SpotShadowMomentsArrayTexture);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	// SRV for moments
+	D3D11_SHADER_RESOURCE_VIEW_DESC MomentsSRVDesc = {};
+	MomentsSRVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+	MomentsSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+	MomentsSRVDesc.Texture2DArray.MostDetailedMip = 0;
+	MomentsSRVDesc.Texture2DArray.MipLevels = 1;
+	MomentsSRVDesc.Texture2DArray.FirstArraySlice = 0;
+	MomentsSRVDesc.Texture2DArray.ArraySize = MaxSpotShadows;
+	hr = Device->CreateShaderResourceView(SpotShadowMomentsArrayTexture, &MomentsSRVDesc, &SpotShadowMomentsSRV);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	// RTVs for moments per slice
+	D3D11_RENDER_TARGET_VIEW_DESC RTVDesc = {};
+	RTVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+	RTVDesc.Texture2DArray.MipSlice = 0;
+	SpotShadowMomentsSliceRTVs.resize(MaxSpotShadows);
+	for (uint32 i = 0; i < MaxSpotShadows; ++i)
+	{
+		RTVDesc.Texture2DArray.FirstArraySlice = i;
+		RTVDesc.Texture2DArray.ArraySize = 1;
+		hr = Device->CreateRenderTargetView(SpotShadowMomentsArrayTexture, &RTVDesc, &SpotShadowMomentsSliceRTVs[i]);
+		if (FAILED(hr))
+		{
+			SpotShadowMomentsSliceRTVs.clear();
+		}
+	}
 }
 
 void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uint32 InPointResolution)
@@ -280,7 +231,7 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
     RTVTexDesc.Height = PointResolution;
     RTVTexDesc.MipLevels = 1;
     RTVTexDesc.ArraySize = MaxPointShadowCubes * 6;
-    RTVTexDesc.Format = DXGI_FORMAT_R32_FLOAT;
+    RTVTexDesc.Format = DXGI_FORMAT_R32G32_TYPELESS;
     RTVTexDesc.SampleDesc.Count = 1;
     RTVTexDesc.SampleDesc.Quality = 0;
     RTVTexDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -297,7 +248,7 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
 
     // --- SRV ---
     D3D11_SHADER_RESOURCE_VIEW_DESC PointSrvDesc = {};
-    PointSrvDesc.Format = RTVTexDesc.Format;
+    PointSrvDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
     PointSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
     PointSrvDesc.TextureCubeArray.MostDetailedMip = 0;
     PointSrvDesc.TextureCubeArray.MipLevels = 1;
@@ -311,9 +262,26 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
         return;
     }
 
+	// // --- SRV 2 (PCF용) ---
+	// D3D11_SHADER_RESOURCE_VIEW_DESC PcfSrvDesc = {};
+	// PcfSrvDesc.Format = DXGI_FORMAT_R32_FLOAT; // float1
+	// PcfSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
+	// PcfSrvDesc.TextureCubeArray.MostDetailedMip = 0;
+	// PcfSrvDesc.TextureCubeArray.MipLevels = 1;
+	// PcfSrvDesc.TextureCubeArray.First2DArrayFace = 0;
+	// PcfSrvDesc.TextureCubeArray.NumCubes = MaxPointShadowCubes;
+	//
+	// // 리소스는 '동일한' 텍스처를 사용
+	// hr = Device->CreateShaderResourceView(PointShadowCubeArrayTexture, &PcfSrvDesc, &PointShadowCubeArraySRV_PCF); // PCF용 SRV
+	// if (FAILED(hr))
+	// {
+	// 	UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE PCF SRV");
+	// 	return;
+	// }
+
     // --- RTV Array ---
     D3D11_RENDER_TARGET_VIEW_DESC PointRtvDesc = {};
-    PointRtvDesc.Format = RTVTexDesc.Format;
+    PointRtvDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
     PointRtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
     PointRtvDesc.Texture2DArray.MipSlice = 0;
 
@@ -332,18 +300,17 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
             return;
         }
     }
-
 }
 
 void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 {
 	ReleaseDirectionalShadow();
-	DirLightResolution = InResolution;
+	DirResolution = InResolution;
 
 	// --- 단일 Texture2D 생성 ---
 	D3D11_TEXTURE2D_DESC TexDesc = {};
-	TexDesc.Width = DirLightResolution;
-	TexDesc.Height = DirLightResolution;
+	TexDesc.Width = DirResolution;
+	TexDesc.Height = DirResolution;
 	TexDesc.MipLevels = 1;
 	TexDesc.ArraySize = 1;
 	TexDesc.Format = DXGI_FORMAT_R32_TYPELESS;
@@ -353,7 +320,7 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 	TexDesc.CPUAccessFlags = 0;
 	TexDesc.MiscFlags = 0;
 
-	HRESULT hr = Device->CreateTexture2D(&TexDesc, nullptr, &DirLightShadowTexture);
+	HRESULT hr = Device->CreateTexture2D(&TexDesc, nullptr, &DirShadowTexture);
 	if (FAILED(hr))
 	{
 		UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE DIR LIGHT TEXTURE");
@@ -367,7 +334,7 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 	SrvDesc.Texture2D.MostDetailedMip = 0;
 	SrvDesc.Texture2D.MipLevels = 1;
 
-	hr = Device->CreateShaderResourceView(DirLightShadowTexture, &SrvDesc, &DirLightShadowSRV);
+	hr = Device->CreateShaderResourceView(DirShadowTexture, &SrvDesc, &DirShadowSRV);
 	if (FAILED(hr))
 	{
 		UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE DIR LIGHT SRV");
@@ -381,10 +348,51 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 	DsvDesc.Texture2D.MipSlice = 0;
 	DsvDesc.Flags = 0;
 
-	hr = Device->CreateDepthStencilView(DirLightShadowTexture, &DsvDesc, &DirLightShadowDSV);
+	hr = Device->CreateDepthStencilView(DirShadowTexture, &DsvDesc, &DirShadowDSV);
 	if (FAILED(hr))
 	{
 		UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE DIR LIGHT DSV");
+		return;
+	}
+
+	// --- Moments Texture2DArray (RG32_FLOAT) for VSM ---
+	D3D11_TEXTURE2D_DESC MomentsDesc = {};
+	MomentsDesc.Width = DirResolution;
+	MomentsDesc.Height = DirResolution;
+	MomentsDesc.MipLevels = 1;
+	MomentsDesc.ArraySize = 1;
+	MomentsDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+	MomentsDesc.SampleDesc.Count = 1;
+	MomentsDesc.SampleDesc.Quality = 0;
+	MomentsDesc.Usage = D3D11_USAGE_DEFAULT;
+	MomentsDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+	MomentsDesc.CPUAccessFlags = 0;
+	MomentsDesc.MiscFlags = 0;
+
+	hr = Device->CreateTexture2D(&MomentsDesc, nullptr, &DirShadowMomentTexture);
+	if (FAILED(hr)) { return; }
+
+	// SRV for moments
+	D3D11_SHADER_RESOURCE_VIEW_DESC MomentsSRVDesc = {};
+	MomentsSRVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+	MomentsSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	MomentsSRVDesc.Texture2DArray.MostDetailedMip = 0;
+	MomentsSRVDesc.Texture2DArray.MipLevels = 1;
+	hr = Device->CreateShaderResourceView(DirShadowMomentTexture, &MomentsSRVDesc, &DirShadowMomentSRV);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	// RTVs for moments per slice
+	D3D11_RENDER_TARGET_VIEW_DESC RTVDesc = {};
+	RTVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	RTVDesc.Texture2D.MipSlice = 0;
+	hr = Device->CreateRenderTargetView(DirShadowMomentTexture, &RTVDesc, &DirShadowMomentRTV);
+	if (FAILED(hr))
+	{
+		UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE DIR LIGHT MOMENT RTV");
 		return;
 	}
 }
@@ -396,6 +404,13 @@ void FShadowMapManager::ReleaseSpotShadows()
 	for (uint32 Idx = 0; Idx < MaxSpotShadows; ++Idx)
 	{
 		SafeRelease(SpotShadowMapSliceDSVs[Idx]);
+	}
+
+	SafeRelease(SpotShadowMomentsArrayTexture);
+	SafeRelease(SpotShadowMomentsSRV);
+	for (uint32 Idx = 0; Idx < MaxSpotShadows; ++Idx)
+	{
+		SafeRelease(SpotShadowMomentsSliceRTVs[Idx]);
 	}
 }
 
@@ -413,41 +428,35 @@ void FShadowMapManager::ReleasePointShadows()
 
 void FShadowMapManager::ReleaseDirectionalShadow()
 {
-	if (DirLightShadowDSV) { DirLightShadowDSV->Release(); DirLightShadowDSV = nullptr; }
-	if (DirLightShadowSRV) { DirLightShadowSRV->Release(); DirLightShadowSRV = nullptr; }
-	if (DirLightShadowTexture) { DirLightShadowTexture->Release(); DirLightShadowTexture = nullptr; }
-	DirLightResolution = 0;
+	SafeRelease(DirShadowDSV);
+	SafeRelease(DirShadowSRV);
+	SafeRelease(DirShadowTexture);
+
+	SafeRelease(DirShadowMomentTexture);
+	SafeRelease(DirShadowMomentSRV);
+	SafeRelease(DirShadowMomentRTV);
 }
 
 void FShadowMapManager::Release()
 {
 	ReleaseSpotShadows();
 	ReleasePointShadows();
-    SafeRelease(ShadowMapArrayTexture);
-    SafeRelease(ShadowMapArraySRV);
-    for (uint32 i = 0; i < MaxShadows; ++i)
-    {
-        SafeRelease(ShadowMapSliceDSVs[i]);
-    }
-    // Release moments resources
-    SafeRelease(ShadowMomentsArrayTexture);
-    SafeRelease(ShadowMomentsSRV);
-    for (uint32 i = 0; i < ShadowMomentsSliceRTVs.size(); ++i)
-    {
-        SafeRelease(ShadowMomentsSliceRTVs[i]);
-    }
-    SafeRelease(ShadowLinearSamplerState);
+	ReleaseDirectionalShadow();
+    SafeRelease(MomentSamplerState);
+    SafeRelease(ShadowMapSamplerState);
 }
 
 void FShadowMapManager::ClearShadowMaps()
 {
+	const float ClearColor[4] = { 1.0f, 1.0f, 0.0f, 0.0f }; // M1=1, M2=1 initializes no-occluder
+
 	for (uint32 Idx = 0; Idx < CurrentSpotShadowIdx; ++Idx)
 	{
 		Context->ClearDepthStencilView(SpotShadowMapSliceDSVs[Idx], D3D11_CLEAR_DEPTH, 1.0f, 0);
+		Context->ClearRenderTargetView(SpotShadowMomentsSliceRTVs[Idx], ClearColor);
 	}
 	CurrentSpotShadowIdx = 0;
 
-	constexpr float ClearColor[4] = { FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX };
 	for (uint32 Idx = 0; Idx < CurrentPointCubeIdx * 6; ++Idx)
 	{
 		Context->ClearRenderTargetView(PointShadowCubeSliceRTVs[Idx], ClearColor);
@@ -455,18 +464,9 @@ void FShadowMapManager::ClearShadowMaps()
 	CurrentPointCubeIdx = 0;
 	Context->ClearDepthStencilView(PointShadowDepthDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-	Context->ClearDepthStencilView(DirLightShadowDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	Context->ClearDepthStencilView(DirShadowDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	Context->ClearRenderTargetView(DirShadowMomentRTV, ClearColor);
 	bIsDirShadowAllocated = false;
-    for (uint32 Idx = 0; Idx < CurrentShadowIdx; ++Idx)
-    {
-        Context->ClearDepthStencilView(GetDSV(Idx), D3D11_CLEAR_DEPTH, 1.0f, 0);
-        if (Idx < ShadowMomentsSliceRTVs.size() && ShadowMomentsSliceRTVs[Idx])
-        {
-            const float ClearColor[4] = { 1.0f, 1.0f, 0.0f, 0.0f }; // M1=1, M2=1 initializes no-occluder
-            Context->ClearRenderTargetView(ShadowMomentsSliceRTVs[Idx], ClearColor);
-        }
-    }
-    CurrentShadowIdx = 0;
 }
 
 void FShadowMapManager::AllocateShadowMap(class ULightComponentBase* Light)
@@ -511,7 +511,7 @@ uint32 FShadowMapManager::GetResolution(class ULightComponentBase* Light) const
 	case ELightComponentType::LightType_Point:
 		return PointResolution;
 	case ELightComponentType::LightType_Directional:
-		return DirLightResolution;
+		return DirResolution;
 	default:
 		break;
 	}
@@ -601,7 +601,7 @@ void FShadowMapManager::InitializeForDebug()
         Desc.Height = SrcDesc.Height;
         Desc.MipLevels = 1;
         Desc.ArraySize = 1;
-        Desc.Format = DXGI_FORMAT_R32_FLOAT;
+        Desc.Format = DXGI_FORMAT_R32G32_FLOAT;
         Desc.SampleDesc.Count = 1;
         Desc.Usage = D3D11_USAGE_DEFAULT;
         Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
@@ -640,7 +640,7 @@ void FShadowMapManager::InitializeForDebug()
 	{
     	// 원본 텍스처(DirLightShadowTexture)에서 해상도 가져오기
     	D3D11_TEXTURE2D_DESC SrcDesc;
-    	DirLightShadowTexture->GetDesc(&SrcDesc);
+    	DirShadowTexture->GetDesc(&SrcDesc);
 
     	D3D11_TEXTURE2D_DESC Desc = {};
     	Desc.Width = SrcDesc.Width;
@@ -731,7 +731,7 @@ ID3D11ShaderResourceView* FShadowMapManager::GetPointSRVForImGuiDebug(uint32 Cub
 ID3D11ShaderResourceView* FShadowMapManager::GetDirectionalSRVForImGuiDebug()
 {
 	// 1. 유효성 검사
-	if (!Context || !DirLightShadowTexture || !ImGuiDebugTexture_Dir || !ImGuiDebugSRV_Dir)
+	if (!Context || !DirShadowTexture || !ImGuiDebugTexture_Dir || !ImGuiDebugSRV_Dir)
 	{
 		return nullptr;
 	}
@@ -745,7 +745,7 @@ ID3D11ShaderResourceView* FShadowMapManager::GetDirectionalSRVForImGuiDebug()
 		ImGuiDebugTexture_Dir,      // 대상
 		dstSubresource,             // 대상 서브리소스
 		0, 0, 0,                    // 대상 위치
-		DirLightShadowTexture,      // 원본
+		DirShadowTexture,      // 원본
 		srcSubresource,             // 원본 서브리소스
 		nullptr                     // 전체 영역 복사
 	);

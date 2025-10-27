@@ -54,10 +54,10 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11DepthStencilState*
 	UnifiedLightSRV = FRenderResourceFactory::CreateBufferSRV(UnifiedLightStructuredBuffer, UnifiedLightCapacity);
 
 	SpotLightMatricesCapacity = FShadowMapManager::GetInstance().GetMaxSpotShadows();
-	SpotLightMatricesStructuredBuffer = FRenderResourceFactory::CreateStructuredBuffer<FMatrix>(SpotLightMatricesCapacity);
+	SpotLightMatricesStructuredBuffer = FRenderResourceFactory::CreateStructuredBuffer<FLightViewProj>(SpotLightMatricesCapacity);
 	SpotLightMatricesSRV = FRenderResourceFactory::CreateBufferSRV(SpotLightMatricesStructuredBuffer, SpotLightMatricesCapacity);
 
-	CBDirectionalShadowMatrix = FRenderResourceFactory::CreateConstantBuffer<FMatrix>();
+	CBDirectionalShadowMatrix = FRenderResourceFactory::CreateConstantBuffer<FLightViewProj>();
 
 	FRenderResourceFactory::CreateComputeShader(L"Asset/Shader/Lighting/LightTilesCS.hlsl", &LightTilesCS);
 
@@ -237,7 +237,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	{
 		// PS also needs the unified light buffer at t6 for clustering
 		Pipeline->SetSRV(6, EShaderType::EST_Pixel /*PS*/, UnifiedLightSRV);
-		Pipeline->SetSRV(7, EShaderType::EST_Pixel /*PS*/, SpotLightMatricesSRV);
+		Pipeline->SetSRV(12, EShaderType::EST_Pixel /*PS*/, SpotLightMatricesSRV);
 		// Bind Forward+ SRVs for PS
 		Pipeline->SetSRV(10, EShaderType::EST_Pixel /*PS*/, ClusterCountSRV);
 		Pipeline->SetSRV(11, EShaderType::EST_Pixel /*PS*/, ClusterIndexSRV);
@@ -411,19 +411,23 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	Pipeline->SetSRV(12, EShaderType::EST_Pixel, nullptr);
 	Pipeline->SetSRV(13, EShaderType::EST_Pixel, nullptr);
 	Pipeline->SetSRV(14, EShaderType::EST_Pixel, nullptr);
+	Pipeline->SetSRV(15, EShaderType::EST_Pixel, nullptr);
+	Pipeline->SetSRV(16, EShaderType::EST_Pixel, nullptr);
+	Pipeline->SetSRV(17, EShaderType::EST_Pixel, nullptr);
+	Pipeline->SetSRV(18, EShaderType::EST_Pixel, nullptr);
 }
 
 TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderingContext& Context)
 {
-	Pipeline->SetSRV(12, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetSpotLightSRV());
-	Pipeline->SetSRV(13, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetPointLightSRV());
-	Pipeline->SetSRV(14, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetDirectionalLightSRV());
-	Pipeline->SetSamplerState(1, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetSamplerState());
+	Pipeline->SetSRV(13, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetSpotLightSRV());
+	Pipeline->SetSRV(14, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetSpotMomentsSRV());
+	Pipeline->SetSRV(15, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetPointLightSRV_PCF());
+	Pipeline->SetSRV(16, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetPointLightSRV());
+	Pipeline->SetSRV(17, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetDirectionalLightSRV());
+	Pipeline->SetSRV(18, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetDirectionalMomentSRV());
 
-	// Bind VSM moments SRV and non-comparison sampler for VSM path
-	15 필요!!
-	Pipeline->SetSRV(13, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetMomentsSRV());
-	Pipeline->SetSamplerState(2, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetLinearSampler());
+	Pipeline->SetSamplerState(1, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetSamplerState());
+	Pipeline->SetSamplerState(2, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetMomentSampler());
 
 	// Collect all dynamic lights into unified buffer
 	TArray<FUnifiedDynamicLight> UnifiedLights;
@@ -442,13 +446,17 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 		int32 ShadowMapIdx = Light->GetShadowMapIdx();
 		if (Light->DoesCastShadows() && ShadowMapIdx >= 0)
 		{
+
+			FLightViewProj LightViewProj;
+			LightViewProj.ViewMatrix = Light->GetLightViewMatrices(CameraVPInv)[0];
+			LightViewProj.ProjectionMatrix = Light->GetLightProjectionMatrix();
 			if (Light->GetLightType() == ELightComponentType::LightType_Spot)
 			{
-				SpotLightMatrices[ShadowMapIdx] = Light->GetLightViewProjectionMatrices(CameraVPInv)[0];
+				SpotLightMatrices[ShadowMapIdx] = LightViewProj;
 			}
 			else if (Light->GetLightType() == ELightComponentType::LightType_Directional)
 			{
-				FRenderResourceFactory::UpdateConstantBufferData(CBDirectionalShadowMatrix, Light->GetLightViewProjectionMatrices(CameraVPInv)[0]);
+				FRenderResourceFactory::UpdateConstantBufferData(CBDirectionalShadowMatrix, LightViewProj);
 			}
 		}
 	}

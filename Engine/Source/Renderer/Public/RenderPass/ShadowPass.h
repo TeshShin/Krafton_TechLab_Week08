@@ -1,6 +1,15 @@
 ﻿#pragma once
 #include "RenderPass.h"
 
+struct FShadowLightInfo
+{
+	FMatrix LightView;
+	FMatrix LightProjection;
+	FVector LightPosition;
+	float LightRadius;
+	uint32 LightType;
+};
+
 class FShadowPass : public FRenderPass
 {
 public:
@@ -17,8 +26,7 @@ private:
 	ID3D11VertexShader* VS = nullptr;
 	ID3D11InputLayout* InputLayout = nullptr;
 	ID3D11PixelShader* PS = nullptr;
-	ID3D11Buffer* CBLightViewProj = nullptr;
-	ID3D11Buffer* CBLightPosRadius = nullptr;
+	ID3D11Buffer* CBLightInfo = nullptr;
 
 	ID3D11DepthStencilState* DS = nullptr;
 	ID3D11SamplerState* SamplerState = nullptr;

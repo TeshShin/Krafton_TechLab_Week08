@@ -123,7 +123,9 @@ public:
 		Shadow Features
 	 -----------------------------------------------------------------------------*/
 public:
-	virtual const TArray<FMatrix>& GetLightViewProjectionMatrices(const FMatrix& InCameraInverseVP) const { return TArray<FMatrix>(); }
+	const TArray<FMatrix>& GetLightViewMatrices(const FMatrix& InCameraInverseVP) const;
+	const FMatrix& GetLightProjectionMatrix() const;
+	const TArray<FMatrix>& GetLightViewProjectionMatrices(const FMatrix& InCameraInverseVP) const;
 
 	bool DoesCastShadows() const { return bCastShadows; }
 	void SetCastShadows(bool bInCastShadows) { bCastShadows = bInCastShadows; }
@@ -132,7 +134,11 @@ public:
 	void SetShadowMapIdx(int32 InShadowIdx) { ShadowMapIdx = InShadowIdx; }
 
 protected:
+	virtual void UpdateLightMatricesInternal(const FMatrix& InCameraInverseVP) const {}
+
 	mutable TArray<FMatrix> CachedLightViewProjection;
+	mutable TArray<FMatrix> CachedLightViewMatrices;
+	mutable FMatrix CachedLightProjectionMatrix;
 	mutable bool bIsLightVPDirty = true;
 
 	bool bCastShadows = false; // 일단 SpotLight만 true로 함

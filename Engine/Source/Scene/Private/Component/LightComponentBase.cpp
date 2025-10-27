@@ -153,3 +153,21 @@ void ULightComponentBase::CreateIconChild()
 		IconBillboard->SetColor(FVector4(LightColor.X, LightColor.Y, LightColor.Z, 1.0f));
 	}
 }
+
+const TArray<FMatrix>& ULightComponentBase::GetLightViewMatrices(const FMatrix& InCameraInverseVP) const
+{
+	UpdateLightMatricesInternal(InCameraInverseVP);
+	return CachedLightViewMatrices;
+}
+
+const FMatrix& ULightComponentBase::GetLightProjectionMatrix() const
+{
+	UpdateLightMatricesInternal(FMatrix());
+	return CachedLightProjectionMatrix;
+}
+
+const TArray<FMatrix>& ULightComponentBase::GetLightViewProjectionMatrices(const FMatrix& InCameraInverseVP) const
+{
+	UpdateLightMatricesInternal(InCameraInverseVP);
+	return CachedLightViewProjection;
+}

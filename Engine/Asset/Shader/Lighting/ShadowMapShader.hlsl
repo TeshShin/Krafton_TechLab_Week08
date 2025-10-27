@@ -1,15 +1,18 @@
-#include "Asset/Shader/Common/CommonConstants.hlsli"
+#include "../Common/CommonConstants.hlsli"
 
-cbuffer LightViewConstants : register(b0)
-{
-	row_major float4x4 LightViewProjection;
-};
+#define LIGHT_TYPE_DIRECTIONAL 0
+#define LIGHT_TYPE_POINT       1
+#define LIGHT_TYPE_SPOT        2
+#define LIGHT_TYPE_AMBIENT     3
 
-cbuffer LightConstants : register(b1)
+cbuffer ShadowLightInfo : register(b0)
 {
+	row_major float4x4 LightView;
+	row_major float4x4 LightProjection;
 	float3 LightPosition;
 	float LightRadius;
-};
+	uint LightType;
+}
 
 struct VS_INPUT
 {
@@ -18,9 +21,26 @@ struct VS_INPUT
 
 struct PS_INPUT
 {
-	float4 ClipPosition   : SV_POSITION;
-	float3 WorldPosition  : TEXCOORD0;
+	float4 Position   : SV_POSITION;
+	float4 ViewPosition  : TEXCOORD0;
+	float4 WorldPosition  : TEXCOORD1;
 };
+
+float2 ComputeMomentsVSM(float Depth01)
+{
+	float2 M;
+	M.x = Depth01;
+
+	// Add small variance based on depth derivatives to reduce light leaking
+	float Dx = ddx(Depth01);
+	float Dy = ddy(Depth01);
+	float D2 = Dx * Dx + Dy * Dy;
+	// Clamp derivative energy to avoid exploding variance
+	D2 = min(D2, 0.25);
+	M.y = Depth01 * Depth01 + 0.25 * D2;
+
+	return M;
+}
 
 // ---------------------------------
 // Vertex Shader
@@ -29,14 +49,9 @@ PS_INPUT mainVS(VS_INPUT Input)
 {
 	PS_INPUT Output;
 
-	// 1. 월드 좌표로 변환
-	float4 WorldPos = mul(float4(Input.Position, 1.0f), ModelWorld);
-
-	// 2. 빛의 시점으로 변환 (SV_POSITION)
-	Output.ClipPosition = mul(WorldPos, LightViewProjection);
-
-	// 3. 픽셀 셰이더로 월드 좌표 전달
-	Output.WorldPosition = WorldPos.xyz;
+	Output.WorldPosition = mul(float4(Input.Position, 1.0f), ModelWorld);
+	Output.ViewPosition = mul(Output.WorldPosition, LightView);
+	Output.Position = mul(Output.ViewPosition, LightProjection);
 
 	return Output;
 }
@@ -46,6 +61,17 @@ PS_INPUT mainVS(VS_INPUT Input)
 // ---------------------------------
 float4 mainPS(PS_INPUT Input) : SV_Target
 {
-	float linearDepth = length(Input.WorldPosition - LightPosition) / LightRadius;
-	return float4(linearDepth, 0.0f, 0.0f, 1.0f);
+	float FinalLinearDepth;
+
+	if (LightType == LIGHT_TYPE_POINT)
+	{
+		FinalLinearDepth = length(Input.WorldPosition - LightPosition.xyz) / LightRadius;
+	}
+	else
+	{
+		FinalLinearDepth = Input.ViewPosition.z;
+	}
+
+	float2 Moment = ComputeMomentsVSM(FinalLinearDepth);
+	return float4(Moment, 0.0f, 0.0f);
 }

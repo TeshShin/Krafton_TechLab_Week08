@@ -91,49 +91,41 @@ UTexture* UPointLightComponent::GetLightBillboardTexture()
 	return UAssetManager::GetInstance().LoadTexture("Data/Icons/PointLight_64x.png");
 }
 
-const TArray<FMatrix>& UPointLightComponent::GetLightViewProjectionMatrices(const FMatrix& InCameraInverseVP) const
+void UPointLightComponent::UpdateLightMatricesInternal(const FMatrix& InCameraInverseVP) const
 {
-	if (bIsLightVPDirty)
-    {
-        CachedLightViewProjection.clear();
+	if (!bIsLightVPDirty) { return; }
 
-        float NearZ = 0.1f;
-        float FarZ = GetAttenuationRadius();
-        float FOV = 90.0f * ToRad;
-        float AspectRatio = 1.0f;
-        FMatrix ProjMatrix = FMatrix::CreatePerspectiveFOV(FOV, AspectRatio, NearZ, FarZ);
+	CachedLightViewMatrices.clear();
+	CachedLightViewProjection.clear();
 
-		const FVector LightPosition = GetWorldLocation();
-		const FVector Right = FVector::RightVector();
-		const FVector Up = FVector::UpVector();
-		const FVector Forward = FVector::ForwardVector();
+	float NearZ = 0.1f;
+	float FarZ = GetAttenuationRadius();
+	float FOV = 90.0f * ToRad;
+	float AspectRatio = 1.0f;
+	CachedLightProjectionMatrix = FMatrix::CreatePerspectiveFOV(FOV, AspectRatio, NearZ, FarZ);
 
-        FMatrix ViewMatrices[6];
-		// D3D Slice 0: (+X) = Unreal +Y (Right)
-		ViewMatrices[0] = FMatrix::CreateViewFromAxes(LightPosition, -Forward, Up, Right);
+	const FVector LightPosition = GetWorldLocation();
+	const FVector Right = FVector::RightVector();
+	const FVector Up = FVector::UpVector();
+	const FVector Forward = FVector::ForwardVector();
 
-		// D3D Slice 1: (-X) = Unreal -Y (Left)
-		ViewMatrices[1] = FMatrix::CreateViewFromAxes(LightPosition, Forward, Up, -Right);
+	// D3D Slice 0: (+X)
+	CachedLightViewMatrices.emplace_back(FMatrix::CreateViewFromAxes(LightPosition, -Forward, Up, Right));
+	// D3D Slice 1: (-X)
+	CachedLightViewMatrices.emplace_back(FMatrix::CreateViewFromAxes(LightPosition, Forward, Up, -Right));
+	// D3D Slice 2: (+Y)
+	CachedLightViewMatrices.emplace_back(FMatrix::CreateViewFromAxes(LightPosition, Right, -Forward, Up));
+	// D3D Slice 3: (-Y)
+	CachedLightViewMatrices.emplace_back(FMatrix::CreateViewFromAxes(LightPosition, Right, Forward, -Up));
+	// D3D Slice 4: (+Z)
+	CachedLightViewMatrices.emplace_back(FMatrix::CreateViewFromAxes(LightPosition, Right, Up, Forward));
+	// D3D Slice 5: (-Z)
+	CachedLightViewMatrices.emplace_back(FMatrix::CreateViewFromAxes(LightPosition, -Right, Up, -Forward));
 
-		// D3D Slice 2: (+Y) = Unreal +Z (Up)
-		ViewMatrices[2] = FMatrix::CreateViewFromAxes(LightPosition, Right, -Forward, Up);
+	for (const auto& ViewMatrix : CachedLightViewMatrices)
+	{
+		CachedLightViewProjection.emplace_back(ViewMatrix * CachedLightProjectionMatrix);
+	}
 
-		// D3D Slice 3: (-Y) = Unreal -Z (Down)
-		ViewMatrices[3] = FMatrix::CreateViewFromAxes(LightPosition, Right, Forward, -Up);
-
-		// D3D Slice 4: (+Z) = Unreal +X (Forward)
-		ViewMatrices[4] = FMatrix::CreateViewFromAxes(LightPosition, Right, Up, Forward);
-
-		// D3D Slice 5: (-Z) = Unreal -X (Backward)
-		ViewMatrices[5] = FMatrix::CreateViewFromAxes(LightPosition, -Right, Up, -Forward);
-
-        for (const auto& ViewMatrix : ViewMatrices)
-        {
-            CachedLightViewProjection.emplace_back(ViewMatrix * ProjMatrix);
-        }
-
-        bIsLightVPDirty = false;
-    }
-
-    return CachedLightViewProjection;
+	bIsLightVPDirty = false;
 }

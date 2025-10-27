@@ -116,73 +116,31 @@ UTexture* USpotLightComponent::GetLightBillboardTexture()
 	return UAssetManager::GetInstance().LoadTexture("Data/Icons/SpotLight_64x.png");
 }
 
-const TArray<FMatrix>& USpotLightComponent::GetLightViewProjectionMatrices(const FMatrix& InCameraInverseVP) const
+void USpotLightComponent::UpdateLightMatricesInternal(const FMatrix& InCameraInverseVP) const
 {
-	if (bIsLightVPDirty)
+	if (!bIsLightVPDirty) { return; }
+
+	CachedLightViewMatrices.clear();
+	CachedLightViewProjection.clear();
+
+	CachedLightViewProjection.clear();
+	const FVector LightPosition = GetWorldLocation();
+	const FVector Right = GetWorldRightVector();
+	const FVector Up = GetWorldUpVector();
+	const FVector Forward = GetWorldForwardVector();
+
+	CachedLightViewMatrices.emplace_back(FMatrix::CreateViewFromAxes(LightPosition, Right, Up, Forward));
+
+	float NearZ = 0.1f;
+	float FarZ = GetAttenuationRadius();
+	float FOV = OuterConeAngle * 2.0f * ToRad;
+	float AspectRatio = 1.0f;
+	CachedLightProjectionMatrix = FMatrix::CreatePerspectiveFOV(FOV, AspectRatio, NearZ, FarZ);
+
+	for (const auto& ViewMatrix : CachedLightViewMatrices)
 	{
-		CachedLightViewProjection.clear();
-		const FVector LightPosition = GetWorldLocation();
-		const FVector Right = GetWorldRightVector();
-		const FVector Up = GetWorldUpVector();
-		const FVector Forward = GetWorldForwardVector();
-
-		FMatrix ViewMatrix = FMatrix::CreateViewFromAxes(LightPosition, Right, Up, Forward);
-
-		float AspectRatio = 1.0f;
-		float FOV = OuterConeAngle * 2.0f * ToRad;
-		float NearZ = 0.1f;
-		float FarZ = GetAttenuationRadius();
-		FMatrix ProjMatrix = FMatrix::CreatePerspectiveFOV(FOV, AspectRatio, NearZ, FarZ);
-
-		CachedLightViewProjection.emplace_back(ViewMatrix * ProjMatrix);
-		bIsLightVPDirty = false;
+		CachedLightViewProjection.emplace_back(ViewMatrix * CachedLightProjectionMatrix);
 	}
 
-	return CachedLightViewProjection;
-}
-
-const FMatrix& USpotLightComponent::GetLightViewMatrix() const
-{
-	//if (bIsLightVPDirty)
-	{
-		const FVector LightPosition = GetWorldLocation();
-		const FVector Right = GetWorldRightVector();
-		const FVector Up = GetWorldUpVector();
-		const FVector Forward = GetWorldForwardVector();
-
-		FMatrix T = FMatrix::TranslationMatrixInverse(LightPosition);
-		FMatrix R = FMatrix(Right, Up, Forward);
-		R = R.Transpose();
-
-		FMatrix ViewMatrix = T * R;
-		CachedLightView = ViewMatrix;
-	//	bIsLightVPDirty = false;
-	} 
-	return CachedLightView;
-}
-
-const FMatrix& USpotLightComponent::GetLightProjectionMatrix() const
-{
-	//if (bIsLightVPDirty)
-	{ 
-		// Projection Matrix 생성 (Perspective)
-		// 섀도우 맵은 보통 정사각형이므로 종횡비(AspectRatio)는 1.0
-		float AspectRatio = 1.0f;
-		float FOV = OuterConeAngle * 2.0f * ToRad;
-
-		// Near/Far 클립 평면 설정
-		float NearZ = 0.1f;
-		float FarZ = GetAttenuationRadius(); // 빛의 최대 도달 거리
-		FMatrix ProjMatrix = FMatrix::CreatePerspectiveFOV(FOV, AspectRatio, NearZ, FarZ);
-
-		CachedLightProjection = ProjMatrix;
-	//	bIsLightVPDirty = false;
-	}
-
-	return CachedLightProjection;
-}
-
-float USpotLightComponent::GetShadowFarClip() const
-{
-	return GetAttenuationRadius();
+	bIsLightVPDirty = false;
 }

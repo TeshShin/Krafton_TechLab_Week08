@@ -2,6 +2,12 @@
 #include "Renderer/Public/RenderPass/RenderPass.h"
 #include "Renderer/Public/LightData.h"
 
+struct FLightViewProj
+{
+	FMatrix ViewMatrix;
+	FMatrix ProjectionMatrix;
+};
+
 class FStaticMeshPass : public FRenderPass
 {
 public:
@@ -40,7 +46,7 @@ private:
 	ID3D11Buffer* SpotLightMatricesStructuredBuffer = nullptr;
 	ID3D11ShaderResourceView* SpotLightMatricesSRV = nullptr;
     uint32 SpotLightMatricesCapacity;
-	TArray<FMatrix> SpotLightMatrices;
+	TArray<FLightViewProj> SpotLightMatrices;
 	ID3D11Buffer* CBDirectionalShadowMatrix;
 
 	ID3D11ComputeShader* LightTilesCS = nullptr;

@@ -43,7 +43,7 @@ class UTexture* UDirectionalLightComponent::GetLightBillboardTexture()
 	return UAssetManager::GetInstance().LoadTexture("Data/Icons/DirectionalLight_64x.png");
 }
 
-const TArray<FMatrix>& UDirectionalLightComponent::GetLightViewProjectionMatrices(const FMatrix& InCameraInverseVP) const
+void UDirectionalLightComponent::UpdateLightMatricesInternal(const FMatrix& InCameraInverseVP) const
 {
     CachedLightViewProjection.clear();
 
@@ -90,7 +90,7 @@ const TArray<FMatrix>& UDirectionalLightComponent::GetLightViewProjectionMatrice
 	const FVector LightUp = GetWorldUpVector().GetNormalized();
     const FVector LightPosition = FrustumCenterWorld - LightDirection * 1000.0f;
 
-	FMatrix ViewMatrix = FMatrix::CreateViewFromAxes(LightPosition, LightRight, LightUp, LightDirection);
+	CachedLightViewMatrices.emplace_back(FMatrix::CreateViewFromAxes(LightPosition, LightRight, LightUp, LightDirection));
 
     // --- 3. 라이트 프로젝션 매트릭스 (P) 생성 (Orthographic) ---
     FVector MinBounds(FLT_MAX, FLT_MAX, FLT_MAX);
@@ -98,7 +98,7 @@ const TArray<FMatrix>& UDirectionalLightComponent::GetLightViewProjectionMatrice
 
     for (int i = 0; i < 8; ++i)
     {
-        FVector CornerInLightView = ViewMatrix.TransformPosition(FrustumCornersWorld[i]);
+        FVector CornerInLightView = CachedLightViewMatrices[0].TransformPosition(FrustumCornersWorld[i]);
 
         MinBounds.X = min(MinBounds.X, CornerInLightView.X);
         MaxBounds.X = max(MaxBounds.X, CornerInLightView.X);
@@ -110,12 +110,10 @@ const TArray<FMatrix>& UDirectionalLightComponent::GetLightViewProjectionMatrice
 	float NearZ = MinBounds.Z;
 	float FarZ = MaxBounds.Z;
 
-    FMatrix ProjMatrix = FMatrix::CreateOrthographicOffCenter(
+    CachedLightProjectionMatrix = FMatrix::CreateOrthographicOffCenter(
         MinBounds.X, MaxBounds.X, MinBounds.Y, MaxBounds.Y, NearZ, FarZ
     );
 
     // --- 4. 최종 VP 매트릭스 캐시 ---
-    CachedLightViewProjection.emplace_back(ViewMatrix * ProjMatrix);
-
-	return CachedLightViewProjection;
+    CachedLightViewProjection.emplace_back(CachedLightViewMatrices[0] * CachedLightProjectionMatrix);
 }
