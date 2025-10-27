@@ -7,16 +7,14 @@
 #define LIGHTING_FUNCTIONS_HLSL
 
 //--------------------------------------------------------------------------------------
-// [VSM FILTER CONFIG]
+// [VSM FILTER ]
 //--------------------------------------------------------------------------------------
-// Set to 1 to use a simple box filter over the VSM moments when sampling.
 #ifndef VSM_USE_BOX_FILTER
-#define VSM_USE_BOX_FILTER 1
+#define VSM_USE_BOX_FILTER 11
 #endif
 
-// Box filter kernel size (must be odd). Typical values: 3, 5, 7, 9, 11
-#ifndef VSM_FILTER_SIZE
-#define VSM_FILTER_SIZE 35
+#ifndef BOX_FILTER_SIZE
+#define BOX_FILTER_SIZE 35
 #endif
 
 // Light bleeding reduction amount for VSM (0 = none, 1 = full cutoff)
@@ -209,6 +207,19 @@ FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPo
 }
  
 
+// ndc좌표계로 변환해서 UV좌표계를 얻어주는 helper function 
+float3 GetSampleCoords(float3 WorldPos, float4x4 VPMatrix)
+{
+	float4 LightClipSpace = mul(float4(WorldPos, 1.0f), VPMatrix);
+	float3 uvw = LightClipSpace.xyz / LightClipSpace.w;
+	
+	uvw.x = uvw.x * 0.5f + 0.5f;
+	uvw.y = uvw.y * -0.5f + 0.5f;
+	
+	return float3(uvw.xyz);
+}
+
+// Percentage Closer Filter
 float PCF(Texture2DArray<float> ShadowMap, SamplerComparisonState Sampler, float3 uvw, float RefZ, int FilterSize)
 { 
 	float2 texSize;;
@@ -234,30 +245,29 @@ float PCF(Texture2DArray<float> ShadowMap, SamplerComparisonState Sampler, float
 
 // M1 = E(x), M2 = E(x^2) 
 float VSM_Visibility(float2 Moments, float t)
-{
-	// m1(湲곕낯 depth)? 鍮꾧탳 癒쇱?, 洹몃┝??or 鍮??먮떒
+{ 
 	if (t <= Moments.x)
 	{
 		return 1.0f;
 	}
 
-	// Variance = E(z^2) - (E(z))^2
-	float variance = Moments.y - (Moments.x * Moments.x);
-	// Prevent negative/too small variance (light bleeding control)
-	const float MinVariance = 1e-5f;
+	// Variance = E(z^2) - (E(z))^2	
+    float variance = Moments.y - (Moments.x * Moments.x); 
+    const float MinVariance = 1e-5f;
+    variance = max(variance, MinVariance);
 
-	// Chebyshev/Cantelli upper bound term
+	// Chebyshev(Cantelli ) upper bound term
 	float d = t - Moments.x; 
     float pMax = variance / (d * d + variance);
 
-    // Reduce light bleeding: remap p_max to suppress low probabilities
+    // Reduce light bleeding
     pMax = ReduceLightBleeding(pMax, VSM_LIGHT_BLEED_REDUCTION);
 
     return saturate(pMax);
 }
 
 //--------------------------------------------------------------------------------------
-// [VSM] Box-filtered moments sampling
+// [VSM] Box-filtered
 //--------------------------------------------------------------------------------------
 float2 SampleVSMBox(Texture2DArray<float2> ShadowMomentsArray,
                     SamplerState Sampler,
@@ -288,8 +298,9 @@ float2 SampleVSMBox(Texture2DArray<float2> ShadowMomentsArray,
 	return (count > 0) ? (sum / count) : ShadowMomentsArray.Sample(Sampler, uvw).xy;
 }
 
-// Sample VSM moments from Texture2DArray<float2> 
-//  일반 SamplerState (non-comparison)를 사용하자
+//--------------------------------------------------------------------------------------
+// VSM: 선형필터와 결합하기 위해, 선형으로 depth 비교
+//--------------------------------------------------------------------------------------
 float ShadowVisibilityVSM(Texture2DArray<float2> ShadowMomentsArray,
 						   SamplerState ShadowSampler,
 						   float3 sampleUVW,
@@ -299,7 +310,7 @@ float ShadowVisibilityVSM(Texture2DArray<float2> ShadowMomentsArray,
 	return VSM_Visibility(moments, t);
 }  
 
-// Box-filtered variant: averages moments over an NxN kernel, then evaluates VSM visibility
+// VSM + Box Filter 
 float ShadowVisibilityVSM_BoxFiltered(Texture2DArray<float2> ShadowMomentsArray,
                                       SamplerState ShadowSampler,
                                       float3 sampleUVW,
@@ -310,21 +321,20 @@ float ShadowVisibilityVSM_BoxFiltered(Texture2DArray<float2> ShadowMomentsArray,
     return VSM_Visibility(moments, t);
 }
 
-FLightingResult CalculateDynamicLightWithShadows(FUnifiedDynamicLight Light,
-	float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower, Texture2DArray<float2> ShadowMapArray, SamplerState ShadowSampler, float3 SampleCoords, float t)
+
+// Shadow + VSM(선형 필터) 
+FLightingResult CalculateDynamicLightWithLinearShadows(FUnifiedDynamicLight Light,
+	float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower, Texture2DArray<float2> ShadowMapArray, SamplerState ShadowSampler, float t)
 {
     FLightingResult Result = CalculateDynamicLight(Light, WorldPos, Normal, ViewDir, SpecularPower);
-
+	 
+	float3 SampleCoords = GetSampleCoords(WorldPos, mul(Light.LightView, Light.LightProjection));
+ 
 	float ShadowFactor = 1.0f;
 	if (Light.bCastShadows > 0)
 	{
-		
-		// Compute receiver depth normalized to match stored moments 
-		// PCF path (hardware depth comparison)
-		// Texture2D format + sampler State ?섎닃 ?꾩슂媛 ?덈떎 .
-		//ShadowFactor = PCF(ShadowMapArray, ShadowSampler, SampleCoords, (ShadowCoords.z - Light.ShadowBias), 11);
 		#if VSM_USE_BOX_FILTER
-		ShadowFactor = ShadowVisibilityVSM_BoxFiltered(ShadowMapArray, ShadowSampler, SampleCoords, t, VSM_FILTER_SIZE);
+		ShadowFactor = ShadowVisibilityVSM_BoxFiltered(ShadowMapArray, ShadowSampler, float3(SampleCoords.xy, Light.ShadowMapIndex), t, BOX_FILTER_SIZE);
 		#else
 		ShadowFactor = ShadowVisibilityVSM(ShadowMapArray, ShadowSampler, SampleCoords, t);
 		#endif
@@ -336,10 +346,8 @@ FLightingResult CalculateDynamicLightWithShadows(FUnifiedDynamicLight Light,
     return Result;
 }
 
-// Overload: VSM-based shadowing using RG moments texture array
-// - ShadowMomentsArray: Texture2DArray storing (E[z], E[z^2]) per texel
-// - ShadowSampler: regular sampler (non-comparison)
-FLightingResult CalculateDynamicLightWithShadows2(
+// Shadow + PCF(비선형 필터) 
+FLightingResult CalculateDynamicLightWithPCF(
 	FUnifiedDynamicLight Light,
 	float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower,
 	Texture2DArray<float> ShadowMomentsArray, SamplerComparisonState ShadowSampler)
@@ -349,14 +357,9 @@ FLightingResult CalculateDynamicLightWithShadows2(
 	float ShadowFactor = 1.0f;
 	if (Light.bCastShadows > 0)
 	{
-		float4 lightPosH = mul(mul(float4(WorldPos, 1.0f), Light.LightView), Light.LightProjection);
-		float3 uvw = lightPosH.xyz / lightPosH.w;
 
-		// Project to texture space
-		uvw.x = uvw.x * 0.5f + 0.5f;
-		uvw.y = uvw.y * -0.5f + 0.5f;
-
-		// Receiver depth t in same normalization as stored z
+		float3 uvw= GetSampleCoords(WorldPos, mul(Light.LightView, Light.LightProjection));
+		 
 		float t = uvw.z - Light.ShadowBias;  
 
 		ShadowFactor = PCF(ShadowMomentsArray, ShadowSampler, float3(uvw.xy, Light.ShadowMapIndex), t, 11);
@@ -382,10 +385,8 @@ struct PS_INPUT
 };
 
 //--------------------------------------------------------------------------------------
-// [SHADOWING] Single-sample hard shadow from 2D array depth map
-// - Samples one texel and does a binary compare (no filtering)
-// - Expects ShadowMapArray to be a depth SRV (or R32F of clip-space depth)
-// - Uses regular sampler and manual comparison to avoid requiring a comparison sampler
+// 어떤 Filter도 없는 Hard Shadow
+//--------------------------------------------------------------------------------------
 FLightingResult HardShadow(
     FUnifiedDynamicLight Light,
     float3 WorldPos,
@@ -399,30 +400,14 @@ FLightingResult HardShadow(
 
     float ShadowFactor = 1.0f;
     if (Light.bCastShadows > 0)
-    {
-        // Project world position into the light's clip space
-        float4 lightPosH = mul(mul(float4(WorldPos, 1.0f), Light.LightView), Light.LightProjection);
-        float3 uvw = lightPosH.xyz / max(lightPosH.w, 1e-6f);
+    { 
+		float3 SampleCoords = GetSampleCoords(WorldPos, mul(Light.LightView, Light.LightProjection));
+		
+		float Depth = SampleCoords.z - Light.ShadowBias;
 
-        // Convert to texture space
-        float2 uv;
-        uv.x = uvw.x * 0.5f + 0.5f;
-        uv.y = uvw.y * -0.5f + 0.5f;
+		float SampleDepth = ShadowMapArray.SampleLevel(ShadowSampler, float3(SampleCoords.xy, Light.ShadowMapIndex), 0).r;
 
-        // If outside the shadow map, treat as lit
-        bool outside = (uv.x < 0.0f) || (uv.x > 1.0f) || (uv.y < 0.0f) || (uv.y > 1.0f) || (uvw.z < 0.0f) || (uvw.z > 1.0f);
-        if (!outside)
-        {
-            // Receiver depth in clip-space [0,1] with bias
-            float receiver = uvw.z - Light.ShadowBias;
-            // Sample the stored depth from the shadow map array
-            float stored = ShadowMapArray.SampleLevel(ShadowSampler, float3(uv, Light.ShadowMapIndex), 0).r;
-            ShadowFactor = (receiver <= stored) ? 1.0f : 0.0f;
-        }
-        else
-        {
-            ShadowFactor = 1.0f;
-        }
+		ShadowFactor = (Depth <= SampleDepth) ? 1.0f : 0.0f; 
     }
 
     Result.Diffuse *= ShadowFactor;

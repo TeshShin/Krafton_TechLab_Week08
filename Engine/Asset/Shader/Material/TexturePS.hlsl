@@ -1,10 +1,10 @@
 #include "../Material/TextureVS.hlsl"
 
-// Toggle VSM shadows (uses RG moments and linear sampler)
-#ifndef USE_VSM
-#define USE_VSM 1
-#endif
-
+// VSM 토글 TODO:UI 연동
+//#ifndef USE_VSM
+//#define USE_VSM 1
+//#endif
+  
 //--------------------------------------------------------------------------------------
 // [FORWARD PLUS RENDERING] Light Tile Clustering Data Structures
 //--------------------------------------------------------------------------------------
@@ -172,7 +172,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 		   
 		float3x3 TBN = float3x3(T, B, N);
 		wsNormal = normalize(mul(nTS, TBN));
-	}     
+	}      
 	else
 	{    
 		wsNormal = normalize(Input.WorldNormal);
@@ -187,43 +187,30 @@ PS_OUTPUT mainPS(PS_INPUT Input)
     uint maxCount = FP_MaxLightsPerCluster;
     uint safeCount = (count < maxCount) ? count : maxCount;
     uint base  = cid * FP_MaxLightsPerCluster; 
-	        
- 	[loop]
+
+	[loop] 
 	for (uint i = 0; i < safeCount; ++i)
 	{
 		uint li = FP_ClusterIndex[base + i];
-		  
-
-		// Project world position into the light's clip space for sampling
-		float4x4 VPMatrix = mul(DynamicLights[li].LightView, DynamicLights[li].LightProjection);
-		float4 LightSpacePos = mul(float4(Input.WorldPosition, 1.0f), VPMatrix);
-		float3 ShadowCoords = LightSpacePos.xyz / LightSpacePos.w; 
-		 
-		ShadowCoords.x = ShadowCoords.x * 0.5f + 0.5f;
-		ShadowCoords.y = ShadowCoords.y * -0.5f + 0.5f; 
-		  
-		// Sample coordinates into VSM texture array (xy + slice index)
-		float3 SampleCoords = float3(ShadowCoords.xy, DynamicLights[li].ShadowMapIndex);
-
-		// VSM expects the same depth domain as the stored moments.
-		// We store moments using LIGHT VIEW-SPACE z in ShadowMapPS, so compute t as that here.
+		    
+		   
+		// 정밀도 때문에 ViewSpace에서 계산
 		float t = mul(float4(Input.WorldPosition, 1.0f), DynamicLights[li].LightView).z ;
-	
+		  
 		#ifdef USE_VSM
-		FLightingResult LightResult = CalculateDynamicLightWithShadows(
+		FLightingResult LightResult = CalculateDynamicLightWithLinearShadows(
             DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, max(Ns, 1.0f),
-            ShadowMomentsArray, ShadowLinearSampler, SampleCoords, t);
+            ShadowMomentsArray, ShadowLinearSampler, t);
 		#else
 		//PCF
-		//FLightingResult LightResult = CalculateDynamicLightWithShadows2(
+		//FLightingResult LightResult = CalculateDynamicLightWithPCF(
 		//	DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, max(Ns, 1.0f),
         //    ShadowMapArray, ShadowSampler);
-
+		
 		//Hard Sampling
 		FLightingResult LightResult = HardShadow(DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, max(Ns, 1.0f),
         ShadowMapArray, SamplerWrap);
-		 
-		 
+		     
 		#endif
 		
 		TotalDiffuse  += LightResult.Diffuse;      
