@@ -62,15 +62,13 @@ const FMatrix& UDirectionalLightComponent::GetLightViewProjectionMatrix() const
 
 		// 라이트 뷰(오리엔테이션)
 		FVector WorldUp(0.0f, 0.0f, 1.0f);
-		FVector ForwardSafe = Forward; ForwardSafe.Normalize();
+		FVector ForwardSafe = Forward.GetNormalized();
 		if (std::abs(ForwardSafe.Dot(WorldUp)) > 0.99f)
 		{
 			WorldUp = FVector(0.0f, 1.0f, 0.0f);
 		}
-		const FVector Right = WorldUp.Cross(ForwardSafe);
-		Right.GetNormalized();
-		const FVector Up = ForwardSafe.Cross(Right);
-		Up.GetNormalized();
+		FVector Right = WorldUp.Cross(ForwardSafe).GetNormalized();
+		FVector Up = ForwardSafe.Cross(Right).GetNormalized();
 		const FMatrix LightView = FMatrix(Right, Up, ForwardSafe).Transpose();
 
 		// 카메라 절두체 → 라이트뷰로 변환 후 바운드 계산
@@ -119,15 +117,13 @@ const FMatrix& UDirectionalLightComponent::GetLightViewProjectionMatrix() const
 
 		// 라이트 뷰(오리엔테이션)
 		FVector WorldUp(0.0f, 0.0f, 1.0f);
-		FVector ForwardSafe = Forward; ForwardSafe.Normalize();
+		FVector ForwardSafe = Forward.GetNormalized();
 		if (std::abs(ForwardSafe.Dot(WorldUp)) > 0.99f)
 		{
 			WorldUp = FVector(0.0f, 1.0f, 0.0f);
 		}
-		const FVector Right = WorldUp.Cross(ForwardSafe);
-		Right.GetNormalized();
-		const FVector Up = ForwardSafe.Cross(Right);
-		Up.GetNormalized();
+		FVector Right = WorldUp.Cross(ForwardSafe).GetNormalized();
+		FVector Up = ForwardSafe.Cross(Right).GetNormalized();
 		const FMatrix LightView = FMatrix(Right, Up, ForwardSafe).Transpose();
 
 		FVector4 FrustumWorld[8];
