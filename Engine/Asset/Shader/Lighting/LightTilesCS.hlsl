@@ -35,7 +35,7 @@ cbuffer ForwardPlusCB : register(b1)
 #define LIGHT_TYPE_SPOT        2
 #define LIGHT_TYPE_AMBIENT     3
 
-// Must match TexturePS.hlsl FUnifiedDynamicLight exactly
+// Must match TexturePS.hlsl/C++ FUnifiedDynamicLight exactly
 struct FUnifiedDynamicLight
 {
     float3 Position;            // world space
@@ -48,7 +48,8 @@ struct FUnifiedDynamicLight
     float  Param1;              // spot outer (rad) / rect height
     float  Param2;              // reserved
 	uint   LightType;           // enum above
-	float4x4 LightViewProjection; // 64 bytes - Light View Projection Matrix
+	row_major float4x4 LightView;       // 64 bytes - Light View Matrix
+	row_major float4x4 LightProjection; // 64 bytes - Light Projection Matrix
 	float ShadowBias;            // 4 bytes - Shadow Bias
 	uint bCastShadows;         // 4 bytes - Light Does Cast Shadows
 	int ShadowMapIndex;        // 4 bytes - Shadow Texture2D Array Index

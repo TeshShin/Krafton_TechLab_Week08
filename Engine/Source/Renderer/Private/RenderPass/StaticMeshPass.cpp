@@ -398,12 +398,17 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	Pipeline->SetSRV(10, EShaderType::EST_Pixel, nullptr);
 	Pipeline->SetSRV(11, EShaderType::EST_Pixel, nullptr);
 	Pipeline->SetSRV(12, EShaderType::EST_Pixel, nullptr);
+	Pipeline->SetSRV(13, EShaderType::EST_Pixel, nullptr);
 }
 
 TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderingContext& Context)
 {
 	Pipeline->SetSRV(12, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetSRV());
 	Pipeline->SetSamplerState(1, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetSamplerState());
+
+	// Bind VSM moments SRV and non-comparison sampler for VSM path
+	Pipeline->SetSRV(13, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetMomentsSRV());
+	Pipeline->SetSamplerState(2, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetLinearSampler());
 
 	// Collect all dynamic lights into unified buffer
 	TArray<FUnifiedDynamicLight> UnifiedLights;
@@ -453,3 +458,4 @@ void FStaticMeshPass::Release()
     SafeRelease(HeatVS);
     SafeRelease(HeatPS);
 }
+
