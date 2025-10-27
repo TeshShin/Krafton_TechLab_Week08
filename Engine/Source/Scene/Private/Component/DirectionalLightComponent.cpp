@@ -31,7 +31,7 @@ FUnifiedDynamicLight UDirectionalLightComponent::GetUnifiedLightData() const
     LightData.Intensity = GetIntensity();
     LightData.Color = GetLightColor();
 	LightData.LightType = static_cast<uint32>(EDynamicLightType::Directional);
-	LightData.ShadowBias = 0.01f;
+	LightData.ShadowBias = 0.001f;
 	LightData.bCastShadows = bCastShadows;
 	LightData.ShadowMapIndex = ShadowMapIdx;
 
@@ -66,23 +66,30 @@ const TArray<FMatrix>& UDirectionalLightComponent::GetLightViewProjectionMatrice
     for (uint32 Idx = 0; Idx < 8; ++Idx)
     {
         // NDC -> World
-        FrustumCornersWorld[Idx] = InCameraInverseVP.TransformPosition(FrustumCornersNDC[Idx]);
-        FrustumCenterWorld += FrustumCornersWorld[Idx];
+    	const FVector4 CornerWorldH = InCameraInverseVP.TransformHomogeneous(FrustumCornersNDC[Idx]);
+    	if (abs(CornerWorldH.W) < 1e-6f)
+    	{
+    		FrustumCornersWorld[Idx] = FVector(0, 0, 0);
+    	}
+    	else
+    	{
+    		FrustumCornersWorld[Idx] = FVector(
+				CornerWorldH.X / CornerWorldH.W,
+				CornerWorldH.Y / CornerWorldH.W,
+				CornerWorldH.Z / CornerWorldH.W
+			);
+    	}
+
+    	FrustumCenterWorld += FrustumCornersWorld[Idx];
     }
     FrustumCenterWorld *= 1 / 8.0f;
 
     // --- 2. 라이트 뷰 매트릭스 (V) 생성 (Orthographic) ---
     const FVector LightDirection = GetWorldForwardVector().GetNormalized();
-    const FVector LightPosition = FrustumCenterWorld - LightDirection * 5000.0f;
-	const FVector WorldUp = FVector::UpVector();
-	FVector LightRight = WorldUp.Cross(LightDirection);
+	const FVector LightRight = GetWorldRightVector().GetNormalized();
+	const FVector LightUp = GetWorldUpVector().GetNormalized();
+    const FVector LightPosition = FrustumCenterWorld - LightDirection * 1000.0f;
 
-	if (LightRight.IsNearlyZero())
-	{
-		LightRight = FVector::ForwardVector().Cross(LightDirection);
-	}
-	LightRight.Normalize();
-	const FVector LightUp = LightDirection.Cross(LightRight);
 	FMatrix ViewMatrix = FMatrix::CreateViewFromAxes(LightPosition, LightRight, LightUp, LightDirection);
 
     // --- 3. 라이트 프로젝션 매트릭스 (P) 생성 (Orthographic) ---
@@ -103,9 +110,6 @@ const TArray<FMatrix>& UDirectionalLightComponent::GetLightViewProjectionMatrice
 	float NearZ = MinBounds.Z;
 	float FarZ = MaxBounds.Z;
 
-	float zMargin = (FarZ - NearZ) * 0.05f; // 5% 여유
-	NearZ -= zMargin;
-	FarZ += zMargin;
     FMatrix ProjMatrix = FMatrix::CreateOrthographicOffCenter(
         MinBounds.X, MaxBounds.X, MinBounds.Y, MaxBounds.Y, NearZ, FarZ
     );

@@ -147,4 +147,5 @@ struct FMatrix
 	FVector GetRotation() const;
 	FVector GetScale() const;
 	FVector TransformPosition(const FVector& V) const;
+	FVector4 TransformHomogeneous(const FVector& V) const;
 };

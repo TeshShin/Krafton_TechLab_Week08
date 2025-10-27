@@ -426,4 +426,13 @@ FVector FMatrix::TransformPosition(const FVector& V) const
     );
 }
 
-
+FVector4 FMatrix::TransformHomogeneous(const FVector& V) const
+{
+	// V.W는 1.0이라고 가정
+	return FVector4(
+		V.X * Data[0][0] + V.Y * Data[1][0] + V.Z * Data[2][0] + Data[3][0], // Out.X
+		V.X * Data[0][1] + V.Y * Data[1][1] + V.Z * Data[2][1] + Data[3][1], // Out.Y
+		V.X * Data[0][2] + V.Y * Data[1][2] + V.Z * Data[2][2] + Data[3][2], // Out.Z
+		V.X * Data[0][3] + V.Y * Data[1][3] + V.Z * Data[2][3] + Data[3][3]  // !!! Out.W !!!
+	);
+}
