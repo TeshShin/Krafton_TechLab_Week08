@@ -52,7 +52,6 @@ public:
 
 	FRay ConvertToWorldRay(float NdcX, float NdcY) const;
 
-	FVector CalculatePlaneNormal(const FVector4& Axis);
 	FVector CalculatePlaneNormal(const FVector& Axis);
 	FVector& GetLocation() { return RelativeLocation; }
 	FVector& GetRotation() { return RelativeRotation; }
@@ -70,11 +69,7 @@ public:
 
 	// Camera Movement Speed Control
 	float GetMoveSpeed() const { return CurrentMoveSpeed; }
-	void SetMoveSpeed(float InSpeed)
-	{
-		CurrentMoveSpeed = clamp(InSpeed, MIN_SPEED, MAX_SPEED);
-		// CurrentMoveSpeed = min(InSpeed, MAX_SPEED);
-	}
+	void SetMoveSpeed(float InSpeed) { CurrentMoveSpeed = clamp(InSpeed, MIN_SPEED, MAX_SPEED); }
 	void AdjustMoveSpeed(float InDelta) { SetMoveSpeed(CurrentMoveSpeed + InDelta); }
 
 	/* *
