@@ -248,7 +248,7 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
 
     // --- SRV ---
     D3D11_SHADER_RESOURCE_VIEW_DESC PointSrvDesc = {};
-    PointSrvDesc.Format = DXGI_FORMAT_R32_FLOAT; // R32G32 로 바꿔야함
+    PointSrvDesc.Format = DXGI_FORMAT_R32_FLOAT; // VSM시에 R32G32 로 바꿔야함
     PointSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
     PointSrvDesc.TextureCubeArray.MostDetailedMip = 0;
     PointSrvDesc.TextureCubeArray.MipLevels = 1;
@@ -474,14 +474,14 @@ void FShadowMapManager::AllocateShadowMap(class ULightComponentBase* Light)
 	switch (Light->GetLightType())
 	{
 	case ELightComponentType::LightType_Spot:
-		if (CurrentSpotShadowIdx < MaxSpotShadows)
+		if (CurrentSpotShadowIdx <= MaxSpotShadows)
 		{
 			Light->SetShadowMapIdx(CurrentSpotShadowIdx++);
 			return;
 		}
 		break;
 	case ELightComponentType::LightType_Point:
-		if (CurrentPointCubeIdx < MaxPointShadowCubes)
+		if (CurrentPointCubeIdx <= MaxPointShadowCubes)
 		{
 			Light->SetShadowMapIdx(CurrentPointCubeIdx++);
 			return;
@@ -534,7 +534,7 @@ void FShadowMapManager::GetPointShadowRTVs(class ULightComponentBase* Light, TAr
 
 	if (ShadowMapIdx < 0) { return; }
 
-	if (CurrentPointCubeIdx < MaxPointShadowCubes)
+	if (CurrentPointCubeIdx <= MaxPointShadowCubes)
 	{
 		for (uint32 Idx = 0; Idx < 6; ++Idx)
 		{

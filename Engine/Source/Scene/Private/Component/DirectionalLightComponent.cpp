@@ -30,7 +30,7 @@ FUnifiedDynamicLight UDirectionalLightComponent::GetUnifiedLightData() const
     LightData.Direction = GetWorldForwardVector();
     LightData.Intensity = GetIntensity();
     LightData.Color = GetLightColor();
-	LightData.LightType = static_cast<uint32>(EDynamicLightType::Directional);
+	LightData.LightType = static_cast<uint32>(GetLightType());
 	LightData.ShadowBias = 0.001f;
 	LightData.bCastShadows = bCastShadows;
 	LightData.ShadowMapIndex = ShadowMapIdx;

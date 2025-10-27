@@ -19,7 +19,7 @@ FShadowPass::FShadowPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS) :
 	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/Lighting/ShadowMapShader.hlsl", &PS);
 
 	CBLightInfo = FRenderResourceFactory::CreateConstantBuffer<FShadowLightInfo>();
-	FShadowMapManager::GetInstance().Initialize(1, 2048, 1, 2048, 4096);
+	FShadowMapManager::GetInstance().Initialize(16, 2048, 16, 2048, 4096);
 }
 
 bool FShadowPass::CanRender(const FRenderingContext& Context)
@@ -75,8 +75,6 @@ void FShadowPass::Execute(FRenderingContext& Context)
             ShadowViewport.Width = static_cast<float>(Resolution);
             ShadowViewport.Height = static_cast<float>(Resolution);
             DeviceContext->RSSetViewports(1, &ShadowViewport);
-
-            const TArray<FMatrix>& VPs = Light->GetLightViewProjectionMatrices(CameraVPInv);
 
             if (Light->GetLightType() == ELightComponentType::LightType_Point)
             {

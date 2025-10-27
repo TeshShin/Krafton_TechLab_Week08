@@ -1,9 +1,9 @@
 #include "../Common/CommonConstants.hlsli"
 
-#define LIGHT_TYPE_DIRECTIONAL 0
-#define LIGHT_TYPE_POINT       1
-#define LIGHT_TYPE_SPOT        2
-#define LIGHT_TYPE_AMBIENT     3
+#define LIGHT_TYPE_AMBIENT		0
+#define LIGHT_TYPE_DIRECTIONAL	1
+#define LIGHT_TYPE_POINT		2
+#define LIGHT_TYPE_SPOT			3
 
 cbuffer ShadowLightInfo : register(b0)
 {

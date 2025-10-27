@@ -8,19 +8,6 @@
  */
 
 /**
- * @brief Dynamic Light Type Enumeration
- * @note Used in FUnifiedDynamicLight for type identification in shaders
- */
-enum class EDynamicLightType : uint32
-{
-    Directional = 0,  // Directional light (infinite distance, parallel rays)
-    Point = 1,        // Point light (omnidirectional)
-    Spot = 2,         // Spot light (cone-shaped)
-	Ambient = 3,         // Ambient light (global illumination)
-    Max = 4
-};
-
-/**
  * @brief Unified Dynamic Light Data for Forward+ Rendering
  * @note 16-byte alignment guaranteed (total 80 bytes)
  * @details Single unified structure for all dynamic light types

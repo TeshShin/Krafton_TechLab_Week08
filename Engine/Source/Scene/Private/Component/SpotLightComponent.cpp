@@ -58,7 +58,7 @@ FUnifiedDynamicLight USpotLightComponent::GetUnifiedLightData() const
     LightData.Direction = GetWorldForwardVector();
     LightData.Param0 = InnerConeAngle;
     LightData.Param1 = OuterConeAngle;
-    LightData.LightType = static_cast<uint32>(EDynamicLightType::Spot);
+    LightData.LightType = static_cast<uint32>(GetLightType());
 	LightData.ShadowBias = 0.001f;
 
     return LightData;

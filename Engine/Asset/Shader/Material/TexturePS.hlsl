@@ -220,7 +220,6 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 
 //--- 2. PCF ---------------------------------------------
 // #elif USE_PCF
-//        // PCF는 <float> 텍스처와 '비교' 샘플러(SamplerComparisonState)를 사용합니다.
 //        // (필터 크기는 예시로 11을 사용. CBuffer의 상수로 대체 가능)
 //        LightResult = CalculateDynamicLightWithPCF(
 //            DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, max(Ns, 1.0f),
@@ -234,8 +233,6 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 
 //--- 3. Hard Shadow ---------------------------------------------
 #else
-       // 하드 섀도우는 PCF와 동일한 리소스를 사용하며, FilterSize=1인
-       // CalculateDynamicLightWithShadows 함수를 호출합니다.
        LightResult = CalculateDynamicLightWithShadows(
           DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, max(Ns, 1.0f),
           SpotShadowAtlas,         // t13 <float>

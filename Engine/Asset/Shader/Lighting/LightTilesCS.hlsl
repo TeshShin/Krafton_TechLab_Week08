@@ -30,10 +30,10 @@ cbuffer ForwardPlusCB : register(b1)
 };
 
 // Light type enumeration (must match pixel shader and LightingFunctions.hlsl)
-#define LIGHT_TYPE_DIRECTIONAL 0
-#define LIGHT_TYPE_POINT       1
-#define LIGHT_TYPE_SPOT        2
-#define LIGHT_TYPE_AMBIENT     3
+#define LIGHT_TYPE_AMBIENT		0
+#define LIGHT_TYPE_DIRECTIONAL	1
+#define LIGHT_TYPE_POINT		2
+#define LIGHT_TYPE_SPOT			3
 
 // Must match TexturePS.hlsl/C++ FUnifiedDynamicLight exactly
 struct FUnifiedDynamicLight

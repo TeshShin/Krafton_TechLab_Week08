@@ -126,10 +126,10 @@ FLightingResult CalculateLambertLighting(float3 LightDir, float3 Normal, float3 
 //--------------------------------------------------------------------------------------
 
 // [IMPORTANT] Light Type Enumeration - Must match C++ EDynamicLightType
-#define LIGHT_TYPE_DIRECTIONAL 0
-#define LIGHT_TYPE_POINT       1
-#define LIGHT_TYPE_SPOT        2
-#define LIGHT_TYPE_AMBIENT     3
+#define LIGHT_TYPE_AMBIENT		0
+#define LIGHT_TYPE_DIRECTIONAL	1
+#define LIGHT_TYPE_POINT		2
+#define LIGHT_TYPE_SPOT			3
 
 // [IMPORTANT] Must match C++ FUnifiedDynamicLight exactly (field names and order)
 struct FUnifiedDynamicLight
