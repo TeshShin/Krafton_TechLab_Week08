@@ -160,9 +160,9 @@ const TArray<FMatrix>& ULightComponentBase::GetLightViewMatrices(const FMatrix& 
 	return CachedLightViewMatrices;
 }
 
-const FMatrix& ULightComponentBase::GetLightProjectionMatrix() const
+const FMatrix& ULightComponentBase::GetLightProjectionMatrix(const FMatrix& InCameraInverseVP) const
 {
-	UpdateLightMatricesInternal(FMatrix());
+	UpdateLightMatricesInternal(InCameraInverseVP);
 	return CachedLightProjectionMatrix;
 }
 

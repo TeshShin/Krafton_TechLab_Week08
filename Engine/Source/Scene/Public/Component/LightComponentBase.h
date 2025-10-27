@@ -124,7 +124,7 @@ public:
 	 -----------------------------------------------------------------------------*/
 public:
 	const TArray<FMatrix>& GetLightViewMatrices(const FMatrix& InCameraInverseVP) const;
-	const FMatrix& GetLightProjectionMatrix() const;
+	const FMatrix& GetLightProjectionMatrix(const FMatrix& InCameraInverseVP) const;
 	const TArray<FMatrix>& GetLightViewProjectionMatrices(const FMatrix& InCameraInverseVP) const;
 
 	bool DoesCastShadows() const { return bCastShadows; }

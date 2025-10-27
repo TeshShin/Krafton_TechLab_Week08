@@ -45,6 +45,7 @@ class UTexture* UDirectionalLightComponent::GetLightBillboardTexture()
 
 void UDirectionalLightComponent::UpdateLightMatricesInternal(const FMatrix& InCameraInverseVP) const
 {
+	CachedLightViewMatrices.clear();
     CachedLightViewProjection.clear();
 
     // --- 1. 메인 카메라의 절두체(Frustum) 8개 꼭짓점 계산 ---

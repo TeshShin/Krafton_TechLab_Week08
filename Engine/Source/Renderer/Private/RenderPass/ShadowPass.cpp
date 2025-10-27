@@ -68,7 +68,7 @@ void FShadowPass::Execute(FRenderingContext& Context)
         	LightInfo.LightPosition = Light->GetWorldLocation();
         	LightInfo.LightType = static_cast<uint32>(Light->GetLightType());
         	LightInfo.LightView = ViewMatrices[0];
-        	LightInfo.LightProjection = Light->GetLightProjectionMatrix();
+        	LightInfo.LightProjection = Light->GetLightProjectionMatrix(CameraVPInv);
         	FRenderResourceFactory::UpdateConstantBufferData(CBLightInfo, LightInfo);
 
             const uint32 Resolution = ShadowMapManager.GetResolution(Light);

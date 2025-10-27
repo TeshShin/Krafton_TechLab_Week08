@@ -446,10 +446,9 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 		int32 ShadowMapIdx = Light->GetShadowMapIdx();
 		if (Light->DoesCastShadows() && ShadowMapIdx >= 0)
 		{
-
 			FLightViewProj LightViewProj;
 			LightViewProj.ViewMatrix = Light->GetLightViewMatrices(CameraVPInv)[0];
-			LightViewProj.ProjectionMatrix = Light->GetLightProjectionMatrix();
+			LightViewProj.ProjectionMatrix = Light->GetLightProjectionMatrix(CameraVPInv);
 			if (Light->GetLightType() == ELightComponentType::LightType_Spot)
 			{
 				SpotLightMatrices[ShadowMapIdx] = LightViewProj;
