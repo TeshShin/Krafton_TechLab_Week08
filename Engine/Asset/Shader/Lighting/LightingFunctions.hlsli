@@ -7,19 +7,35 @@
 #define LIGHTING_FUNCTIONS_HLSL
 
 //--------------------------------------------------------------------------------------
-// [VSM FILTER ]
+// [VSM FILTER]
 //--------------------------------------------------------------------------------------
+// Filter selection (mutually exclusive):
+// - Set VSM_USE_GAUSSIAN_FILTER to 1 to use Gaussian; otherwise falls back to box or linear.
+// - If both are 0, uses unfiltered linear sampling of moments.
 #ifndef VSM_USE_BOX_FILTER
-#define VSM_USE_BOX_FILTER 11
+#define VSM_USE_BOX_FILTER 1
+#endif
+
+#ifndef VSM_USE_GAUSSIAN_FILTER
+#define VSM_USE_GAUSSIAN_FILTER 0
 #endif
 
 #ifndef BOX_FILTER_SIZE
-#define BOX_FILTER_SIZE 35
+#define BOX_FILTER_SIZE 11
+#endif
+
+// Gaussian settings (radius in texels; kernel size = 2*R+1)
+#ifndef GAUSSIAN_KERNEL_RADIUS
+#define GAUSSIAN_KERNEL_RADIUS 10
+#endif
+
+#ifndef GAUSSIAN_SIGMA
+#define GAUSSIAN_SIGMA 5.0f
 #endif
 
 // Light bleeding reduction amount for VSM (0 = none, 1 = full cutoff)
 #ifndef VSM_LIGHT_BLEED_REDUCTION
-#define VSM_LIGHT_BLEED_REDUCTION 0.8f
+#define VSM_LIGHT_BLEED_REDUCTION 0.5f
 #endif
 
 float linstep(float minV, float maxV, float v)
@@ -301,6 +317,74 @@ float2 SampleVSMBox(Texture2DArray<float2> ShadowMomentsArray,
 //--------------------------------------------------------------------------------------
 // VSM: 선형필터와 결합하기 위해, 선형으로 depth 비교
 //--------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------
+// [VSM] Gaussian-filtered (2D via separable 1D weights)
+// - Computes 1D Gaussian weights on-the-fly; uses product to form 2D kernel
+// - radius: kernel radius in texels (kernel size = 2*radius+1)
+// - sigma: standard deviation in texels
+//--------------------------------------------------------------------------------------
+float2 SampleVSMGaussian(
+    Texture2DArray<float2> ShadowMomentsArray,
+    SamplerState Sampler,
+    float3 uvw,
+    int radius,
+    float sigma)
+{
+    radius = max(0, radius);
+
+    uint2 texSize;
+    float element;
+    ShadowMomentsArray.GetDimensions(texSize.x, texSize.y, element);
+
+    float2 st = texSize * uvw.xy;
+
+    // Precompute 1D normalization sum: S = sum_{i=-r..r} g(i)
+    float oneDsum = 0.0f;
+    [loop]
+    for (int i = -radius; i <= radius; ++i)
+    {
+        float x = i / sigma;
+        // Unnormalized Gaussian (normalization handled by dividing by (oneDsum^2))
+        oneDsum += exp(-0.5f * x * x);
+    }
+
+    float norm2D = max(oneDsum * oneDsum, 1e-8f);
+
+    float2 acc = float2(0.0f, 0.0f);
+    [loop]
+    for (int y = -radius; y <= radius; ++y)
+    {
+        float jy = y / sigma;
+        float wy = exp(-0.5f * jy * jy);
+
+        [loop]
+        for (int x = -radius; x <= radius; ++x)
+        {
+            float jx = x / sigma;
+            float wx = exp(-0.5f * jx * jx);
+            float w = wx * wy; // separable 2D weight
+
+            float2 uv = (st + float2(x, y) + 0.5f) / texSize;
+            acc += w * ShadowMomentsArray.Sample(Sampler, float3(uv, uvw.z)).xy;
+        }
+    }
+
+    return acc / norm2D;
+}
+
+// VSM + Gaussian Filter
+float ShadowVisibilityVSM_GaussianFiltered(
+    Texture2DArray<float2> ShadowMomentsArray,
+    SamplerState ShadowSampler,
+    float3 sampleUVW,
+    float t,
+    int radius,
+    float sigma)
+{
+    float2 moments = SampleVSMGaussian(ShadowMomentsArray, ShadowSampler, sampleUVW, radius, sigma);
+    return VSM_Visibility(moments, t);
+}
+
 float ShadowVisibilityVSM(Texture2DArray<float2> ShadowMomentsArray,
 						   SamplerState ShadowSampler,
 						   float3 sampleUVW,
@@ -323,7 +407,7 @@ float ShadowVisibilityVSM_BoxFiltered(Texture2DArray<float2> ShadowMomentsArray,
 
 
 // Shadow + VSM(선형 필터) 
-FLightingResult CalculateDynamicLightWithLinearShadows(FUnifiedDynamicLight Light,
+FLightingResult CalculateDynamicLightWithVSM(FUnifiedDynamicLight Light,
 	float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower, Texture2DArray<float2> ShadowMapArray, SamplerState ShadowSampler, float t)
 {
     FLightingResult Result = CalculateDynamicLight(Light, WorldPos, Normal, ViewDir, SpecularPower);
@@ -333,7 +417,11 @@ FLightingResult CalculateDynamicLightWithLinearShadows(FUnifiedDynamicLight Ligh
 	float ShadowFactor = 1.0f;
 	if (Light.bCastShadows > 0)
 	{
-		#if VSM_USE_BOX_FILTER
+		#if VSM_USE_GAUSSIAN_FILTER
+		ShadowFactor = ShadowVisibilityVSM_GaussianFiltered(
+			ShadowMapArray, ShadowSampler, float3(SampleCoords.xy, Light.ShadowMapIndex), t,
+			GAUSSIAN_KERNEL_RADIUS, GAUSSIAN_SIGMA);
+		#elif VSM_USE_BOX_FILTER
 		ShadowFactor = ShadowVisibilityVSM_BoxFiltered(ShadowMapArray, ShadowSampler, float3(SampleCoords.xy, Light.ShadowMapIndex), t, BOX_FILTER_SIZE);
 		#else
 		ShadowFactor = ShadowVisibilityVSM(ShadowMapArray, ShadowSampler, SampleCoords, t);

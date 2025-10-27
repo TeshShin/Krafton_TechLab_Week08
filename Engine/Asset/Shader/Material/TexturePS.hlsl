@@ -1,9 +1,9 @@
 #include "../Material/TextureVS.hlsl"
-
+ 
 // VSM 토글 TODO:UI 연동
-//#ifndef USE_VSM
-//#define USE_VSM 1
-//#endif
+#ifndef USE_VSM
+#define USE_VSM 1
+#endif
   
 //--------------------------------------------------------------------------------------
 // [FORWARD PLUS RENDERING] Light Tile Clustering Data Structures
@@ -140,7 +140,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 	{
 		SpecularColor *= SpecularTexture.Sample(SamplerWrap, UV);
 	}
-
+	 
 	float4 FinalColor = float4(0, 0, 0, 1);
 	 
 	// Accumulate separated diffuse and specular contributions
@@ -160,7 +160,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
     // -----------------------
 	float3 wsNormal = Input.WorldNormal;
 	if (MaterialFlags & HAS_BUMP_MAP)
-	{
+	{   
         // Sample and unpack tangent-space normal (assumes XYZ in texture)
 		float3 nTS = BumpTexture.Sample(SamplerWrap, UV).xyz * 2.0f - 1.0f;
 		nTS = normalize(nTS);
@@ -172,11 +172,11 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 		   
 		float3x3 TBN = float3x3(T, B, N);
 		wsNormal = normalize(mul(nTS, TBN));
-	}      
-	else
+	}       
+	else   
 	{    
 		wsNormal = normalize(Input.WorldNormal);
-	} 
+	}  
 
     float3 ViewDir = normalize(ViewWorldLocation - Input.WorldPosition);
     float SpecularPower = max(Ns, 1.0f); // Prevent division by zero
@@ -198,7 +198,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 		float t = mul(float4(Input.WorldPosition, 1.0f), DynamicLights[li].LightView).z ;
 		  
 		#ifdef USE_VSM
-		FLightingResult LightResult = CalculateDynamicLightWithLinearShadows(
+		FLightingResult LightResult = CalculateDynamicLightWithVSM(
             DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, max(Ns, 1.0f),
             ShadowMomentsArray, ShadowLinearSampler, t);
 		#else
