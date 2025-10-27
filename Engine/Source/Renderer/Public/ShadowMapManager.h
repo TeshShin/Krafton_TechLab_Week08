@@ -104,6 +104,7 @@ private:
 public:
 	void InitializeForDebug();
 	ID3D11ShaderResourceView* GetSpotSRVForImGuiDebug(uint32 SpotIndex);
+	void UpdatePointShadowDebugTextures(uint32 CubeIndex);
 	ID3D11ShaderResourceView* GetPointSRVForImGuiDebug(uint32 CubeIndex, uint32 FaceIndex); // FaceIndex: 0~5
 	ID3D11ShaderResourceView* GetDirectionalSRVForImGuiDebug();
 
@@ -112,9 +113,9 @@ private:
     ID3D11Texture2D* ImGuiDebugTexture_Spot = nullptr;
     ID3D11ShaderResourceView* ImGuiDebugSRV_Spot = nullptr;
 
-    ID3D11Texture2D* ImGuiDebugTexture_Point = nullptr;
-    ID3D11ShaderResourceView* ImGuiDebugSRV_Point = nullptr;
+    ID3D11Texture2D* ImGuiDebugTextures_Point[6] = { nullptr };
+    ID3D11ShaderResourceView* ImGuiDebugSRVs_Point[6] = { nullptr };
 
 	ID3D11Texture2D* ImGuiDebugTexture_Dir = nullptr;
-	ID3D11ShaderResourceView* ImGuiDebugSRV_Dir = nullptr;
+	ID3D11ShaderResourceView* ImGuiDebugSRV_Dir =  nullptr;
 };

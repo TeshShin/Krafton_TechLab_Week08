@@ -69,6 +69,7 @@ void ULightComponentWidget::RenderWidget()
             		ImGui::Image(FShadowMapManager::GetInstance().GetDirectionalSRVForImGuiDebug(), ImVec2(512, 512));
             		break;
             	case ELightComponentType::LightType_Point:
+            		FShadowMapManager::GetInstance().UpdatePointShadowDebugTextures(ShadowMapIdx);
             		for (uint32 Idx = 0; Idx < 6; ++Idx)
             		{
             			ImGui::Image(FShadowMapManager::GetInstance().GetPointSRVForImGuiDebug(ShadowMapIdx, Idx), ImVec2(512, 512));

@@ -463,12 +463,15 @@ void FShadowMapManager::InitializeForDebug()
         Desc.CPUAccessFlags = 0;
         Desc.MiscFlags = 0;
 
-        hr = Device->CreateTexture2D(&Desc, nullptr, &ImGuiDebugTexture_Point);
-        if (FAILED(hr))
-        {
-            UE_LOG_ERROR("[ShadowMapManager] Failed to create Point Debug Texture.");
-            return;
-        }
+    	for (uint32 Idx = 0; Idx < 6; Idx++)
+    	{
+    		hr = Device->CreateTexture2D(&Desc, nullptr, &ImGuiDebugTextures_Point[Idx]);
+    		if (FAILED(hr))
+    		{
+    			UE_LOG_ERROR("[ShadowMapManager] Failed to create Point Debug Texture.");
+    			return;
+    		}
+    	}
 
         // SRV 생성
         D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -477,12 +480,15 @@ void FShadowMapManager::InitializeForDebug()
         srvDesc.Texture2D.MostDetailedMip = 0;
         srvDesc.Texture2D.MipLevels = 1;
 
-        hr = Device->CreateShaderResourceView(ImGuiDebugTexture_Point, &srvDesc, &ImGuiDebugSRV_Point);
-        if (FAILED(hr))
-        {
-            UE_LOG_ERROR("[ShadowMapManager] Failed to create Point Debug SRV.");
-            return;
-        }
+    	for (uint32 Idx = 0; Idx < 6; Idx++)
+    	{
+    		hr = Device->CreateShaderResourceView(ImGuiDebugTextures_Point[Idx], &srvDesc, &ImGuiDebugSRVs_Point[Idx]);
+    		if (FAILED(hr))
+    		{
+    			UE_LOG_ERROR("[ShadowMapManager] Failed to create Point Debug SRV.");
+    			return;
+    		}
+    	}
     }
 
 	// --- 3. 디렉셔널 라이트 디버그 리소스 생성 ---
@@ -542,29 +548,39 @@ ID3D11ShaderResourceView* FShadowMapManager::GetSpotSRVForImGuiDebug(uint32 Spot
     return ImGuiDebugSRV_Spot;
 }
 
+void FShadowMapManager::UpdatePointShadowDebugTextures(uint32 CubeIndex)
+{
+	if (!Context || !PointShadowCubeArrayTexture || CubeIndex >= MaxPointShadowCubes)
+	{
+		return;
+	}
+
+	// 6개의 모든 면을 순회하며 개별 텍스처에 복사
+	for (uint32 FaceIndex = 0; FaceIndex < 6; ++FaceIndex)
+	{
+		if (!ImGuiDebugTextures_Point[FaceIndex])
+		{
+			continue; // 디버그 텍스처가 준비되지 않음
+		}
+
+		uint32 FinalSliceIndex = (CubeIndex * 6) + FaceIndex;
+		UINT SrcSubresource = D3D11CalcSubresource(0, FinalSliceIndex, 1);
+		UINT DstSubresource = 0; // 각 2D 텍스처의 0번 서브리소스
+
+		Context->CopySubresourceRegion(
+			ImGuiDebugTextures_Point[FaceIndex], DstSubresource, 0, 0, 0,
+			PointShadowCubeArrayTexture, SrcSubresource, nullptr
+		);
+	}
+}
+
 ID3D11ShaderResourceView* FShadowMapManager::GetPointSRVForImGuiDebug(uint32 CubeIndex, uint32 FaceIndex)
 {
-    // 1. 유효성 검사
-    if (!Context || !PointShadowCubeArrayTexture || !ImGuiDebugTexture_Point || !ImGuiDebugSRV_Point)
-    {
-        return nullptr;
-    }
-    if (CubeIndex >= MaxPointShadowCubes || FaceIndex >= 6)
-    {
-        return nullptr;
-    }
-
-    uint32 FinalSliceIndex = (CubeIndex * 6) + FaceIndex;
-    UINT SrcSubresource = D3D11CalcSubresource(0, FinalSliceIndex, 1);
-    UINT DstSubresource = 0;
-
-    // 리소스 복사 (GPU 작업)
-    Context->CopySubresourceRegion(
-        ImGuiDebugTexture_Point, DstSubresource, 0, 0, 0,
-        PointShadowCubeArrayTexture, SrcSubresource, nullptr
-    );
-
-    return ImGuiDebugSRV_Point;
+	if (FaceIndex >= 6)
+	{
+		return nullptr;
+	}
+	return ImGuiDebugSRVs_Point[FaceIndex];
 }
 
 ID3D11ShaderResourceView* FShadowMapManager::GetDirectionalSRVForImGuiDebug()
