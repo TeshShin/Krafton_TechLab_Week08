@@ -179,7 +179,7 @@ FQuaternion USceneComponent::GetWorldRotationAsQuaternion() const
 {
     if (AttachParent)
     {
-        return AttachParent->GetWorldRotationAsQuaternion() * RelativeRotation;
+		return RelativeRotation * AttachParent->GetWorldRotationAsQuaternion();
     }
     return RelativeRotation;
 }
@@ -213,7 +213,7 @@ void USceneComponent::SetWorldRotation(const FVector& NewRotation)
     if (AttachParent)
     {
         FQuaternion ParentWorldRotationQuat = AttachParent->GetWorldRotationAsQuaternion();
-        SetRelativeRotation(ParentWorldRotationQuat.Inverse() * NewWorldRotationQuat);
+		SetRelativeRotation(NewWorldRotationQuat * ParentWorldRotationQuat.Inverse());
     }
     else
     {
@@ -226,7 +226,7 @@ void USceneComponent::SetWorldRotation(const FQuaternion& NewRotation)
 	if (AttachParent)
 	{
 		FQuaternion ParentWorldRotationQuat = AttachParent->GetWorldRotationAsQuaternion();
-       SetRelativeRotation(ParentWorldRotationQuat.Inverse() * NewRotation); 
+		SetRelativeRotation(NewRotation * ParentWorldRotationQuat.Inverse());
 	}
 	else
 	{

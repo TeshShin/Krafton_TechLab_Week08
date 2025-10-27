@@ -146,7 +146,10 @@ FQuaternion FQuaternion::operator*(const FQuaternion& Q) const
 		W * Q.W - X * Q.X - Y * Q.Y - Z * Q.Z
 	);
 }
-
+bool FQuaternion::operator==(const FQuaternion& Q) const
+{
+	return (Q.X == X) && (Q.Y == Y) && (Q.Z == Z) && (Q.W == W);
+}
 void FQuaternion::Normalize()
 {
 	float mag = sqrtf(X * X + Y * Y + Z * Z + W * W);
