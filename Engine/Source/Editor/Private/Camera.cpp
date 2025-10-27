@@ -126,35 +126,15 @@ void UCamera::Update(const D3D11_VIEWPORT& InViewport)
 void UCamera::UpdateMatrixByPers()
 {
 	/**
-	 * @brief View 행렬 연산
+	 * @brief View 행렬 연산 (헬퍼 함수로 대체)
 	 */
-	FMatrix T = FMatrix::TranslationMatrixInverse(RelativeLocation);
-	FMatrix R = FMatrix(Right, Up, Forward);
-	R = R.Transpose();
-	CameraConstants.View = T * R;
+	CameraConstants.View = FMatrix::CreateViewFromAxes(RelativeLocation, Right, Up, Forward);
 
 	/**
-	 * @brief Projection 행렬 연산
-	 * 원근 투영 행렬 (HLSL에서 row-major로 mul(p, M) 일관성 유지)
-	 * f = 1 / tan(fovY/2)
+	 * @brief Projection 행렬 연산 (기존과 동일)
 	 */
 	const float RadianFovY = FVector::GetDegreeToRadian(FovY);
 	CameraConstants.Projection = FMatrix::CreatePerspectiveFOV(RadianFovY, Aspect, NearZ, FarZ);
-	// const float F = 1.0f / std::tanf(RadianFovY * 0.5f);
-	//
-	// FMatrix P = FMatrix::Identity();
-	// // | f/aspect   0        0         0 |
-	// // |    0       f        0         0 |
-	// // |    0       0   zf/(zf-zn)     1 |
-	// // |    0       0  -zn*zf/(zf-zn)  0 |
-	// P.Data[0][0] = F / Aspect;
-	// P.Data[1][1] = F;
-	// P.Data[2][2] = FarZ / (FarZ - NearZ);
-	// P.Data[2][3] = 1.0f;
-	// P.Data[3][2] = (-NearZ * FarZ) / (FarZ - NearZ);
-	// P.Data[3][3] = 0.0f;
-	//
-	// CameraConstants.Projection = P;
 
 	CameraConstants.ViewWorldLocation = RelativeLocation;
 	CameraConstants.NearClip = NearZ;
@@ -164,18 +144,12 @@ void UCamera::UpdateMatrixByPers()
 void UCamera::UpdateMatrixByOrth()
 {
 	/**
-	 * @brief View 행렬 연산
-	 */
-	FMatrix T = FMatrix::TranslationMatrixInverse(RelativeLocation);
-	FMatrix R = FMatrix(Right, Up, Forward);
-	R = R.Transpose();
-	CameraConstants.View = T * R;
-	/*FMatrix T = FMatrix::TranslationMatrixInverse(RelativeLocation);
-	FMatrix R = FMatrix::RotationMatrixInverse(FVector::GetDegreeToRadian(RelativeRotation));
-	ViewProjConstants.View = T * R;*/
+		 * @brief View 행렬 연산 (헬퍼 함수로 대체)
+		 */
+	CameraConstants.View = FMatrix::CreateViewFromAxes(RelativeLocation, Right, Up, Forward);
 
 	/**
-	 * @brief Projection 행렬 연산
+	 * @brief Projection 행렬 연산 (헬퍼 함수로 대체)
 	 */
 	const float OrthoHeight = OrthoWidth / Aspect;
 	const float Left = -OrthoWidth * 0.5f;
@@ -183,15 +157,7 @@ void UCamera::UpdateMatrixByOrth()
 	const float Bottom = -OrthoHeight * 0.5f;
 	const float Top = OrthoHeight * 0.5f;
 
-	FMatrix P = FMatrix::Identity();
-	P.Data[0][0] = 2.0f / (Right - Left);
-	P.Data[1][1] = 2.0f / (Top - Bottom);
-	P.Data[2][2] = 1.0f / (FarZ - NearZ);
-	P.Data[3][0] = -(Right + Left) / (Right - Left);
-	P.Data[3][1] = -(Top + Bottom) / (Top - Bottom);
-	P.Data[3][2] = -NearZ / (FarZ - NearZ);
-	P.Data[3][3] = 1.0f;
-	CameraConstants.Projection = P;
+	CameraConstants.Projection = FMatrix::CreateOrthographicOffCenter(Left, Right, Bottom, Top, NearZ, FarZ);
 
 	CameraConstants.ViewWorldLocation = RelativeLocation;
 	CameraConstants.NearClip = NearZ;
@@ -204,7 +170,6 @@ const FCameraConstants UCamera::GetFViewProjConstantsInverse() const
 	* @brief View^(-1) = R * T
 	*/
 	FCameraConstants Result = {};
-	//FMatrix R = FMatrix::RotationMatrix(FVector::GetDegreeToRadian(RelativeRotation));
 	FMatrix R = FMatrix(Right, Up, Forward);
 	FMatrix T = FMatrix::TranslationMatrix(RelativeLocation);
 	Result.View = R * T;
