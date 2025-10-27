@@ -20,6 +20,7 @@
     <FxCompile Include="Asset\Shader\ViewMode\BlitPS.hlsl" />
     <FxCompile Include="Asset\Shader\ViewMode\NormalMapPS.hlsl" />
     <FxCompile Include="Asset\Shader\ViewMode\SceneDepthPS.hlsl" />
+    <FxCompile Include="Asset\Shader\Lighting\ShadowMapPS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Editor\Private\Line\BatchLineManager.cpp">

@@ -151,6 +151,12 @@ struct FLightConstants
 	float Padding[3];               // 12 bytes - Padding for 16-byte alignment
 };
 
+struct FLightMatrix
+{
+	FMatrix LightView;
+	FMatrix LightProjection;
+};
+
 struct FForwardPlusCameraConstants
 {
 	FMatrix View;
