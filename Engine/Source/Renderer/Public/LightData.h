@@ -52,4 +52,4 @@ struct FUnifiedDynamicLight
 	int32 ShadowMapIndex;        // 4 bytes - Shadow Texture2D Array Index, 나중에 ShadowAtlas를 위해서.
 	float Padding;        // 4 bytes - four Byte
 };
-static_assert(sizeof(FUnifiedDynamicLight) == 80, "FUnifiedDynamicLight must be 144 bytes for proper GPU alignment");
+static_assert(sizeof(FUnifiedDynamicLight) == 80, "FUnifiedDynamicLight must be 80 bytes for proper GPU alignment");

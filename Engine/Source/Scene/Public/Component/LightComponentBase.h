@@ -114,6 +114,11 @@ private:
 
 	class UBillBoardComponent* IconBillboard = nullptr;
 
+public:
+	// ... other public methods
+	virtual float GetShadowNearClip() const { return 0.1f; }
+	virtual float GetShadowFarClip() const { return 1000.0f; }
+
 	/*-----------------------------------------------------------------------------
 		Shadow Features
 	 -----------------------------------------------------------------------------*/

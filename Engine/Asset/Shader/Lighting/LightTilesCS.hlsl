@@ -35,7 +35,7 @@ cbuffer ForwardPlusCB : register(b1)
 #define LIGHT_TYPE_SPOT        2
 #define LIGHT_TYPE_AMBIENT     3
 
-// Must match TexturePS.hlsl FUnifiedDynamicLight exactly
+// Must match TexturePS.hlsl/C++ FUnifiedDynamicLight exactly
 struct FUnifiedDynamicLight
 {
     float3 Position;            // world space

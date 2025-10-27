@@ -21,7 +21,7 @@ struct FQuaternion
 	FMatrix ToRotationMatrix() const;
 
 	FQuaternion operator*(const FQuaternion& Q) const;
-
+	bool operator==(const FQuaternion& Q) const;
 	void Normalize();
 
 	FQuaternion Conjugate() const { return FQuaternion(-X, -Y, -Z, W); }

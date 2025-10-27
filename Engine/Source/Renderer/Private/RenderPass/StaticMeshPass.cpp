@@ -420,6 +420,11 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 	Pipeline->SetSRV(14, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetDirectionalLightSRV());
 	Pipeline->SetSamplerState(1, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetSamplerState());
 
+	// Bind VSM moments SRV and non-comparison sampler for VSM path
+	15 필요!!
+	Pipeline->SetSRV(13, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetMomentsSRV());
+	Pipeline->SetSamplerState(2, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetLinearSampler());
+
 	// Collect all dynamic lights into unified buffer
 	TArray<FUnifiedDynamicLight> UnifiedLights;
 	SpotLightMatrices.resize(FShadowMapManager::GetInstance().GetMaxSpotShadows());
@@ -484,3 +489,4 @@ void FStaticMeshPass::Release()
 	SafeRelease(SpotLightMatricesSRV);
 	SafeRelease(CBDirectionalShadowMatrix);
 }
+

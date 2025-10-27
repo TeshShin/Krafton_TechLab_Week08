@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Renderer/Public/RenderPass/ShadowPass.h"
 
 #include "Editor/Public/Camera.h"
@@ -29,7 +29,7 @@ bool FShadowPass::CanRender(const FRenderingContext& Context)
 }
 
 void FShadowPass::SetRenderTargets(class UDeviceResources* DeviceResources)
-{
+{ 
 	// Light 별로 Shadow Map DSV 설정
 }
 
@@ -41,6 +41,7 @@ void FShadowPass::Execute(FRenderingContext& Context)
 	Pipeline->UpdatePipeline(PipelineInfo);
 	Pipeline->SetConstantBuffer(0, EShaderType::EST_Vertex, CBLightViewProj);
 	Pipeline->SetConstantBuffer(1, EShaderType::EST_Pixel, CBLightPosRadius);
+    Pipeline->SetConstantBuffer(12, EShaderType::EST_Vertex, Context.ModelCB);
 
 	FShadowMapManager& ShadowMapManager = FShadowMapManager::GetInstance();
 	ShadowMapManager.ClearShadowMaps();
@@ -62,6 +63,9 @@ void FShadowPass::Execute(FRenderingContext& Context)
         {
             ShadowMapManager.AllocateShadowMap(Light);
             if (Light->GetShadowMapIdx() == -1) { continue; }
+
+            ID3D11RenderTargetView* MomentsRTV = ShadowMapManager.GetMomentsRTV(Light->GetShadowMapIdx());
+			Pipeline->SetRenderTargets(1, &MomentsRTV, ShadowMapDSV);
 
             const uint32 Resolution = ShadowMapManager.GetResolution(Light);
             ShadowViewport.Width = static_cast<float>(Resolution);

@@ -140,3 +140,49 @@ const TArray<FMatrix>& USpotLightComponent::GetLightViewProjectionMatrices(const
 
 	return CachedLightViewProjection;
 }
+
+const FMatrix& USpotLightComponent::GetLightViewMatrix() const
+{
+	//if (bIsLightVPDirty)
+	{
+		const FVector LightPosition = GetWorldLocation();
+		const FVector Right = GetWorldRightVector();
+		const FVector Up = GetWorldUpVector();
+		const FVector Forward = GetWorldForwardVector();
+
+		FMatrix T = FMatrix::TranslationMatrixInverse(LightPosition);
+		FMatrix R = FMatrix(Right, Up, Forward);
+		R = R.Transpose();
+
+		FMatrix ViewMatrix = T * R;
+		CachedLightView = ViewMatrix;
+	//	bIsLightVPDirty = false;
+	} 
+	return CachedLightView;
+}
+
+const FMatrix& USpotLightComponent::GetLightProjectionMatrix() const
+{
+	//if (bIsLightVPDirty)
+	{ 
+		// Projection Matrix 생성 (Perspective)
+		// 섀도우 맵은 보통 정사각형이므로 종횡비(AspectRatio)는 1.0
+		float AspectRatio = 1.0f;
+		float FOV = OuterConeAngle * 2.0f * ToRad;
+
+		// Near/Far 클립 평면 설정
+		float NearZ = 0.1f;
+		float FarZ = GetAttenuationRadius(); // 빛의 최대 도달 거리
+		FMatrix ProjMatrix = FMatrix::CreatePerspectiveFOV(FOV, AspectRatio, NearZ, FarZ);
+
+		CachedLightProjection = ProjMatrix;
+	//	bIsLightVPDirty = false;
+	}
+
+	return CachedLightProjection;
+}
+
+float USpotLightComponent::GetShadowFarClip() const
+{
+	return GetAttenuationRadius();
+}

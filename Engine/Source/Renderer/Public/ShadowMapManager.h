@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 class FShadowMapManager
 {
@@ -64,6 +64,12 @@ public:
 	ID3D11ShaderResourceView* GetDirectionalLightSRV() const { return DirLightShadowSRV; }
 	ID3D11DepthStencilView* GetDirectionalLightDSV() const { return DirLightShadowDSV; }
 	uint32 GetDirectionalResolution() const { return DirLightResolution; }
+	// VSM moments resources
+	ID3D11ShaderResourceView* GetMomentsSRV() const { return ShadowMomentsSRV; }
+	ID3D11RenderTargetView* GetMomentsRTV(uint32 ShadowMapIdx) const { return ShadowMomentsSliceRTVs[ShadowMapIdx]; }
+	ID3D11SamplerState* GetLinearSampler() const { return ShadowLinearSamplerState; }
+
+	uint32 GetResolution() const { return Resolution; }
 
 private:
     // D3D11 핵심 오브젝트
@@ -101,6 +107,13 @@ private:
 	ID3D11DepthStencilView* DirLightShadowDSV = nullptr;
 
 	// Debug Section
+	// VSM Moments (RG32F) as color render targets
+	ID3D11Texture2D* ShadowMomentsArrayTexture = nullptr;
+	ID3D11ShaderResourceView* ShadowMomentsSRV = nullptr;
+	TArray<ID3D11RenderTargetView*> ShadowMomentsSliceRTVs;
+	ID3D11SamplerState* ShadowLinearSamplerState = nullptr;
+
+// Debug Section
 public:
 	void InitializeForDebug();
 	ID3D11ShaderResourceView* GetSpotSRVForImGuiDebug(uint32 SpotIndex);

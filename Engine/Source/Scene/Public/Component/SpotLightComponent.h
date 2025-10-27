@@ -81,4 +81,5 @@ private:
 	 -----------------------------------------------------------------------------*/
 public:
 	const TArray<FMatrix>& GetLightViewProjectionMatrices(const FMatrix& InCameraInverseVP) const override;
+    virtual float GetShadowFarClip() const override;
 };
