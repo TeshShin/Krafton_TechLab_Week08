@@ -461,6 +461,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Renderer\Public\ShaderFactory.h" />
     <ClInclude Include="Source\Renderer\Public\ShaderManager.h" />
     <ClInclude Include="Source\Renderer\Public\ShadowMapManager.h" />
+    <ClInclude Include="Source\Renderer\Public\Shadow\PSMBuilder.h" />
     <ClInclude Include="Source\Scene\Public\Actor\Actor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\AmbientLightActor.h" />
     <ClInclude Include="Source\Scene\Public\Actor\BillBoardActor.h" />
@@ -530,6 +531,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClCompile Include="Source\Renderer\Private\ShaderFactory.cpp" />
     <ClCompile Include="Source\Renderer\Private\ShaderManager.cpp" />
     <ClCompile Include="Source\Renderer\Private\ShadowMapManager.cpp" />
+    <ClCompile Include="Source\Renderer\Private\Shadow\PSMBuilder.cpp" />
     <ClCompile Include="Source\Scene\Private\Actor\SpotLightActor.cpp" />
     <ClCompile Include="Source\Scene\Private\Component\SpotLightComponent.cpp" />
     <ClCompile Include="pch.cpp">

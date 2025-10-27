@@ -1,8 +1,9 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Editor/Public/UI/Widget/Component/LightComponentWidget.h"
 #include "Editor/Public/Editor.h"
 #include "Renderer/Public/ShadowMapManager.h"
 #include "Scene/Public/Component/LightComponentBase.h"
+#include "Renderer/Public/Renderer.h"
 
 IMPLEMENT_CLASS(ULightComponentWidget, UComponentWidget)
 
@@ -54,7 +55,24 @@ void ULightComponentWidget::RenderWidget()
             {
 				LightComponent->SetCastShadows(bCastShadows);
             }
-
+			// Directional 전역 PSM 토글 (Directional 라이트를 선택했을 때만 표시)
+			if (LightComponent->GetLightType() == ELightComponentType::LightType_Directional)
+			{
+				bool bUseDirectionalPSM = URenderer::GetInstance().GetUseDirectionalPSM();
+				if (ImGui::Checkbox("Use Perspective Shadow Mapping (Directional)", &bUseDirectionalPSM))
+				{
+					URenderer::GetInstance().SetUseDirectionalPSM(bUseDirectionalPSM);
+				}
+			}
+			// Spot 전역 PSM 토글 (Spot 라이트를 선택했을 때만 표시)
+			if (LightComponent->GetLightType() == ELightComponentType::LightType_Spot)
+			{
+				bool bUseSpotPSM = URenderer::GetInstance().GetUseSpotLightPSM();
+				if (ImGui::Checkbox("Use Perspective Shadow Mapping (Spot)", &bUseSpotPSM))
+				{
+					URenderer::GetInstance().SetUseSpotLightPSM(bUseSpotPSM);
+				}
+			}
             // Light Depth Map
             int32 ShadowMapIdx = LightComponent->GetShadowMapIdx();
             if (ShadowMapIdx > -1)

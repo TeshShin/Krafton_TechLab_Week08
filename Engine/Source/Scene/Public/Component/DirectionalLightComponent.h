@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Scene/Public/Component/LightComponent.h"
 
 UCLASS()
@@ -8,7 +8,7 @@ class UDirectionalLightComponent : public ULightComponent
     DECLARE_CLASS(UDirectionalLightComponent, ULightComponent)
 
 public:
-    UDirectionalLightComponent() = default;
+    UDirectionalLightComponent();
     virtual ~UDirectionalLightComponent() = default;
 
     /*-----------------------------------------------------------------------------
@@ -19,6 +19,7 @@ public:
 
     virtual struct FUnifiedDynamicLight GetUnifiedLightData() const override;
 
+	virtual const FMatrix& GetLightViewProjectionMatrix() const override;
 public:
 	virtual void DrawDebugArrow(TArray<FName>& InOutLabels) override;
 

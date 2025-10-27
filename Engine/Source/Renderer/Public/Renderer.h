@@ -129,6 +129,10 @@ private:
 public:
 	bool GetUseSpotLightPSM() const { return bUseSpotLightPSM; }
 	void SetUseSpotLightPSM(bool bInEnable) { bUseSpotLightPSM = bInEnable; }
+
+	bool GetUseDirectionalPSM() const { return bUseDirectionalPSM; }
+	void SetUseDirectionalPSM(bool bInEnable) { bUseDirectionalPSM = bInEnable; }
 private:
 	bool bUseSpotLightPSM = true;
+	bool bUseDirectionalPSM = true;
 };

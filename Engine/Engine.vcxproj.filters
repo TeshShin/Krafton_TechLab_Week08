@@ -1,54 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <FxCompile Include="Asset\Shader\HeightFogShader.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\BillboardShader.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\BlitShader.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\NormalMapShader.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\LightingFunctions.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\SceneDepthShader.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\FXAAShader.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\DecalShader.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\TexturePS.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\SampleShader.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\ShaderFont.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\TextureVS.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\ClusterHeatShader.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\LightTilesComputeShader.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\TextureUnlitPS.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\TextureUnlitVS.hlsl">
-      <Filter>Engine\Asset\Shader</Filter>
-    </FxCompile>
+    <FxCompile Include="Asset\Shader\Common\BlitVS.hlsl" />
+    <FxCompile Include="Asset\Shader\Common\CommonConstants.hlsli" />
+    <FxCompile Include="Asset\Shader\Common\EditorPrimitiveShader.hlsl" />
+    <FxCompile Include="Asset\Shader\Lighting\ClusterHeatPS.hlsl" />
+    <FxCompile Include="Asset\Shader\Lighting\LightingFunctions.hlsli" />
+    <FxCompile Include="Asset\Shader\Lighting\LightTilesCS.hlsl" />
+    <FxCompile Include="Asset\Shader\Lighting\ShadowMapVS.hlsl" />
+    <FxCompile Include="Asset\Shader\Material\TextureVS.hlsl" />
+    <FxCompile Include="Asset\Shader\Material\TexturePS.hlsl" />
+    <FxCompile Include="Asset\Shader\Material\TextureUnlitVS.hlsl" />
+    <FxCompile Include="Asset\Shader\Material\TextureUnlitPS.hlsl" />
+    <FxCompile Include="Asset\Shader\PostProcess\FXAAPS.hlsl" />
+    <FxCompile Include="Asset\Shader\PostProcess\HeightFogPS.hlsl" />
+    <FxCompile Include="Asset\Shader\Primitive\BillboardShader.hlsl" />
+    <FxCompile Include="Asset\Shader\Primitive\DecalShader.hlsl" />
+    <FxCompile Include="Asset\Shader\Primitive\FontShader.hlsl" />
+    <FxCompile Include="Asset\Shader\ViewMode\BlitPS.hlsl" />
+    <FxCompile Include="Asset\Shader\ViewMode\NormalMapPS.hlsl" />
+    <FxCompile Include="Asset\Shader\ViewMode\SceneDepthPS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Editor\Private\Line\BatchLineManager.cpp">
@@ -504,6 +475,10 @@
     <ClCompile Include="Source\ImGui\imgui_widgets.cpp">
       <Filter>Engine\Source\ImGui</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Private\UI\Widget\ControlPanelWidget.cpp" />
+    <ClCompile Include="Source\Renderer\Private\RenderPass\ShadowPass.cpp" />
+    <ClCompile Include="Source\Renderer\Private\ShadowMapManager.cpp" />
+    <ClCompile Include="Source\Renderer\Private\Shadow\PSMBuilder.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Scene\Public\Component\LightComponent.h" />
@@ -999,36 +974,24 @@
     <ClInclude Include="Source\Physics\Public\OBB.h">
       <Filter>Engine\Source\Physics\Public</Filter>
     </ClInclude>
-    <ClInclude Include="Source\ImGui\imconfig.h">
-      <Filter>Engine\Source\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\ImGui\imgui.h">
-      <Filter>Engine\Source\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\ImGui\imgui_impl_dx11.h">
-      <Filter>Engine\Source\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\ImGui\imgui_impl_win32.h">
-      <Filter>Engine\Source\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\ImGui\imgui_internal.h">
-      <Filter>Engine\Source\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\ImGui\imstb_rectpack.h">
-      <Filter>Engine\Source\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\ImGui\imstb_textedit.h">
-      <Filter>Engine\Source\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\ImGui\imstb_truetype.h">
-      <Filter>Engine\Source\ImGui</Filter>
-    </ClInclude>
+    <ClInclude Include="Source\Editor\Public\UI\Widget\ControlPanelWidget.h" />
+    <ClInclude Include="Source\Renderer\Public\RenderPass\ShadowPass.h" />
+    <ClInclude Include="Source\Renderer\Public\ShadowMapManager.h" />
+    <ClInclude Include="Source\Renderer\Public\Shadow\PSMBuilder.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />
     <None Include="ClassDiagram.cd">
       <Filter>Engine</Filter>
     </None>
+    <None Include="Source\ImGui\imconfig.h" />
+    <None Include="Source\ImGui\imgui.h" />
+    <None Include="Source\ImGui\imgui_impl_dx11.h" />
+    <None Include="Source\ImGui\imgui_impl_win32.h" />
+    <None Include="Source\ImGui\imgui_internal.h" />
+    <None Include="Source\ImGui\imstb_rectpack.h" />
+    <None Include="Source\ImGui\imstb_textedit.h" />
+    <None Include="Source\ImGui\imstb_truetype.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Engine">

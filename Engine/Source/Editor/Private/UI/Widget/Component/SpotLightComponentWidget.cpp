@@ -44,9 +44,4 @@ void USpotLightComponentWidget::RenderWidget()
 	}
 
     ImGui::Separator();
-	bool bUsePSM = URenderer::GetInstance().GetUseSpotLightPSM();
-	if (ImGui::Checkbox("Use Perspective Shadow Mapping (Spot)", &bUsePSM))
-	{
-		URenderer::GetInstance().SetUseSpotLightPSM(bUsePSM);
-	}
 }
