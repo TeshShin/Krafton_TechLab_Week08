@@ -8,6 +8,7 @@ cbuffer LightViewConstants : register(b0)
 cbuffer LightConstants : register(b1)
 {
 	float3 LightPosition;
+	float LightRadius;
 };
 
 struct VS_INPUT
@@ -45,6 +46,6 @@ PS_INPUT mainVS(VS_INPUT Input)
 // ---------------------------------
 float4 mainPS(PS_INPUT Input) : SV_Target
 {
-	float linearDepth = length(Input.WorldPosition - LightPosition);
+	float linearDepth = length(Input.WorldPosition - LightPosition) / LightRadius;
 	return float4(linearDepth, 0.0f, 0.0f, 1.0f);
 }

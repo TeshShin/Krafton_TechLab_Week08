@@ -18,7 +18,7 @@ private:
 	ID3D11InputLayout* InputLayout = nullptr;
 	ID3D11PixelShader* PS = nullptr;
 	ID3D11Buffer* CBLightViewProj = nullptr;
-	ID3D11Buffer* CBLightPosition = nullptr;
+	ID3D11Buffer* CBLightPosRadius = nullptr;
 
 	ID3D11DepthStencilState* DS = nullptr;
 	ID3D11SamplerState* SamplerState = nullptr;
