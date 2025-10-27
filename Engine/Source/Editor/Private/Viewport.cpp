@@ -151,6 +151,7 @@ void FViewport::UpdateActiveViewportClient(const FVector& InMousePosition)
 		{
 			Viewport.bIsActive = true;
 			ActiveViewportClient = &Viewport;
+			LastActiveCamera = &ActiveViewportClient->Camera;
 		}
 	}
 }
@@ -173,4 +174,36 @@ void FViewport::SetFocusPoint(const FVector& NewFocusPoint)
 {
 	FocusPoint = NewFocusPoint;
 	UpdateAllViewportClientCameras();
+}
+
+void FViewport::StartPiloting(USceneComponent* InComponentToPilot)
+{
+	if (InComponentToPilot == nullptr)
+	{
+		return;
+	}
+
+	StopPiloting();
+	UCamera* ActiveCam = GetLastActiveCamera();
+	if (ActiveCam == nullptr) { return; }
+
+	ActiveCam->AttachToComponent(InComponentToPilot);
+	PilotingCamera = ActiveCam;
+	PilotedComponent = InComponentToPilot;
+}
+
+void FViewport::StopPiloting()
+{
+	if (PilotingCamera != nullptr)
+	{
+		PilotingCamera->DetachFromComponent();
+	}
+
+	PilotingCamera = nullptr;
+	PilotedComponent = nullptr;
+}
+
+bool FViewport::IsPilotingComponent(USceneComponent* InComponent) const
+{
+	return PilotedComponent == InComponent;
 }

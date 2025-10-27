@@ -8,12 +8,12 @@
 class ULightComponentWidget: public UComponentWidget
 {
     DECLARE_CLASS(ULightComponentWidget, UComponentWidget);
-    
+
 public:
     ULightComponentWidget() = default;
-    
+
     virtual ~ULightComponentWidget() = default;
-    
+
     /*-----------------------------------------------------------------------------
         UWidget Features
      -----------------------------------------------------------------------------*/
@@ -22,4 +22,6 @@ public:
     virtual void Update() override;
     virtual void RenderWidget() override;
 
+private:
+	class UCamera* PilotingCamera = nullptr;
 };

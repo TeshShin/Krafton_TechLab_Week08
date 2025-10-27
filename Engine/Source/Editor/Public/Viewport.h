@@ -54,6 +54,7 @@ public:
 	* @return 활성 카메라의 포인터. 없으면 nullptr.
 	*/
 	UCamera* GetActiveCamera() const { return ActiveViewportClient ? &ActiveViewportClient->Camera : nullptr; }
+	UCamera* GetLastActiveCamera() const { return LastActiveCamera; }
 
 	TArray<FViewportClient>& GetViewports() { return ViewportClients; }
 
@@ -63,6 +64,31 @@ private:
 	TArray<FViewportClient> ViewportClients = {};
 	TArray<ViewVolumeCuller> ViewVolumeCullers{4, ViewVolumeCuller()};
 	FViewportClient* ActiveViewportClient = nullptr;
+	UCamera* LastActiveCamera = nullptr;
 	FVector FocusPoint = { 0.0f, 0.0f, 0.0f }; 	// 직교 투영 카메라가 공유하는 좌표
+
+// Camera Override Section
+public:
+	/**
+	 * @brief 특정 컴포넌트를 활성 뷰포트 카메라로 파일럿하기 시작
+	 */
+	void StartPiloting(USceneComponent* InComponentToPilot);
+
+	/**
+	 * @brief 현재 진행 중인 모든 파일럿 중지
+	 */
+	void StopPiloting();
+
+	/**
+	 * @brief 현재 이 컴포넌트가 파일럿 대상인지 확인
+	 */
+	bool IsPilotingComponent(USceneComponent* InComponent) const;
+
+private:
+	// "어떤 카메라가"
+	UCamera* PilotingCamera = nullptr;
+
+	// "어떤 컴포넌트를"
+	USceneComponent* PilotedComponent = nullptr;
 };
 

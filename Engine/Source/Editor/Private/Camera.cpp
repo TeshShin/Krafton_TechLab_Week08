@@ -44,16 +44,10 @@ FVector UCamera::UpdateInput()
 		{
 			Direction.Normalize();
 		}
-		RelativeLocation += Direction * CurrentMoveSpeed * DT;
+		SetLocation(GetLocation() + Direction * CurrentMoveSpeed * DT);
 		MovementDelta = Direction * CurrentMoveSpeed * DT;
 
-		// 오른쪽 마우스 버튼 + 마우스 휠로 카메라 이동속도 조절
-		float WheelDelta = Input.GetMouseWheelDelta();
-		if (WheelDelta != 0.0f)
-		{
-			// 휠 위로 돌리면 속도 증가, 아래로 돌리면 속도 감소
-			AdjustMoveSpeed(WheelDelta * SPEED_ADJUST_STEP);
-		}
+		SetMoveSpeed(CurrentMoveSpeed + Input.GetMouseWheelDelta() * SPEED_ADJUST_STEP);
 
 		/**
 		* @brief 마우스 위치 변화량을 감지하여 카메라의 회전을 담당합니다.
@@ -62,19 +56,21 @@ FVector UCamera::UpdateInput()
 		if (CameraType == ECameraType::ECT_Perspective)
 		{
 			const FVector MouseDelta = UInputManager::GetInstance().GetMouseDelta();
-			RelativeRotation.Z += MouseDelta.X * KeySensitivityDegPerPixel;
-			RelativeRotation.Y += MouseDelta.Y * KeySensitivityDegPerPixel;
+			const FVector DeltaRotation = FVector(0, MouseDelta.Y, MouseDelta.X) * KeySensitivityDegPerPixel;
+			SetRotation(GetRotation() + DeltaRotation);
 			MovementDelta = FVector::Zero(); // 원근 투영 모드는 반환할 필요가 없음
 		}
 
+		FVector Rotation = GetRotation();
 
 		// Yaw 래핑(값이 무한히 커지지 않도록)
-		if (RelativeRotation.Z > 180.0f) RelativeRotation.Z -= 360.0f;
-		if (RelativeRotation.Z < -180.0f) RelativeRotation.Z += 360.0f;
+		if (Rotation.Z > 180.0f) Rotation.Z -= 360.0f;
+		if (Rotation.Z < -180.0f) Rotation.Z += 360.0f;
 
 		// Pitch 클램프(짐벌 플립 방지)
-		if (RelativeRotation.Y > 89.0f)  RelativeRotation.Y = 89.0f;
-		if (RelativeRotation.Y < -89.0f) RelativeRotation.Y = -89.0f;
+		Rotation.Y = std::min(Rotation.Y, 89.0f);
+		Rotation.Y = std::max(Rotation.Y, -89.0f);
+		SetRotation(Rotation);
 	}
 
 	return MovementDelta;
@@ -82,7 +78,9 @@ FVector UCamera::UpdateInput()
 
 void UCamera::Update(const D3D11_VIEWPORT& InViewport)
 {
-	const FMatrix RotationMatrix = FMatrix::RotationMatrix(FVector::GetDegreeToRadian(RelativeRotation));
+	//UpdateInput();
+
+	const FMatrix RotationMatrix = FMatrix::RotationMatrix(FVector::GetDegreeToRadian(GetRotation()));
 	const FVector4 Forward4 = FVector4::ForwardVector() * RotationMatrix;
 	const FVector4 WorldUp4 = FVector4::UpVector() * RotationMatrix;
 	const FVector WorldUp = { WorldUp4.X, WorldUp4.Y, WorldUp4.Z };
@@ -110,16 +108,9 @@ void UCamera::Update(const D3D11_VIEWPORT& InViewport)
 		break;
 	}
 
-	// 카메라가 업데이트할 때마다 Cull한다.
-	// 카메라가 업데이트하지 않으면 Culling을 갱신할 이유가 없다.
-    ULevel* CurrentLevel = GWorld->GetLevel();
-    if (CurrentLevel)
+	if (ULevel* Level = GWorld->GetLevel())
     {
-        ViewVolumeCuller.Cull(
-            CurrentLevel->GetStaticOctree(),
-            CurrentLevel->GetDynamicPrimitives(),
-            CameraConstants
-        );
+        ViewVolumeCuller.Cull(Level->GetStaticOctree(), Level->GetDynamicPrimitives(), CameraConstants);
     }
 }
 
@@ -128,10 +119,12 @@ void UCamera::UpdateMatrixByPers()
 	/**
 	 * @brief 표준 View/Projection 행렬 연산
 	 */
-	CameraConstants.View = FMatrix::CreateViewFromAxes(RelativeLocation, RightVector, UpVector, ForwardVector);
+	const FVector Location = GetLocation();
+
+	CameraConstants.View = FMatrix::CreateViewFromAxes(Location, RightVector, UpVector, ForwardVector);
 	const float RadianFovY = FVector::GetDegreeToRadian(FovY);
 	CameraConstants.Projection = FMatrix::CreatePerspectiveFOV(RadianFovY, Aspect, NearZ, FarZ);
-	CameraConstants.ViewWorldLocation = RelativeLocation;
+	CameraConstants.ViewWorldLocation = Location;
 	CameraConstants.NearClip = NearZ;
 	CameraConstants.FarClip = FarZ;
 
@@ -139,7 +132,7 @@ void UCamera::UpdateMatrixByPers()
 	 * @brief 역행렬(Inverse)을 미리 계산하여 캐시
 	 */
 	FMatrix R_Inv = FMatrix(RightVector, UpVector, ForwardVector);
-	FMatrix T_Inv = FMatrix::TranslationMatrix(RelativeLocation);
+	FMatrix T_Inv = FMatrix::TranslationMatrix(Location);
 	InverseCameraConstants.View = R_Inv * T_Inv;
 
 	const float F = 1.0f / std::tanf(RadianFovY * 0.5f);
@@ -151,7 +144,7 @@ void UCamera::UpdateMatrixByPers()
 	P_Inv.Data[3][2] = 1.0f;
 	P_Inv.Data[3][3] = FarZ / (NearZ * FarZ);
 	InverseCameraConstants.Projection = P_Inv;
-	InverseCameraConstants.ViewWorldLocation = RelativeLocation;
+	InverseCameraConstants.ViewWorldLocation = Location;
 	InverseCameraConstants.NearClip = NearZ;
 	InverseCameraConstants.FarClip = FarZ;
 }
@@ -159,8 +152,8 @@ void UCamera::UpdateMatrixByPers()
 void UCamera::UpdateMatrixByOrth()
 {
 	/**
-		 * @brief 표준 View/Projection 행렬 연산
-		 */
+	 * @brief 표준 View/Projection 행렬 연산
+	 */
 	CameraConstants.View = FMatrix::CreateViewFromAxes(RelativeLocation, RightVector, UpVector, ForwardVector);
 
 	const float OrthoHeight = OrthoWidth / Aspect;
@@ -196,9 +189,28 @@ void UCamera::UpdateMatrixByOrth()
 	InverseCameraConstants.FarClip = FarZ;
 }
 
-const FCameraConstants& UCamera::GetCameraConstantsInverse() const
+void UCamera::SetLocation(const FVector& InOtherPosition)
 {
-	return InverseCameraConstants;
+	if (bOverrideComponent && OverrideTargetComponent)
+	{
+		OverrideTargetComponent->SetWorldLocation(InOtherPosition);
+	}
+	else
+	{
+		RelativeLocation = InOtherPosition;
+	}
+}
+
+void UCamera::SetRotation(const FVector& InOtherRotation)
+{
+	if (bOverrideComponent && OverrideTargetComponent)
+	{
+		OverrideTargetComponent->SetWorldRotation(InOtherRotation);
+	}
+	else
+	{
+		RelativeRotation = InOtherRotation;
+	}
 }
 
 FRay UCamera::ConvertToWorldRay(float NdcX, float NdcY) const
@@ -263,4 +275,43 @@ FRay UCamera::ConvertToWorldRay(float NdcX, float NdcY) const
 FVector UCamera::CalculatePlaneNormal(const FVector& Axis)
 {
 	return FVector(Axis.X, Axis.Y, Axis.Z).Cross(ForwardVector);
+}
+
+const FVector& UCamera::GetLocation()
+{
+	if (bOverrideComponent && OverrideTargetComponent)
+	{
+		return OverrideTargetComponent->GetWorldLocation();
+	}
+	else
+	{
+		return RelativeLocation;
+	}
+}
+
+const FVector& UCamera::GetRotation()
+{
+	if (bOverrideComponent && OverrideTargetComponent)
+	{
+		return OverrideTargetComponent->GetWorldRotation();
+	}
+	else
+	{
+		return RelativeRotation;
+	}
+}
+
+void UCamera::AttachToComponent(USceneComponent* InTargetComponent)
+{
+	if (InTargetComponent != nullptr)
+	{
+		OverrideTargetComponent = InTargetComponent;
+		bOverrideComponent = true;
+	}
+}
+
+void UCamera::DetachFromComponent()
+{
+	OverrideTargetComponent = nullptr;
+	bOverrideComponent = false;
 }

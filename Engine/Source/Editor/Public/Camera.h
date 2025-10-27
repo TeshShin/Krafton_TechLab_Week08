@@ -7,7 +7,7 @@ class UConfigManager;
 enum class ECameraType
 {
 	ECT_Orthographic,
-	ECT_Perspective
+	ECT_Perspective,
 };
 
 class UCamera : public UObject
@@ -35,8 +35,8 @@ public:
 	/**
 	 * @brief Setter
 	 */
-	void SetLocation(const FVector& InOtherPosition) { RelativeLocation = InOtherPosition; }
-	void SetRotation(const FVector& InOtherRotation) { RelativeRotation = InOtherRotation; }
+	void SetLocation(const FVector& InOtherPosition);
+	void SetRotation(const FVector& InOtherRotation);
 	void SetFovY(const float InOtherFovY) { FovY = InOtherFovY; }
 	void SetAspect(const float InOtherAspect) { Aspect = InOtherAspect; }
 	void SetNearZ(const float InOtherNearZ) { NearZ = InOtherNearZ; }
@@ -48,13 +48,13 @@ public:
 	 * @brief Getter
 	 */
 	const FCameraConstants& GetCameraConstants() const { return CameraConstants; }
-	const FCameraConstants& GetCameraConstantsInverse() const;
+	const FCameraConstants& GetCameraConstantsInverse() const { return InverseCameraConstants; }
 
 	FRay ConvertToWorldRay(float NdcX, float NdcY) const;
 
 	FVector CalculatePlaneNormal(const FVector& Axis);
-	FVector& GetLocation() { return RelativeLocation; }
-	FVector& GetRotation() { return RelativeRotation; }
+	const FVector& GetLocation();
+	const FVector& GetRotation();
 	const FVector& GetForward() const { return ForwardVector; }
 	const FVector& GetUp() const { return UpVector; }
 	const FVector& GetRight() const { return RightVector; }
@@ -66,11 +66,9 @@ public:
 	ECameraType GetCameraType() const { return CameraType; }
 	ViewVolumeCuller& GetViewVolumeCuller() { return ViewVolumeCuller; }
 
-
 	// Camera Movement Speed Control
 	float GetMoveSpeed() const { return CurrentMoveSpeed; }
 	void SetMoveSpeed(float InSpeed) { CurrentMoveSpeed = clamp(InSpeed, MIN_SPEED, MAX_SPEED); }
-	void AdjustMoveSpeed(float InDelta) { SetMoveSpeed(CurrentMoveSpeed + InDelta); }
 
 	/* *
 	 * @brief 행렬 형태로 저장된 좌표와 변환 행렬과의 연산한 결과를 반환합니다.
@@ -106,4 +104,32 @@ private:
 
 	// Dynamic Movement Speed
 	float CurrentMoveSpeed = DEFAULT_SPEED;
+
+// Camera Override Section
+public:
+	/**
+	 * @brief 이 카메라를 특정 컴포넌트에 파일럿
+	 * @param InTargetComponent 파일럿할 대상 컴포넌트
+	 */
+	void AttachToComponent(USceneComponent* InTargetComponent);
+	/**
+	 * @brief 컴포넌트로부터 파일럿 해제
+	 */
+	void DetachFromComponent();
+	/**
+	 * @brief 현재 파일럿(Override) 중인지 확인
+	 */
+	bool IsOverridingWithComponent(const USceneComponent* Component) const { return bOverrideComponent && OverrideTargetComponent == Component; }
+
+private:
+	/**
+	 * @brief true일 경우, 카메라가 외부 컴포넌트의 트랜스폼 따라감
+	 */
+	bool bOverrideComponent = false;
+
+	/**
+	 * @brief 카메라가 따라갈(파일럿할) 대상 컴포넌트
+	 * TODO - 대상이 파괴되었을 때를 대비해야함
+	*/
+	USceneComponent* OverrideTargetComponent = nullptr;
 };

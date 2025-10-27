@@ -169,8 +169,8 @@ void UViewportMenuBarWidget::RenderWidget()
 void UViewportMenuBarWidget::RenderCameraControls(UCamera& InCamera)
 {
 	// --- UI를 그리기 직전에 항상 카메라로부터 최신 값을 가져옵니다 ---
-	auto& Location = InCamera.GetLocation();
-	auto& Rotation = InCamera.GetRotation();
+	FVector Location = InCamera.GetLocation();
+	FVector Rotation = InCamera.GetRotation();
 	float FovY = InCamera.GetFovY();
 	float NearZ = InCamera.GetNearZ();
 	float FarZ = InCamera.GetFarZ();
@@ -189,11 +189,17 @@ void UViewportMenuBarWidget::RenderCameraControls(UCamera& InCamera)
 		InCamera.SetMoveSpeed(MoveSpeed); // 변경 시 즉시 적용
 	}
 
-	ImGui::DragFloat3("Location", &Location.X, 0.05f);
-	ImGui::DragFloat3("Rotation", &Rotation.X, 0.1f);
+	if (ImGui::DragFloat3("Location", &Location.X, 0.05f))
+	{
+		InCamera.SetLocation(Location);
+	}
+	if (ImGui::DragFloat3("Rotation", &Rotation.X, 0.1f))
+	{
+		InCamera.SetRotation(Rotation);
+	}
 
 	bool bOpticsChanged = false;
-	if (ModeIndex == 0) // 원근 투영 
+	if (ModeIndex == 0) // 원근 투영
 	{
 		bOpticsChanged |= ImGui::SliderFloat("FOV", &FovY, 1.0f, 170.0f, "%.1f");
 		bOpticsChanged |= ImGui::DragFloat("Z Near", &NearZ, 0.01f, 0.0001f, 1e6f, "%.4f");

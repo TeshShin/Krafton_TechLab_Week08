@@ -2,6 +2,7 @@
 #include "DeviceResources.h"
 #include "Core/Public/Object/Object.h"
 #include "Editor/Public/EditorPrimitive.h"
+#include "Editor/Public/Viewport.h"
 #include "Renderer/Public/Pipeline.h"
 
 class FViewport;
