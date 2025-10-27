@@ -5,7 +5,7 @@
 #include "Scene/Public/Level/Level.h"
 #include "Scene/Public/Component/ActorComponent.h"
 #include "ImGui/imgui.h"
-
+#include "Renderer/Public/Renderer.h"
 IMPLEMENT_CLASS(USpotLightComponentWidget, UPointLightComponentWidget)
 
 void USpotLightComponentWidget::Initialize()
@@ -44,4 +44,9 @@ void USpotLightComponentWidget::RenderWidget()
 	}
 
     ImGui::Separator();
+	bool bUsePSM = URenderer::GetInstance().GetUseSpotLightPSM();
+	if (ImGui::Checkbox("Use Perspective Shadow Mapping (Spot)", &bUsePSM))
+	{
+		URenderer::GetInstance().SetUseSpotLightPSM(bUsePSM);
+	}
 }

@@ -242,12 +242,46 @@ const FMatrix& USpotLightComponent::GetLightViewProjectionMatrix() const
 	FMatrix T = FMatrix::TranslationMatrixInverse(LightPosition);
 	FMatrix R = FMatrix(Right, Up, Forward).Transpose();
 	FMatrix LightView = T * R;
-
+	if (!URenderer::GetInstance().GetUseSpotLightPSM())
+	{
+		const float Aspect = 1.0f;
+		const float FovRad = GetOuterConeAngle() * 2.0f * ToRad;
+		const float NearZ = 0.1f;
+		const float FarZ = GetAttenuationRadius();
+		CachedLightViewProjection = LightView * FMatrix::CreatePerspectiveFOV(FovRad, Aspect, NearZ, FarZ);
+		bIsLightVPDirty = false;
+		return CachedLightViewProjection;
+	}
 	// 2) 활성 카메라
 	UCamera* ActiveCamera = nullptr;
 	if (URenderer::GetInstance().GetViewportClient())
 	{
 		ActiveCamera = URenderer::GetInstance().GetViewportClient()->GetActiveCamera();
+	}
+	// 카메라가 없으면 활성 뷰포트가 없다는 뜻이므로, 뷰포트 목록에서 폴백 카메라를 선택
+	if (!ActiveCamera)
+	{
+		FViewport* ViewportClient = URenderer::GetInstance().GetViewportClient();
+		if (ViewportClient)
+		{
+			TArray<FViewportClient>& Clients = ViewportClient->GetViewports();
+
+			// 1) 원근 카메라 우선
+			for (FViewportClient& Client : Clients)
+			{
+				if (Client.GetCameraType() == EViewportCameraType::Perspective)
+				{
+					ActiveCamera = &Client.Camera;
+					break;
+				}
+			}
+			// 2) 그래도 없으면 첫 번째 카메라
+			if (!ActiveCamera && Clients.size() > 0)
+			{
+				ActiveCamera = &Clients[0].Camera;
+			}
+		}
+
 	}
 
 	// 카메라가 없으면 유니폼(기존 스팟)으로 폴백

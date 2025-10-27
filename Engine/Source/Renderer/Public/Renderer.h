@@ -122,4 +122,13 @@ private:
 	// Shader Hot-Reload
 	float ShaderCheckAccumulator = 0.0f;           ///< Time accumulator for periodic shader checks
 	const float ShaderCheckInterval = 0.5f;        ///< Check shader files every 0.5 seconds (configurable)
+
+
+
+	// shadow
+public:
+	bool GetUseSpotLightPSM() const { return bUseSpotLightPSM; }
+	void SetUseSpotLightPSM(bool bInEnable) { bUseSpotLightPSM = bInEnable; }
+private:
+	bool bUseSpotLightPSM = true;
 };
