@@ -667,7 +667,7 @@ FLightingResult CalculateDynamicLightWithVSM_Directional(
     {
         float3 uvw = GetSampleCoords(WorldPos, DirectionalShadowMatrix.ViewMatrix,
                                       DirectionalShadowMatrix.ProjectionMatrix);
-        float t = uvw.z;
+    	float t = mul(float4(WorldPos, 1.0f), DirectionalShadowMatrix.ViewMatrix).z; // uvw.z;
 
         float2 moments;
         if (FilterType == 2) // Gaussian
@@ -714,7 +714,7 @@ FLightingResult CalculateDynamicLightWithVSM_Spot(
         FLightViewProj ViewProj = SpotLightShadowMatrices[Light.ShadowMapIndex];
         float3 uvw = GetSampleCoords(WorldPos, ViewProj.ViewMatrix, ViewProj.ProjectionMatrix);
         float3 SampleCoords = float3(uvw.xy, Light.ShadowMapIndex);
-        float t = uvw.z;
+        float t = mul(float4(WorldPos, 1.0f), ViewProj.ViewMatrix).z; // uvw.z;
 
         float2 moments;
         if (FilterType == 2) // Gaussian
@@ -845,7 +845,7 @@ FLightingResult CalculateDynamicLightWithVSM(
     float ViewSpaceDepth) // ViewSpace Z (from shader)
 {
     #ifndef VSM_FILTER_TYPE
-    #define VSM_FILTER_TYPE 0 // 0=None, 1=Box, 2=Gaussian
+    #define VSM_FILTER_TYPE 1 // 0=None, 1=Box, 2=Gaussian
     #endif
 
     #ifndef VSM_FILTER_SIZE

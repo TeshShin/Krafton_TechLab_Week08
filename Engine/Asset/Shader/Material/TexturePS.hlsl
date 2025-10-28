@@ -2,7 +2,7 @@
 
 // VSM 토글 TODO:UI 연동
 #ifndef USE_VSM
-#define USE_VSM 0
+#define USE_VSM 1
 #endif
 
 //--------------------------------------------------------------------------------------
@@ -216,7 +216,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
            DirectionalMoment,       // t18 <float2>
            DirectionalShadowMatrix, // (CBuffer에서 온다고 가정)
            ShadowLinearSampler,     // s2 (일반 샘플러)
-           0.0f);                   // (Dummy 값)
+           0.0f);     // (Dummy 값)
 
 //--- 2. PCF ---------------------------------------------
 // #elif USE_PCF
