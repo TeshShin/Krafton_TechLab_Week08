@@ -129,7 +129,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 	if (MaterialFlags & HAS_DIFFUSE_MAP)
 	{
 		DiffuseColor *= DiffuseTexture.Sample(SamplerWrap, UV);
-	}
+	} 
 
     // Ambient color for material
 	float4 AmbientColor = Ka;
@@ -202,7 +202,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
        uint li = FP_ClusterIndex[base + i];
 
        FLightingResult LightResult;
-
+		 
 //--- 1. VSM ----------------------------------------------
 #if USE_VSM
        // VSM은 <float2> 텍스처와 '일반' 샘플러(SamplerState)를 사용합니다.
@@ -243,7 +243,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
           ShadowSampler);          // s1 (비교 샘플러)
 #endif
 //-------------------------------------------------------------------------
-
+		 
        TotalDiffuse  += LightResult.Diffuse;
        TotalSpecular += LightResult.Specular;
        TotalAmbient  += LightResult.Ambient;

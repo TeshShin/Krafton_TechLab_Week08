@@ -65,7 +65,7 @@ private:
 
 	// 모든 기즈모 드래그 함수가 ActiveCamera를 받도록 통일
 	FVector GetGizmoDragLocation(UCamera* InActiveCamera, FRay& WorldRay);
-	FVector GetGizmoDragRotation(UCamera* InActiveCamera, FRay& WorldRay);
+	FQuaternion GetGizmoDragRotation(UCamera* InActiveCamera, FRay& WorldRay);
 	FVector GetGizmoDragScale(UCamera* InActiveCamera, FRay& WorldRay);
 
 	inline float Lerp(const float A, const float B, const float Alpha)

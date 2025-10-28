@@ -299,6 +299,14 @@ float3 GetSampleCoords(float3 WorldPos, float4x4 ViewMatrix, float4x4 Projection
     return uvw;
 }
 
+void BuildOrthonormalBasis(float3 N, out float3 T, out float3 B)
+{
+	float3 a = (abs(N.y) < 0.999f) ? float3(0, 1, 0) : float3(0, 0, 1);
+	T = normalize(cross(a, N));
+	B = cross(N, T);
+}
+
+
 //==============================================================================
 // PCF (Percentage Closer Filtering) - 비선형 필터
 //==============================================================================
@@ -415,6 +423,35 @@ float2 SampleVSMBox(Texture2DArray<float2> ShadowMomentsArray, SamplerState Samp
     }
     return (count > 0) ? (sum / count) : ShadowMomentsArray.Sample(Sampler, uvw).xy;
 }
+float2 SampleVSMBox_Point(TextureCubeArray<float2> ShadowMomentsArray, SamplerState Sampler,
+                    float4 dir, int KernelSize)
+{
+    int radius = max(0, (KernelSize & 1) ? KernelSize / 2 : (KernelSize - 1) / 2);
+
+    float Width, Height;
+    float element;
+    ShadowMomentsArray.GetDimensions(Width, Height, element);
+	
+	float3 T, B;
+	BuildOrthonormalBasis(normalize(dir.xyz), T, B); 
+
+	float TexelAngle = 1 / Width;
+	
+    float2 sum = float2(0.0, 0.0);
+    int count = (2 * radius + 1) * (2 * radius + 1);
+
+    for (int y = -radius; y <= radius; y++)
+    {
+        for (int x = -radius; x <= radius; x++)
+        {
+			float2 angle = TexelAngle * float2(x, y);
+			
+            float3 dOffset = (dir.xyz + angle.x * T + angle.y * B);
+            sum += ShadowMomentsArray.Sample(Sampler, float4(dOffset, dir.w)).xy;
+        }
+    }
+    return (count > 0) ? (sum / count) : ShadowMomentsArray.Sample(Sampler, dir).xy;
+}
 
 float2 SampleVSMBox_Texture2D(Texture2D<float2> ShadowMoments, SamplerState Sampler,
                               float2 uv, int KernelSize)
@@ -483,6 +520,52 @@ float2 SampleVSMGaussian(Texture2DArray<float2> ShadowMomentsArray, SamplerState
     }
 
     return acc / norm2D;
+}
+
+float2 SampleVSMGaussian_Point(TextureCubeArray<float2>ShadowMomentsArray, SamplerState Sampler,
+                         float4 dir, int radius, float sigma)
+{
+	radius = max(0, radius);
+
+	uint Width, Height, Elements; 
+	ShadowMomentsArray.GetDimensions(Width, Height, Elements);
+
+	float texelAngle = 1.0f / Width;
+	
+	float oneDsum = 0.0f;
+    [loop]
+	for (int i = -radius; i <= radius; ++i)
+	{
+		float x = i / sigma;
+		oneDsum += exp(-0.5f * x * x);
+	}
+
+	float norm2D = max(oneDsum * oneDsum, 1e-8f);
+
+	float3 T, B;
+	BuildOrthonormalBasis(normalize(dir.xyz), T, B);
+	
+	float2 acc = float2(0.0f, 0.0f);
+    [loop]
+	for (int y = -radius; y <= radius; ++y)
+	{
+		float jy = y / sigma;
+		float wy = exp(-0.5f * jy * jy);
+
+        [loop]
+		for (int x = -radius; x <= radius; ++x)
+		{
+			float jx = x / sigma;
+			float wx = exp(-0.5f * jx * jx);
+			float w = wx * wy;
+
+			float2 ang = float2(x, y) * texelAngle;
+			float3 dOff = normalize(dir.xyz + ang.x * T + ang.y * B);
+			acc += w * ShadowMomentsArray.Sample(Sampler, float4(dOff, dir.w)).xy;
+		}
+	}
+
+	return acc / norm2D;
 }
 
 float2 SampleVSMGaussian_Texture2D(Texture2D<float2> ShadowMoments, SamplerState Sampler,
@@ -743,11 +826,15 @@ FLightingResult CalculateDynamicLightWithVSM_Spot(
 //--------------------------------------------------------------------------------------
 // VSM Shadow - Point Light (LinearDepth moments)
 //--------------------------------------------------------------------------------------
+
 FLightingResult CalculateDynamicLightWithVSM_Point(
     FUnifiedDynamicLight Light,
     float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower,
     TextureCubeArray<float2> PointMomentsAtlas,
-    SamplerState ShadowSampler)
+    SamplerState ShadowSampler,
+	int FilterType,
+	int FilterSize,
+	float GaussianSigma)
 {
     FLightingResult Result = CalculateDynamicLight(Light, WorldPos, Normal, ViewDir, SpecularPower);
     float ShadowFactor = 1.0f;
@@ -760,7 +847,22 @@ FLightingResult CalculateDynamicLightWithVSM_Point(
 
         float4 SampleCoord = float4(SwizzledDir, Light.ShadowMapIndex);
         float2 moments = PointMomentsAtlas.Sample(ShadowSampler, SampleCoord).xy;
+		 
+		if (FilterType == 2) // Gaussian
+		{
+			moments = SampleVSMGaussian_Point(PointMomentsAtlas, ShadowSampler,
+                                       SampleCoord, FilterSize / 2, GaussianSigma);
+		}
+		else if (FilterType == 1) // Box
+		{
+			moments = SampleVSMBox_Point(PointMomentsAtlas, ShadowSampler,
+                                   SampleCoord, FilterSize);
+			}
+		else // No filter
+		{
+			moments = PointMomentsAtlas.Sample(ShadowSampler, SampleCoord).xy;
 
+		}
         ShadowFactor = VSM_Visibility(moments, LinearDepth);
     }
 
@@ -845,7 +947,7 @@ FLightingResult CalculateDynamicLightWithVSM(
     float ViewSpaceDepth) // ViewSpace Z (from shader)
 {
     #ifndef VSM_FILTER_TYPE
-    #define VSM_FILTER_TYPE 1 // 0=None, 1=Box, 2=Gaussian
+    #define VSM_FILTER_TYPE 0 // 0=None, 1=Box, 2=Gaussian
     #endif
 
     #ifndef VSM_FILTER_SIZE
@@ -864,8 +966,10 @@ FLightingResult CalculateDynamicLightWithVSM(
     }
     if (Light.LightType == LIGHT_TYPE_POINT)
     {
-        // return CalculateDynamicLightWithVSM_Point(Light, WorldPos, Normal, ViewDir, SpecularPower,
-        //                                           PointMomentsAtlas, ShadowSampler);
+	
+		return CalculateDynamicLightWithVSM_Point(Light, WorldPos, Normal, ViewDir, SpecularPower,
+                                                   PointMomentsAtlas, ShadowSampler, VSM_FILTER_TYPE, VSM_FILTER_SIZE, VSM_GAUSSIAN_SIGMA);
+		
     }
     if (Light.LightType == LIGHT_TYPE_DIRECTIONAL)
     {
