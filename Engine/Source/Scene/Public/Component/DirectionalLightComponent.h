@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Scene/Public/Component/LightComponent.h"
 
 UCLASS()
@@ -29,5 +29,5 @@ protected:
 		Shadow Features
 	 -----------------------------------------------------------------------------*/
 protected:
-	void UpdateLightMatricesInternal(const FMatrix& InCameraInverseVP) const override;
+	void UpdateLightMatricesInternal(const FCameraConstants& InCameraInvConstants) const override;
 };

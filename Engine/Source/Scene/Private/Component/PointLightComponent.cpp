@@ -57,7 +57,7 @@ void UPointLightComponent::DrawDebugLines()
 
 	LineManager.AddDebugCircle(BaseLabel, Center, AttenuationRadius, Color, DebugLineLabels);
 }
-
+ 
 FUnifiedDynamicLight UPointLightComponent::GetUnifiedLightData() const
 {
     FUnifiedDynamicLight LightData = {};
@@ -91,7 +91,7 @@ UTexture* UPointLightComponent::GetLightBillboardTexture()
 	return UAssetManager::GetInstance().LoadTexture("Data/Icons/PointLight_64x.png");
 }
 
-void UPointLightComponent::UpdateLightMatricesInternal(const FMatrix& InCameraInverseVP) const
+void UPointLightComponent::UpdateLightMatricesInternal(const FCameraConstants& InCameraInvConstants) const
 {
 	if (!bIsLightVPDirty) { return; }
 

@@ -434,7 +434,6 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 	SpotLightMatrices.resize(FShadowMapManager::GetInstance().GetMaxSpotShadows());
 
 	FCameraConstants CamInv = Context.CurrentCamera->GetCameraConstantsInverse();
-	FMatrix CameraVPInv = CamInv.Projection * CamInv.View;
 	for (ULightComponentBase* Light : Context.Lights)
 	{
 		if (!Light || !Light->IsVisibleInHierarchy()) continue;
@@ -447,8 +446,8 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 		if (Light->DoesCastShadows() && ShadowMapIdx >= 0)
 		{
 			FLightViewProj LightViewProj;
-			LightViewProj.ViewMatrix = Light->GetLightViewMatrices(CameraVPInv)[0];
-			LightViewProj.ProjectionMatrix = Light->GetLightProjectionMatrix(CameraVPInv);
+			LightViewProj.ViewMatrix = Light->GetLightViewMatrices(CamInv)[0];
+			LightViewProj.ProjectionMatrix = Light->GetLightProjectionMatrix(CamInv);
 			if (Light->GetLightType() == ELightComponentType::LightType_Spot)
 			{
 				SpotLightMatrices[ShadowMapIdx] = LightViewProj;

@@ -43,78 +43,88 @@ class UTexture* UDirectionalLightComponent::GetLightBillboardTexture()
 	return UAssetManager::GetInstance().LoadTexture("Data/Icons/DirectionalLight_64x.png");
 }
 
-void UDirectionalLightComponent::UpdateLightMatricesInternal(const FMatrix& InCameraInverseVP) const
+void UDirectionalLightComponent::UpdateLightMatricesInternal(const FCameraConstants& InCameraInvConstants) const
 {
 	CachedLightViewMatrices.clear();
-    CachedLightViewProjection.clear();
+	CachedLightViewProjection.clear();
 
-    // --- 1. 메인 카메라의 절두체(Frustum) 8개 꼭짓점 계산 ---
-    FVector FrustumCornersNDC[8] =
-    {
-        FVector(-1.0f, -1.0f, 0.0f), // Near-Bottom-Left
-        FVector( 1.0f, -1.0f, 0.0f), // Near-Bottom-Right
-        FVector(-1.0f,  1.0f, 0.0f), // Near-Top-Left
-        FVector( 1.0f,  1.0f, 0.0f), // Near-Top-Right
-        FVector(-1.0f, -1.0f, 1.0f), // Far-Bottom-Left
-        FVector( 1.0f, -1.0f, 1.0f), // Far-Bottom-Right
-        FVector(-1.0f,  1.0f, 1.0f), // Far-Top-Left
-        FVector( 1.0f,  1.0f, 1.0f)  // Far-Top-Right
-    };
+	// --- 0) 카메라 역행렬 준비 ---
+	const FMatrix InverseView = InCameraInvConstants.View;        // View^-1
+	const FMatrix InverseProjection = InCameraInvConstants.Projection; // Proj^-1
+	const FMatrix InverseVP = InverseProjection * InverseView;
 
-    // NDC 좌표를 월드 좌표로 변환
-    FVector FrustumCornersWorld[8];
-    FVector FrustumCenterWorld = FVector(0, 0, 0);
-    for (uint32 Idx = 0; Idx < 8; ++Idx)
-    {
-        // NDC -> World
-    	const FVector4 CornerWorldH = InCameraInverseVP.TransformHomogeneous(FrustumCornersNDC[Idx]);
-    	if (abs(CornerWorldH.W) < 1e-6f)
-    	{
-    		FrustumCornersWorld[Idx] = FVector(0, 0, 0);
-    	}
-    	else
-    	{
-    		FrustumCornersWorld[Idx] = FVector(
+	// --- 1) 카메라 절두체 8점 (NDC) -> 월드 ---
+	FVector FrustumCornersNDC[8] =
+	{
+		FVector(-1.0f, -1.0f, 0.0f), FVector(1.0f, -1.0f, 0.0f),
+		FVector(-1.0f,  1.0f, 0.0f), FVector(1.0f,  1.0f, 0.0f),
+		FVector(-1.0f, -1.0f, 1.0f), FVector(1.0f, -1.0f, 1.0f),
+		FVector(-1.0f,  1.0f, 1.0f), FVector(1.0f,  1.0f, 1.0f)
+	};
+	FVector FrustumCornersWorld[8];
+	FVector FrustumCenterWorld(0.0f, 0.0f, 0.0f);
+	for (uint32 Idx = 0; Idx < 8; ++Idx)
+	{
+		const FVector4 CornerWorldH = InverseVP.TransformHomogeneous(FrustumCornersNDC[Idx]);
+		if (std::abs(CornerWorldH.W) > 1e-6f)
+		{
+			FrustumCornersWorld[Idx] = FVector(
 				CornerWorldH.X / CornerWorldH.W,
 				CornerWorldH.Y / CornerWorldH.W,
 				CornerWorldH.Z / CornerWorldH.W
 			);
-    	}
+		}
+		else
+		{
+			FrustumCornersWorld[Idx] = FVector(0, 0, 0);
+		}
+		FrustumCenterWorld += FrustumCornersWorld[Idx];
+	}
+	FrustumCenterWorld *= 1.0f / 8.0f;
 
-    	FrustumCenterWorld += FrustumCornersWorld[Idx];
-    }
-    FrustumCenterWorld *= 1 / 8.0f;
-
-    // --- 2. 라이트 뷰 매트릭스 (V) 생성 (Orthographic) ---
-    const FVector LightDirection = GetWorldForwardVector().GetNormalized();
+	// --- 2) 라이트 뷰 L (라이트 방향 기준) ---
+	const FVector LightDirection = GetWorldForwardVector().GetNormalized();
 	const FVector LightRight = GetWorldRightVector().GetNormalized();
 	const FVector LightUp = GetWorldUpVector().GetNormalized();
-    const FVector LightPosition = FrustumCenterWorld - LightDirection * 1000.0f;
+	const FVector LightPosition = FrustumCenterWorld - LightDirection * 1000.0f; // 프러스텀 중심에서 뒤로
+	const FMatrix LightView = FMatrix::CreateViewFromAxes(LightPosition, LightRight, LightUp, LightDirection);
 
-	CachedLightViewMatrices.emplace_back(FMatrix::CreateViewFromAxes(LightPosition, LightRight, LightUp, LightDirection));
-
-    // --- 3. 라이트 프로젝션 매트릭스 (P) 생성 (Orthographic) ---
-    FVector MinBounds(FLT_MAX, FLT_MAX, FLT_MAX);
-    FVector MaxBounds(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-
-    for (int i = 0; i < 8; ++i)
-    {
-        FVector CornerInLightView = CachedLightViewMatrices[0].TransformPosition(FrustumCornersWorld[i]);
-
-        MinBounds.X = min(MinBounds.X, CornerInLightView.X);
-        MaxBounds.X = max(MaxBounds.X, CornerInLightView.X);
-        MinBounds.Y = min(MinBounds.Y, CornerInLightView.Y);
-        MaxBounds.Y = max(MaxBounds.Y, CornerInLightView.Y);
-        MinBounds.Z = min(MinBounds.Z, CornerInLightView.Z);
-        MaxBounds.Z = max(MaxBounds.Z, CornerInLightView.Z);
-    }
+	// --- 3) 기존 LVP: Ortho 투영 (깊이 안정용) ---
+	FVector MinBounds(FLT_MAX, FLT_MAX, FLT_MAX);
+	FVector MaxBounds(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+	for (int i = 0; i < 8; ++i)
+	{
+		FVector CornerInLightView = LightView.TransformPosition(FrustumCornersWorld[i]);
+		MinBounds.X = min(MinBounds.X, CornerInLightView.X);
+		MaxBounds.X = max(MaxBounds.X, CornerInLightView.X);
+		MinBounds.Y = min(MinBounds.Y, CornerInLightView.Y);
+		MaxBounds.Y = max(MaxBounds.Y, CornerInLightView.Y);
+		MinBounds.Z = min(MinBounds.Z, CornerInLightView.Z);
+		MaxBounds.Z = max(MaxBounds.Z, CornerInLightView.Z);
+	}
 	float NearZ = MinBounds.Z;
 	float FarZ = MaxBounds.Z;
+	const FMatrix OrthographicProjection = FMatrix::CreateOrthographicOffCenter(
+		MinBounds.X, MaxBounds.X, MinBounds.Y, MaxBounds.Y, NearZ, FarZ);
 
-    CachedLightProjectionMatrix = FMatrix::CreateOrthographicOffCenter(
-        MinBounds.X, MaxBounds.X, MinBounds.Y, MaxBounds.Y, NearZ, FarZ
-    );
-
-    // --- 4. 최종 VP 매트릭스 캐시 ---
-    CachedLightViewProjection.emplace_back(CachedLightViewMatrices[0] * CachedLightProjectionMatrix);
+	// --- LVP 모드: 기존 동작 유지 ---
+	if (GetShadowProjectionMode() == EShadowProjectionMode::LVP)
+	{
+		CachedLightViewMatrices.emplace_back(LightView);
+		CachedLightProjectionMatrix = OrthographicProjection;
+		CachedLightViewProjection.emplace_back(CachedLightViewMatrices[0] * CachedLightProjectionMatrix);
+		return;
+	}
+	// --- LiSPSM 모드: 추후 구현, 현재는 LVP로 폴백 ---
+	else if (GetShadowProjectionMode() == EShadowProjectionMode::LiSPSM)
+	{
+		CachedLightViewMatrices.emplace_back(LightView);
+		CachedLightProjectionMatrix = OrthographicProjection;
+		CachedLightViewProjection.emplace_back(CachedLightViewMatrices[0] * CachedLightProjectionMatrix);
+		return;
+	}
+	else if (GetShadowProjectionMode() == EShadowProjectionMode::PSM)
+	{
+		// TODO : PSM 구현
+	}
 }

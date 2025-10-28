@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Editor/Public/UI/Widget/Component/LightComponentWidget.h"
 #include "Editor/Public/Editor.h"
 #include "Renderer/Public/Renderer.h"
@@ -55,7 +55,29 @@ void ULightComponentWidget::RenderWidget()
     		{
     			LightComponent->SetCastShadows(bCastShadows);
     		}
+			// Shadow Projection Mode Toggle (Spot/Directional 지원)
+			if (LightComponent->GetLightType() == ELightComponentType::LightType_Spot ||
+				LightComponent->GetLightType() == ELightComponentType::LightType_Directional)
+			{
+				int CurrentMode = static_cast<int>(LightComponent->GetShadowProjectionMode());
 
+				if (LightComponent->GetLightType() == ELightComponentType::LightType_Directional)
+				{
+					const char* ModeItems[] = { "LVP", "PSM", "LiSPSM (TODO)" };
+					if (ImGui::Combo("Shadow Projection", &CurrentMode, ModeItems, IM_ARRAYSIZE(ModeItems)))
+					{
+						LightComponent->SetShadowProjectionMode(static_cast<EShadowProjectionMode>(CurrentMode));
+					}
+				}
+				else
+				{
+					const char* ModeItems[] = { "LVP", "PSM" };
+					if (ImGui::Combo("Shadow Projection", &CurrentMode, ModeItems, IM_ARRAYSIZE(ModeItems)))
+					{
+						LightComponent->SetShadowProjectionMode(static_cast<EShadowProjectionMode>(CurrentMode));
+					}
+				}
+			}
     		// Light Depth Map
     		int32 ShadowMapIdx = LightComponent->GetShadowMapIdx();
     		if (ShadowMapIdx > -1)

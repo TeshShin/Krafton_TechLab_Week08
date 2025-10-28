@@ -22,6 +22,9 @@ void ULightComponentBase::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		FJsonSerializer::ReadBool(InOutHandle, "bVisible", bVisible, true);
 		FJsonSerializer::ReadBool(InOutHandle, "bCastShadows", bCastShadows, true);
 		SetLightColor(LightColor);
+		int32 ShadowModeInt = 0;
+		FJsonSerializer::ReadInt32(InOutHandle, "ShadowProjectionMode", ShadowModeInt, 0);
+		ShadowProjectionMode = static_cast<EShadowProjectionMode>(ShadowModeInt);
 	}
 	else
 	{
@@ -29,6 +32,7 @@ void ULightComponentBase::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		InOutHandle["LightColor"] = FJsonSerializer::VectorToJson(LightColor);
 		InOutHandle["bVisible"] = bVisible;
 		InOutHandle["bCastShadows"] = bCastShadows;
+		InOutHandle["ShadowProjectionMode"] = static_cast<int>(ShadowProjectionMode);
 	}
 }
 
@@ -154,20 +158,20 @@ void ULightComponentBase::CreateIconChild()
 	}
 }
 
-const TArray<FMatrix>& ULightComponentBase::GetLightViewMatrices(const FMatrix& InCameraInverseVP) const
+const TArray<FMatrix>& ULightComponentBase::GetLightViewMatrices(const FCameraConstants& InCameraInvConstants) const
 {
-	UpdateLightMatricesInternal(InCameraInverseVP);
+	UpdateLightMatricesInternal(InCameraInvConstants);
 	return CachedLightViewMatrices;
 }
 
-const FMatrix& ULightComponentBase::GetLightProjectionMatrix(const FMatrix& InCameraInverseVP) const
+const FMatrix& ULightComponentBase::GetLightProjectionMatrix(const FCameraConstants& InCameraInvConstants) const
 {
-	UpdateLightMatricesInternal(InCameraInverseVP);
+	UpdateLightMatricesInternal(InCameraInvConstants);
 	return CachedLightProjectionMatrix;
 }
 
-const TArray<FMatrix>& ULightComponentBase::GetLightViewProjectionMatrices(const FMatrix& InCameraInverseVP) const
+const TArray<FMatrix>& ULightComponentBase::GetLightViewProjectionMatrices(const FCameraConstants& InCameraInvConstants) const
 {
-	UpdateLightMatricesInternal(InCameraInverseVP);
+	UpdateLightMatricesInternal(InCameraInvConstants);
 	return CachedLightViewProjection;
 }

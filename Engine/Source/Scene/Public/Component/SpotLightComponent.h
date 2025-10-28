@@ -80,5 +80,5 @@ private:
 		Shadow Features
 	 -----------------------------------------------------------------------------*/
 public:
-	void UpdateLightMatricesInternal(const FMatrix& InCameraInverseVP) const override;
+	void UpdateLightMatricesInternal(const FCameraConstants& InCameraInvConstants) const override;
 };

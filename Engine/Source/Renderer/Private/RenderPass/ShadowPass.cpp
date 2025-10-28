@@ -52,7 +52,6 @@ void FShadowPass::Execute(FRenderingContext& Context)
 	ShadowViewport.MaxDepth = 1.0f;
 
 	FCameraConstants CamInv = Context.CurrentCamera->GetCameraConstantsInverse();
-	FMatrix CameraVPInv = CamInv.Projection * CamInv.View;
     TArray<ID3D11RenderTargetView*> PointRTVs;
 
     for (ULightComponentBase* Light : Context.Lights)
@@ -63,12 +62,12 @@ void FShadowPass::Execute(FRenderingContext& Context)
             ShadowMapManager.AllocateShadowMap(Light);
             if (Light->GetShadowMapIdx() == -1) { continue; }
 
-        	const TArray<FMatrix>& ViewMatrices = Light->GetLightViewMatrices(CameraVPInv);
+        	const TArray<FMatrix>& ViewMatrices = Light->GetLightViewMatrices(CamInv);
         	FShadowLightInfo LightInfo;
         	LightInfo.LightPosition = Light->GetWorldLocation();
         	LightInfo.LightType = static_cast<uint32>(Light->GetLightType());
         	LightInfo.LightView = ViewMatrices[0];
-        	LightInfo.LightProjection = Light->GetLightProjectionMatrix(CameraVPInv);
+        	LightInfo.LightProjection = Light->GetLightProjectionMatrix(CamInv);
         	FRenderResourceFactory::UpdateConstantBufferData(CBLightInfo, LightInfo);
 
             const uint32 Resolution = ShadowMapManager.GetResolution(Light);

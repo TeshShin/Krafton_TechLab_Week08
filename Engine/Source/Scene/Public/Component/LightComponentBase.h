@@ -11,6 +11,14 @@ enum class ELightComponentType
     LightType_Spot        = 3,
     LightType_Max         = 4,
 };
+
+UENUM()
+enum class EShadowProjectionMode
+{
+	LVP = 0,
+	PSM = 1,
+	LiSPSM = 2, // Directional 예정
+};
 DECLARE_ENUM_REFLECTION(ELightComponentType)
 
 UCLASS()
@@ -123,9 +131,9 @@ public:
 		Shadow Features
 	 -----------------------------------------------------------------------------*/
 public:
-	const TArray<FMatrix>& GetLightViewMatrices(const FMatrix& InCameraInverseVP) const;
-	const FMatrix& GetLightProjectionMatrix(const FMatrix& InCameraInverseVP) const;
-	const TArray<FMatrix>& GetLightViewProjectionMatrices(const FMatrix& InCameraInverseVP) const;
+	const TArray<FMatrix>& GetLightViewMatrices(const FCameraConstants& InCameraInvConstants) const;
+	const FMatrix& GetLightProjectionMatrix(const FCameraConstants& InCameraInvConstants) const;
+	const TArray<FMatrix>& GetLightViewProjectionMatrices(const FCameraConstants& InCameraInvConstants) const;
 
 	bool DoesCastShadows() const { return bCastShadows; }
 	void SetCastShadows(bool bInCastShadows) { bCastShadows = bInCastShadows; }
@@ -133,8 +141,15 @@ public:
 	int32 GetShadowMapIdx() const { return ShadowMapIdx; }
 	void SetShadowMapIdx(int32 InShadowIdx) { ShadowMapIdx = InShadowIdx; }
 
+	EShadowProjectionMode GetShadowProjectionMode() const { return ShadowProjectionMode; }
+	void SetShadowProjectionMode(EShadowProjectionMode InMode)
+	{
+		ShadowProjectionMode = InMode;
+		bIsLightVPDirty = true;
+	}
+
 protected:
-	virtual void UpdateLightMatricesInternal(const FMatrix& InCameraInverseVP) const {}
+	virtual void UpdateLightMatricesInternal(const FCameraConstants& InCameraInvConstants) const {}
 
 	mutable TArray<FMatrix> CachedLightViewProjection;
 	mutable TArray<FMatrix> CachedLightViewMatrices;
@@ -143,4 +158,6 @@ protected:
 
 	bool bCastShadows = false; // 일단 SpotLight만 true로 함
 	int32 ShadowMapIdx = -1;
+
+	EShadowProjectionMode ShadowProjectionMode = EShadowProjectionMode::LVP;
 };

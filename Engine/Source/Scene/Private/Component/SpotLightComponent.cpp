@@ -116,31 +116,36 @@ UTexture* USpotLightComponent::GetLightBillboardTexture()
 	return UAssetManager::GetInstance().LoadTexture("Data/Icons/SpotLight_64x.png");
 }
 
-void USpotLightComponent::UpdateLightMatricesInternal(const FMatrix& InCameraInverseVP) const
+void USpotLightComponent::UpdateLightMatricesInternal(const FCameraConstants& InCameraInvConstants) const
 {
 	if (!bIsLightVPDirty) { return; }
 
 	CachedLightViewMatrices.clear();
 	CachedLightViewProjection.clear();
 
-	CachedLightViewProjection.clear();
 	const FVector LightPosition = GetWorldLocation();
 	const FVector Right = GetWorldRightVector();
 	const FVector Up = GetWorldUpVector();
 	const FVector Forward = GetWorldForwardVector();
 
-	CachedLightViewMatrices.emplace_back(FMatrix::CreateViewFromAxes(LightPosition, Right, Up, Forward));
+	const FMatrix LightView = FMatrix::CreateViewFromAxes(LightPosition, Right, Up, Forward);
 
-	float NearZ = 0.1f;
-	float FarZ = GetAttenuationRadius();
-	float FOV = OuterConeAngle * 2.0f * ToRad;
-	float AspectRatio = 1.0f;
-	CachedLightProjectionMatrix = FMatrix::CreatePerspectiveFOV(FOV, AspectRatio, NearZ, FarZ);
+	const float NearZ_LVP = 0.1f;
+	const float FarZ_LVP = GetAttenuationRadius();
+	const float FovY = OuterConeAngle * 2.0f * ToRad;
+	const float AspectRatio = 1.0f;
+	const FMatrix LVPProjection = FMatrix::CreatePerspectiveFOV(FovY, AspectRatio, NearZ_LVP, FarZ_LVP);
 
-	for (const auto& ViewMatrix : CachedLightViewMatrices)
+	if (GetShadowProjectionMode() == EShadowProjectionMode::LVP)
 	{
-		CachedLightViewProjection.emplace_back(ViewMatrix * CachedLightProjectionMatrix);
+		CachedLightViewMatrices.emplace_back(LightView);
+		CachedLightProjectionMatrix = LVPProjection;
+		CachedLightViewProjection.emplace_back(CachedLightViewMatrices[0] * CachedLightProjectionMatrix);
+		bIsLightVPDirty = false;
+		return;
 	}
-
-	bIsLightVPDirty = false;
+	else if (GetShadowProjectionMode() == EShadowProjectionMode::PSM)
+	{
+		// TODO : PSM 구현
+	}
 }
