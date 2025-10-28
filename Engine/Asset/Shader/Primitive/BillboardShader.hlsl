@@ -1,4 +1,4 @@
-#include "Asset/Shader/Common/CommonConstants.hlsli"
+	#include "Asset/Shader/Common/CommonConstants.hlsli"
 
 cbuffer Color : register(b0)
 {
@@ -14,7 +14,7 @@ struct VS_INPUT
 };
 
 struct PS_INPUT
-{
+{	
 	float4 Position : SV_POSITION;
 	float4 Color : TEXCOORD0;
 	float2 Tex : TEXCOORD1;
