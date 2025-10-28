@@ -21,6 +21,8 @@ public:
 	TArray<FUnifiedDynamicLight> CollectLightsFromContext(FRenderingContext& Context);
 
 private:
+	void UpdateShadowResources();
+
     ID3D11VertexShader* VSPhong = nullptr;
     ID3D11PixelShader* PSPhong = nullptr;
 
@@ -47,6 +49,7 @@ private:
 	ID3D11ShaderResourceView* SpotLightMatricesSRV = nullptr;
     uint32 SpotLightMatricesCapacity;
 	TArray<FLightViewProj> SpotLightMatrices;
+	ID3D11Buffer* CBShadowSettings;
 	ID3D11Buffer* CBDirectionalShadowMatrix;
 
 	ID3D11ComputeShader* LightTilesCS = nullptr;

@@ -57,6 +57,7 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11DepthStencilState*
 	SpotLightMatricesStructuredBuffer = FRenderResourceFactory::CreateStructuredBuffer<FLightViewProj>(SpotLightMatricesCapacity);
 	SpotLightMatricesSRV = FRenderResourceFactory::CreateBufferSRV(SpotLightMatricesStructuredBuffer, SpotLightMatricesCapacity);
 
+	CBShadowSettings = FRenderResourceFactory::CreateConstantBuffer<FShadowSettings>();
 	CBDirectionalShadowMatrix = FRenderResourceFactory::CreateConstantBuffer<FLightViewProj>();
 
 	FRenderResourceFactory::CreateComputeShader(L"Asset/Shader/Lighting/LightTilesCS.hlsl", &LightTilesCS);
@@ -205,6 +206,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 {
     // Collect lights from context
     TArray<FUnifiedDynamicLight> UnifiedLights = CollectLightsFromContext(Context);
+	UpdateShadowResources();
 
 	// Ensure buffer capacity is sufficient
 	if (UnifiedLights.size() > UnifiedLightCapacity)
@@ -215,11 +217,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	}
 
     // Upload Unified Lights to StructuredBuffer
-    FRenderResourceFactory::UpdateStructuredBufferData(
-        UnifiedLightStructuredBuffer, UnifiedLights);
-    FRenderResourceFactory::UpdateStructuredBufferData(
-        SpotLightMatricesStructuredBuffer, SpotLightMatrices);
-	Pipeline->SetConstantBuffer(4, EShaderType::EST_Pixel, CBDirectionalShadowMatrix);
+    FRenderResourceFactory::UpdateStructuredBufferData(UnifiedLightStructuredBuffer, UnifiedLights);
 
     // After uploading current lights, build clusters using the compute shader
     CreateClusterBuffers(Context, UnifiedLights.size());
@@ -233,7 +231,6 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	{
 		// PS also needs the unified light buffer at t6 for clustering
 		Pipeline->SetSRV(6, EShaderType::EST_Pixel /*PS*/, UnifiedLightSRV);
-		Pipeline->SetSRV(12, EShaderType::EST_Pixel /*PS*/, SpotLightMatricesSRV);
 		// Bind Forward+ SRVs for PS
 		Pipeline->SetSRV(10, EShaderType::EST_Pixel /*PS*/, ClusterCountSRV);
 		Pipeline->SetSRV(11, EShaderType::EST_Pixel /*PS*/, ClusterIndexSRV);
@@ -415,16 +412,6 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 
 TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderingContext& Context)
 {
-	Pipeline->SetSRV(13, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetSpotLightSRV());
-	Pipeline->SetSRV(14, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetSpotMomentsSRV());
-	Pipeline->SetSRV(15, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetPointLightSRV()); // PCF 용으로 바꿔야함
-	Pipeline->SetSRV(16, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetPointLightSRV());
-	Pipeline->SetSRV(17, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetDirectionalLightSRV());
-	Pipeline->SetSRV(18, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetDirectionalMomentSRV());
-
-	Pipeline->SetSamplerState(1, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetSamplerState());
-	Pipeline->SetSamplerState(2, EShaderType::EST_Pixel, FShadowMapManager::GetInstance().GetMomentSampler());
-
 	// Collect all dynamic lights into unified buffer
 	TArray<FUnifiedDynamicLight> UnifiedLights;
 	SpotLightMatrices.resize(FShadowMapManager::GetInstance().GetMaxSpotShadows());
@@ -458,6 +445,43 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 	return UnifiedLights;
 }
 
+void FStaticMeshPass::UpdateShadowResources()
+{
+	FShadowMapManager& ShadowMapManager = FShadowMapManager::GetInstance();
+	EShadowFilterType ShadowFilter = ShadowMapManager.GetFilterType();
+
+	if (ShadowFilter >= EShadowFilterType::SFT_VSM)
+	{
+		Pipeline->SetSRV(13, EShaderType::EST_Pixel, nullptr);
+		Pipeline->SetSRV(15, EShaderType::EST_Pixel, nullptr);
+		Pipeline->SetSRV(17, EShaderType::EST_Pixel, nullptr);
+
+		Pipeline->SetSRV(14, EShaderType::EST_Pixel, ShadowMapManager.GetSpotLightSRV());
+		Pipeline->SetSRV(16, EShaderType::EST_Pixel, ShadowMapManager.GetPointLightSRV());
+		Pipeline->SetSRV(18, EShaderType::EST_Pixel, ShadowMapManager.GetDirectionalLightSRV());
+	}
+	else
+	{
+		Pipeline->SetSRV(13, EShaderType::EST_Pixel, ShadowMapManager.GetSpotLightSRV());
+		Pipeline->SetSRV(15, EShaderType::EST_Pixel, ShadowMapManager.GetPointLightSRV());
+		Pipeline->SetSRV(17, EShaderType::EST_Pixel, ShadowMapManager.GetDirectionalLightSRV());
+
+		Pipeline->SetSRV(14, EShaderType::EST_Pixel, nullptr);
+		Pipeline->SetSRV(16, EShaderType::EST_Pixel, nullptr);
+		Pipeline->SetSRV(18, EShaderType::EST_Pixel, nullptr);
+	}
+
+	Pipeline->SetSamplerState(1, EShaderType::EST_Pixel, ShadowMapManager.GetSamplerState());
+	Pipeline->SetSamplerState(2, EShaderType::EST_Pixel, ShadowMapManager.GetMomentSampler());
+
+	FRenderResourceFactory::UpdateStructuredBufferData(SpotLightMatricesStructuredBuffer, SpotLightMatrices);
+	Pipeline->SetSRV(12, EShaderType::EST_Pixel, SpotLightMatricesSRV);
+
+	FRenderResourceFactory::UpdateConstantBufferData(CBShadowSettings, ShadowMapManager.GetShadowSettings());
+	Pipeline->SetConstantBuffer(4, EShaderType::EST_Pixel, CBShadowSettings);
+	Pipeline->SetConstantBuffer(5, EShaderType::EST_Pixel, CBDirectionalShadowMatrix);
+}
+
 void FStaticMeshPass::Release()
 {
 	SafeRelease(ConstantBufferMaterial);
@@ -489,6 +513,7 @@ void FStaticMeshPass::Release()
 
 	SafeRelease(SpotLightMatricesStructuredBuffer);
 	SafeRelease(SpotLightMatricesSRV);
+	SafeRelease(CBShadowSettings);
 	SafeRelease(CBDirectionalShadowMatrix);
 }
 

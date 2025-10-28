@@ -62,7 +62,6 @@ FUnifiedDynamicLight USpotLightComponent::GetUnifiedLightData() const
     LightData.LightType = static_cast<uint32>(GetLightType());
 	LightData.ShadowBias = 0.001f;
 
-
     return LightData;
 }
 
