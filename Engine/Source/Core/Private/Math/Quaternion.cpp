@@ -42,16 +42,16 @@ FQuaternion FQuaternion::FromRotationMatrix(const FMatrix& M)
     {
         float s = 0.5f / sqrtf(trace + 1.0f);
         Q.W = 0.25f / s;
-        Q.X = (M.Data[2][1] - M.Data[1][2]) * s;
-        Q.Y = (M.Data[0][2] - M.Data[2][0]) * s;
-        Q.Z = (M.Data[1][0] - M.Data[0][1]) * s;
+        Q.X = (M.Data[1][2] - M.Data[2][1]) * s;
+        Q.Y = (M.Data[2][0] - M.Data[0][2]) * s;
+        Q.Z = (M.Data[0][1] - M.Data[1][0]) * s;
     }
     else
     {
         if (M.Data[0][0] > M.Data[1][1] && M.Data[0][0] > M.Data[2][2])
         {
             float s = 2.0f * sqrtf(1.0f + M.Data[0][0] - M.Data[1][1] - M.Data[2][2]);
-            Q.W = (M.Data[2][1] - M.Data[1][2]) / s;
+            Q.W = (M.Data[1][2] - M.Data[2][1]) / s;
             Q.X = 0.25f * s;
             Q.Y = (M.Data[0][1] + M.Data[1][0]) / s;
             Q.Z = (M.Data[0][2] + M.Data[2][0]) / s;
@@ -59,7 +59,7 @@ FQuaternion FQuaternion::FromRotationMatrix(const FMatrix& M)
         else if (M.Data[1][1] > M.Data[2][2])
         {
             float s = 2.0f * sqrtf(1.0f + M.Data[1][1] - M.Data[0][0] - M.Data[2][2]);
-            Q.W = (M.Data[0][2] - M.Data[2][0]) / s;
+            Q.W = (M.Data[2][0] - M.Data[0][2]) / s;
             Q.X = (M.Data[0][1] + M.Data[1][0]) / s;
             Q.Y = 0.25f * s;
             Q.Z = (M.Data[1][2] + M.Data[2][1]) / s;
@@ -67,7 +67,7 @@ FQuaternion FQuaternion::FromRotationMatrix(const FMatrix& M)
         else
         {
             float s = 2.0f * sqrtf(1.0f + M.Data[2][2] - M.Data[0][0] - M.Data[1][1]);
-            Q.W = (M.Data[1][0] - M.Data[0][1]) / s;
+            Q.W = (M.Data[0][1] - M.Data[1][0]) / s;
             Q.X = (M.Data[0][2] + M.Data[2][0]) / s;
             Q.Y = (M.Data[1][2] + M.Data[2][1]) / s;
             Q.Z = 0.25f * s;
@@ -115,17 +115,17 @@ FMatrix FQuaternion::ToRotationMatrix() const
     const float WZ = W * Z;
 
     M.Data[0][0] = 1.0f - 2.0f * (Y2 + Z2);
-    M.Data[0][1] = 2.0f * (XY - WZ);
-    M.Data[0][2] = 2.0f * (XZ + WY);
+    M.Data[0][1] = 2.0f * (XY + WZ);
+    M.Data[0][2] = 2.0f * (XZ - WY);
     M.Data[0][3] = 0.0f;
 
-    M.Data[1][0] = 2.0f * (XY + WZ);
+    M.Data[1][0] = 2.0f * (XY - WZ);
     M.Data[1][1] = 1.0f - 2.0f * (X2 + Z2);
-    M.Data[1][2] = 2.0f * (YZ - WX);
+    M.Data[1][2] = 2.0f * (YZ + WX);
     M.Data[1][3] = 0.0f;
 
-    M.Data[2][0] = 2.0f * (XZ - WY);
-    M.Data[2][1] = 2.0f * (YZ + WX);
+    M.Data[2][0] = 2.0f * (XZ + WY);
+    M.Data[2][1] = 2.0f * (YZ - WX);
     M.Data[2][2] = 1.0f - 2.0f * (X2 + Y2);
     M.Data[2][3] = 0.0f;
 
@@ -168,23 +168,26 @@ FQuaternion FQuaternion::MakeFromDirection(const FVector& Direction)
 	FVector Dir = Direction.GetNormalized();
 
 	float Dot = ForwardVector.Dot(Dir);
-	if (Dot == 1.f) { return Identity(); }
-
-	if (Dot == -1.f)
+	if (Dot > 0.999999f)
 	{
-		// 180도 회전
+		return Identity();
+	}
+
+	if (Dot < -0.999999f)
+	{
 		FVector RotAxis = FVector::UpVector().Cross(ForwardVector);
-		if (RotAxis.IsZero()) // Forward가 UP 벡터와 평행하면 다른 축 사용
+		if (RotAxis.IsZero())
 		{
-			RotAxis = FVector::ForwardVector().Cross(ForwardVector);
+			RotAxis = FVector::RightVector();
 		}
 		return FromAxisAngle(RotAxis.GetNormalized(), PI);
 	}
 
-	float AngleRad = acos(Dot);
+	float AngleRad = acosf(Dot);
 
 	// 두 벡터에 수직인 회전축 계산 후 쿼터니언 생성
-	FVector Axis = Dir.Cross(ForwardVector);
+	// RH 규칙에 따라 A에서 B로 갈 때 축은 A x B
+	FVector Axis = ForwardVector.Cross(Dir);
 	Axis.Normalize();
 	return FromAxisAngle(Axis, AngleRad);
 }
@@ -199,7 +202,7 @@ FVector FQuaternion::RotateVector(const FQuaternion& q, const FVector& v)
 FVector FQuaternion::RotateVector(const FVector& V) const
 {
 	const FVector Q(X, Y, Z);
-	const FVector TT = V.Cross(Q) * 2.f;
-	const FVector Result = V + (TT * W) + TT.Cross(Q);
+	const FVector t = Q.Cross(V) * 2.f;
+	const FVector Result = V + (t * W) + Q.Cross(t);
 	return Result;
 }

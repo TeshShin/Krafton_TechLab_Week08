@@ -98,13 +98,15 @@ void FGizmo::Update(UCamera* InCamera)
 	}
 
 	// X축 (Forward) - 빨간색
-	P[0].Rotation = FQuaternion::Identity() * LocalRot;
+	P[0].Rotation = LocalRot * FQuaternion::Identity();
 	P[0].Color = ColorFor(EGizmoDirection::Forward);
-	// Y축 (Right) - 초록색 (Z축 주위로 -90도 회전)
-	P[1].Rotation =  FQuaternion::FromAxisAngle(FVector::UpVector(), -90.0f * ToRad) * LocalRot;
+
+	// Y축 (Right) - 초록색 (Z축 주위로 90도 회전)
+	P[1].Rotation =  LocalRot * FQuaternion::FromAxisAngle(FVector::UpVector(), 90.0f * ToRad);
 	P[1].Color = ColorFor(EGizmoDirection::Right);
-	// Z축 (Up) - 파란색 (Y축 주위로 90도 회전)
-	P[2].Rotation =  FQuaternion::FromAxisAngle(FVector::RightVector(), 90.0f * ToRad) * LocalRot;
+
+	// Z축 (Up) - 파란색 (Y축 주위로 -90도 회전)
+	P[2].Rotation =  LocalRot * FQuaternion::FromAxisAngle(FVector::RightVector(), -90.0f * ToRad);
 	P[2].Color = ColorFor(EGizmoDirection::Up);
 }
 
@@ -143,6 +145,16 @@ void FGizmo::OnMouseDragStart(FVector& CollisionPoint)
 		DragStartActorLocation = TargetComponent->GetWorldLocation();
 		DragStartActorRotation = TargetComponent->GetWorldRotation();
 		DragStartActorScale = TargetComponent->GetWorldScale3D();
+		FVector LocalAxis = GetGizmoAxis();
+		FVector WorldSpaceDragAxis = LocalAxis;
+
+		if (!IsWorldMode())
+		{
+			FQuaternion StartRotation = TargetComponent->GetWorldRotationAsQuaternion();
+			WorldSpaceDragAxis = StartRotation.RotateVector(LocalAxis);
+		}
+
+		StoredDragAxis = WorldSpaceDragAxis;
 	}
 }
 
