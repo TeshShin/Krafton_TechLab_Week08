@@ -66,6 +66,7 @@ FUnifiedDynamicLight USpotLightComponent::GetUnifiedLightData() const
 
 void USpotLightComponent::DrawDebugArrow(TArray<FName>& InOutLabels)
 {
+	if (!IsVisibleInHierarchy()) { return;	}
 	auto& LineManager = UBatchLineManager::GetInstance();
 	const FVector Tip = GetWorldLocation();
 	const FVector Dir = GetWorldForwardVector();

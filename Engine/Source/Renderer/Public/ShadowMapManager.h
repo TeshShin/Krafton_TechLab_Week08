@@ -1,5 +1,33 @@
 #pragma once
 
+/**
+ * @brief 섀도우 맵 매니저의 VRAM 및 할당 상태를 추적하는 스탯 구조체
+ */
+struct FShadowStatData
+{
+	// --- VRAM (Bytes) ---
+	// 정적(Static) VRAM - 초기화 시 한 번만 계산
+	uint64 VRAM_Directional_Depth = 0;
+	uint64 VRAM_Directional_Moments = 0;
+	uint64 VRAM_Spot_Depth = 0;
+	uint64 VRAM_Spot_Moments = 0;
+	uint64 VRAM_Point_Moments = 0;     // 포인트 라이트는 Moment RTV를 사용
+	uint64 VRAM_Point_Pass_DSV = 0;  // 포인트 라이트 렌더링 패스용 DSV
+	uint64 VRAM_Total = 0;
+
+	// --- Config (초기화 설정값) ---
+	uint32 Config_DirResolution = 0;
+	uint32 Config_SpotResolution = 0;
+	uint32 Config_MaxSpotShadows = 0;
+	uint32 Config_PointResolution = 0;
+	uint32 Config_MaxPointShadowCubes = 0;
+
+	// --- Dynamic Stats (매 프레임 업데이트) ---
+	uint32 Allocated_Directional = 0;
+	uint32 Allocated_Spot = 0;
+	uint32 Allocated_PointCubes = 0;
+};
+
 class FShadowMapManager
 {
 public:
@@ -10,6 +38,7 @@ public:
 	FShadowMapManager& operator=(FShadowMapManager const&) = delete;
 
 	static FShadowMapManager& GetInstance();
+
 public:
     /**
      * @param InMaxSpotShadows - 최대 스포트라이트 섀도우 개수 (슬라이스 수)
@@ -138,4 +167,13 @@ private:
 
 	ID3D11Texture2D* ImGuiDebugTexture_Dir = nullptr;
 	ID3D11ShaderResourceView* ImGuiDebugSRV_Dir =  nullptr;
+
+// Stat Section
+public:
+	const FShadowStatData& GetShadowStats() const;
+
+private:
+	void UpdateTotalVRAMStats();
+
+	mutable FShadowStatData StatData;
 };

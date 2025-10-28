@@ -2,6 +2,7 @@
 #include "Editor/Public/UI/StatOverlay.h"
 #include "Manager/Public/TimeManager.h"
 #include "Renderer/Public/Renderer.h"
+#include "Renderer/Public/ShadowMapManager.h"
 
 IMPLEMENT_SINGLETON_CLASS(UStatOverlay, UObject)
 
@@ -26,6 +27,9 @@ void UStatOverlay::Initialize()
             &TextFormat
         );
     }
+
+	// 시연용 Shadow Enable
+	EnableStat(EStatType::Shadow);
 }
 
 void UStatOverlay::Release()
@@ -37,8 +41,6 @@ void UStatOverlay::Release()
 
 void UStatOverlay::Render()
 {
-    TIME_PROFILE(StatDrawn);
-
     auto* DeviceResources = URenderer::GetInstance().GetDeviceResources();
     IDXGISwapChain* SwapChain = DeviceResources->GetSwapChain();
     ID3D11Device* D3DDevice = DeviceResources->GetDevice();
@@ -80,11 +82,15 @@ void UStatOverlay::Render()
     D2DCtx->SetTarget(TargetBmp);
     D2DCtx->BeginDraw();
 
+    // CurrentLineY를 사용하여 각 렌더 함수가 자동으로 다음 줄로 이동
+    CurrentLineY = OverlayY;
+
     if (IsStatEnabled(EStatType::FPS))     RenderFPS(D2DCtx);
     if (IsStatEnabled(EStatType::Memory))  RenderMemory(D2DCtx);
     if (IsStatEnabled(EStatType::Picking)) RenderPicking(D2DCtx);
-    if (IsStatEnabled(EStatType::Time))    RenderTimeInfo(D2DCtx);
     if (IsStatEnabled(EStatType::Decal))   RenderDecalInfo(D2DCtx);
+	if (IsStatEnabled(EStatType::Shadow))    RenderShadow(D2DCtx);
+    if (IsStatEnabled(EStatType::Time))    RenderTimeInfo(D2DCtx);
 
     D2DCtx->EndDraw();
     D2DCtx->SetTarget(nullptr);
@@ -111,7 +117,7 @@ void UStatOverlay::RenderFPS(ID2D1DeviceContext* D2DCtx)
     if (CurrentFPS < 30.0f) { r = 1.0f; g = 0.0f; b = 0.0f; }
     else if (CurrentFPS < 60.0f) { r = 1.0f; g = 1.0f; b = 0.0f; }
 
-    RenderText(D2DCtx, text, OverlayX, OverlayY, r, g, b);
+    RenderTextLine(D2DCtx, text, r, g, b);
 }
 
 void UStatOverlay::RenderMemory(ID2D1DeviceContext* d2dCtx)
@@ -122,9 +128,7 @@ void UStatOverlay::RenderMemory(ID2D1DeviceContext* d2dCtx)
     sprintf_s(Buf, sizeof(Buf), "Memory: %.1f MB (%u objects)", MemoryMB, TotalAllocationCount);
     FString text = Buf;
 
-    float OffsetY = 0.0f;
-    if (IsStatEnabled(EStatType::FPS))    OffsetY += 20.0f;
-    RenderText(d2dCtx, text, OverlayX, OverlayY + OffsetY, 1.0f, 1.0f, 0.0f);
+    RenderTextLine(d2dCtx, text, 1.0f, 1.0f, 0.0f);
 }
 
 void UStatOverlay::RenderPicking(ID2D1DeviceContext* D2DCtx)
@@ -136,15 +140,11 @@ void UStatOverlay::RenderPicking(ID2D1DeviceContext* D2DCtx)
         LastPickingTimeMs, PickAttempts, AccumulatedPickingTimeMs, AvgMs);
     FString Text = Buf;
 
-    float OffsetY = 0.0f;
-    if (IsStatEnabled(EStatType::FPS))    OffsetY += 20.0f;
-    if (IsStatEnabled(EStatType::Memory)) OffsetY += 20.0f;
-
     float r = 0.0f, g = 1.0f, b = 0.8f;
     if (LastPickingTimeMs > 5.0f) { r = 1.0f; g = 0.0f; b = 0.0f; }
     else if (LastPickingTimeMs > 1.0f) { r = 1.0f; g = 1.0f; b = 0.0f; }
 
-    RenderText(D2DCtx, Text, OverlayX, OverlayY + OffsetY, r, g, b);
+    RenderTextLine(D2DCtx, Text, r, g, b);
 }
 
 void UStatOverlay::RenderDecalInfo(ID2D1DeviceContext* D2DCtx)
@@ -154,41 +154,105 @@ void UStatOverlay::RenderDecalInfo(ID2D1DeviceContext* D2DCtx)
         sprintf_s(Buf, sizeof(Buf), "Rendered Decal: %d (Collided Components: %d)",
             RenderedDecal, CollidedCompCount);
         FString Text = Buf;
-    
-        float OffsetY = 0.0f;
-        if (IsStatEnabled(EStatType::FPS))      OffsetY += 20.0f;
-        if (IsStatEnabled(EStatType::Memory))   OffsetY += 20.0f;
-        if (IsStatEnabled(EStatType::Picking))  OffsetY += 20.0f;
-
-        RenderText(D2DCtx, Text, OverlayX, OverlayY + OffsetY, 0.f, 1.f, 0.f);
+        RenderTextLine(D2DCtx, Text, 0.f, 1.f, 0.f);
     }
 
     {
         char Buf[128];
         sprintf_s(Buf, sizeof(Buf), "Decal Pass Time: %.4f ms", FScopeCycleCounter::GetTimeProfile("DecalPass").Milliseconds);
         FString Text = Buf;
-    
-        float OffsetY = 20.0f;
-        if (IsStatEnabled(EStatType::FPS))      OffsetY += 20.0f;
-        if (IsStatEnabled(EStatType::Memory))   OffsetY += 20.0f;
-        if (IsStatEnabled(EStatType::Picking))  OffsetY += 20.0f;
-        RenderText(D2DCtx, Text, OverlayX, OverlayY + OffsetY, 0.f, 1.f, 0.f);
+        RenderTextLine(D2DCtx, Text, 0.f, 1.f, 0.f);
+    }
+}
+
+void UStatOverlay::RenderShadow(ID2D1DeviceContext* D2DCtx)
+{
+	FShadowMapManager& ShadowMapManager = FShadowMapManager::GetInstance();
+    const FShadowStatData& Stats = ShadowMapManager.GetShadowStats();
+
+    auto ToMB = [](uint64_t bytes) -> double {
+        return static_cast<double>(bytes) / (1024.0 * 1024.0);
+    };
+
+    char Buf[256];
+    FString Text;
+    const float R = 0.0f, G = 1.0f, B = 0.0f;
+
+    // --- 총 VRAM 사용량 ---
+    {
+        sprintf_s(Buf, sizeof(Buf), "Total Shadow VRAM: %.2f MB", ToMB(Stats.VRAM_Total));
+        Text = Buf;
+        RenderTextLine(D2DCtx, Text, R, G, B);
+    }
+
+    // --- 할당된 라이트 개수 ---
+    {
+        uint32 TotalAllocated = Stats.Allocated_Directional + Stats.Allocated_Spot + Stats.Allocated_PointCubes;
+        sprintf_s(Buf, sizeof(Buf), "Shadow Casting Lights: %d", TotalAllocated);
+        Text = Buf;
+        RenderTextLine(D2DCtx, Text, R, G, B);
+    }
+
+    // --- Directional Light 상세 ---
+    {
+        sprintf_s(Buf, sizeof(Buf), "  Directional: %d (%dx%d)",
+            Stats.Allocated_Directional,
+            Stats.Config_DirResolution, Stats.Config_DirResolution);
+        Text = Buf;
+        RenderTextLine(D2DCtx, Text, R, G, B);
+    }
+    {
+        sprintf_s(Buf, sizeof(Buf), "    Depth: %.2f MB, Moments: %.2f MB",
+            ToMB(Stats.VRAM_Directional_Depth),
+            ToMB(Stats.VRAM_Directional_Moments));
+        Text = Buf;
+        RenderTextLine(D2DCtx, Text, R, G, B);
+    }
+
+    // --- Spot Lights 상세 ---
+    {
+        sprintf_s(Buf, sizeof(Buf), "  Spot Lights: %d / %d (%dx%d)",
+            Stats.Allocated_Spot,
+            Stats.Config_MaxSpotShadows,
+            Stats.Config_SpotResolution, Stats.Config_SpotResolution);
+        Text = Buf;
+        RenderTextLine(D2DCtx, Text, R, G, B);
+    }
+    {
+        sprintf_s(Buf, sizeof(Buf), "    Depth: %.2f MB, Moments: %.2f MB",
+            ToMB(Stats.VRAM_Spot_Depth),
+            ToMB(Stats.VRAM_Spot_Moments));
+        Text = Buf;
+        RenderTextLine(D2DCtx, Text, R, G, B);
+    }
+
+    // --- Point Lights 상세 ---
+    {
+        sprintf_s(Buf, sizeof(Buf), "  Point Lights: %d / %d (%dx%d)",
+            Stats.Allocated_PointCubes,
+            Stats.Config_MaxPointShadowCubes,
+            Stats.Config_PointResolution, Stats.Config_PointResolution);
+        Text = Buf;
+        RenderTextLine(D2DCtx, Text, R, G, B);
+    }
+    {
+        sprintf_s(Buf, sizeof(Buf), "    Moments (CubeArray): %.2f MB",
+            ToMB(Stats.VRAM_Point_Moments));
+        Text = Buf;
+        RenderTextLine(D2DCtx, Text, R, G, B);
+    }
+    {
+        // (Initialize에서 생성한 포인트라이트 전용 임시 DSV)
+        sprintf_s(Buf, sizeof(Buf), "    Pass DSV (Temp): %.2f MB",
+            ToMB(Stats.VRAM_Point_Pass_DSV));
+        Text = Buf;
+        RenderTextLine(D2DCtx, Text, R, G, B);
     }
 }
 
 void UStatOverlay::RenderTimeInfo(ID2D1DeviceContext* D2DCtx)
 {
     const TArray<FString> ProfileKeys = FScopeCycleCounter::GetTimeProfileKeys();
-
-    float OffsetY = 0.0f;
-    if (IsStatEnabled(EStatType::FPS))    OffsetY += 20.0f;
-    if (IsStatEnabled(EStatType::Memory)) OffsetY += 20.0f;
-    if (IsStatEnabled(EStatType::Picking)) OffsetY += 20.0f;
-    if (IsStatEnabled(EStatType::Decal))  OffsetY += 40.0f;
-
-
-    float CurrentY = OverlayY + OffsetY;
-    const float LineHeight = 20.0f;
 
     for (const FString& Key : ProfileKeys)
     {
@@ -201,9 +265,14 @@ void UStatOverlay::RenderTimeInfo(ID2D1DeviceContext* D2DCtx)
         float r = 0.8f, g = 0.8f, b = 0.8f;
         if (Profile.Milliseconds > 1.0f) { r = 1.0f; g = 1.0f; b = 0.0f; }
 
-        RenderText(D2DCtx, text, OverlayX, CurrentY, r, g, b);
-        CurrentY += LineHeight;
+        RenderTextLine(D2DCtx, text, r, g, b);
     }
+}
+
+void UStatOverlay::RenderTextLine(ID2D1DeviceContext* D2DCtx, const FString& Text, float r, float g, float b)
+{
+    RenderText(D2DCtx, Text, OverlayX, CurrentLineY, r, g, b);
+    CurrentLineY += LineHeight;
 }
 
 void UStatOverlay::RenderText(ID2D1DeviceContext* D2DCtx, const FString& Text, float x, float y, float r, float g, float b)
@@ -216,7 +285,7 @@ void UStatOverlay::RenderText(ID2D1DeviceContext* D2DCtx, const FString& Text, f
     if (FAILED(D2DCtx->CreateSolidColorBrush(D2D1::ColorF(r, g, b), &Brush)))
         return;
 
-    D2D1_RECT_F rect = D2D1::RectF(x, y, x + 800.0f, y + 20.0f);
+    D2D1_RECT_F rect = D2D1::RectF(x, y, x + 800.0f, y + LineHeight);
     D2DCtx->DrawTextW(
         wText.c_str(),
         static_cast<UINT32>(wText.length()),

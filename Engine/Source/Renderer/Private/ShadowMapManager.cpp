@@ -50,43 +50,8 @@ void FShadowMapManager::Initialize(uint32 InMaxSpotShadows, uint32 InSpotResolut
 	}
 
 	InitializeForDebug();
-    hr = Device->CreateSamplerState(&SamplerDesc, &ShadowMapSamplerState);
-    if (FAILED(hr))
-        { return; }
 
-
-    // --- 섀도우 패스 전용 DSV ---
-    D3D11_TEXTURE2D_DESC DepthTexDesc = {};
-    DepthTexDesc.Width = PointResolution;
-    DepthTexDesc.Height = PointResolution;
-    DepthTexDesc.MipLevels = 1;
-    DepthTexDesc.ArraySize = 1;
-    DepthTexDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-    DepthTexDesc.SampleDesc.Count = 1;
-    DepthTexDesc.Usage = D3D11_USAGE_DEFAULT;
-    DepthTexDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-    DepthTexDesc.CPUAccessFlags = 0;
-    DepthTexDesc.MiscFlags = 0;
-
-    hr = Device->CreateTexture2D(&DepthTexDesc, nullptr, &PointShadowDepthTexture);
-    if (FAILED(hr))
-    {
-        UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE SHADOW DSV TEXTURE");
-        return;
-    }
-
-    D3D11_DEPTH_STENCIL_VIEW_DESC PointDsvDesc = {};
-    PointDsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
-    PointDsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-    PointDsvDesc.Texture2D.MipSlice = 0;
-
-    hr = Device->CreateDepthStencilView(PointShadowDepthTexture, &PointDsvDesc, &PointShadowDepthDSV);
-    if (FAILED(hr))
-    {
-        UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE SHADOW DSV");
-        return;
-    }
-        // Linear sampler for moments sampling (non-comparison)
+    // Linear sampler for moments sampling (non-comparison)
     D3D11_SAMPLER_DESC LinearSamp = {};
     LinearSamp.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
     LinearSamp.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
@@ -101,7 +66,6 @@ void FShadowMapManager::Initialize(uint32 InMaxSpotShadows, uint32 InSpotResolut
     LinearSamp.MaxLOD = D3D11_FLOAT32_MAX;
     hr = Device->CreateSamplerState(&LinearSamp, &MomentSamplerState);
     if (FAILED(hr)) { return; }
-
 }
 
 void FShadowMapManager::InitializeSpotShadows(uint32 InMaxSpotShadows, uint32 InSpotResolution)
@@ -130,6 +94,10 @@ void FShadowMapManager::InitializeSpotShadows(uint32 InMaxSpotShadows, uint32 In
         UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE TEXTURE");
 	    return;
     }
+
+	StatData.VRAM_Spot_Depth = static_cast<uint64_t>(SpotResolution) * SpotResolution * MaxSpotShadows * 4;
+	StatData.Config_SpotResolution = SpotResolution;
+	StatData.Config_MaxSpotShadows = MaxSpotShadows;
 
 	// --- SRV ---
     D3D11_SHADER_RESOURCE_VIEW_DESC SpotSrvDesc = {};
@@ -187,6 +155,7 @@ void FShadowMapManager::InitializeSpotShadows(uint32 InMaxSpotShadows, uint32 In
 	{
 		return;
 	}
+	StatData.VRAM_Spot_Moments = static_cast<uint64>(SpotResolution) * SpotResolution * MaxSpotShadows * 8;
 
 	// SRV for moments
 	D3D11_SHADER_RESOURCE_VIEW_DESC MomentsSRVDesc = {};
@@ -218,6 +187,8 @@ void FShadowMapManager::InitializeSpotShadows(uint32 InMaxSpotShadows, uint32 In
 			SpotShadowMomentsSliceRTVs.clear();
 		}
 	}
+
+	UpdateTotalVRAMStats();
 }
 
 void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uint32 InPointResolution)
@@ -245,6 +216,10 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
         UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE RTV TEXTURE");
         return;
     }
+
+	StatData.VRAM_Point_Moments = static_cast<uint64>(PointResolution) * PointResolution * (MaxPointShadowCubes * 6) * 4;
+	StatData.Config_PointResolution = PointResolution;
+	StatData.Config_MaxPointShadowCubes = MaxPointShadowCubes;
 
     // --- SRV ---
     D3D11_SHADER_RESOURCE_VIEW_DESC PointSrvDesc = {};
@@ -300,6 +275,41 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
             return;
         }
     }
+
+	// --- 섀도우 패스 전용 DSV ---
+	D3D11_TEXTURE2D_DESC DepthTexDesc = {};
+	DepthTexDesc.Width = PointResolution;
+	DepthTexDesc.Height = PointResolution;
+	DepthTexDesc.MipLevels = 1;
+	DepthTexDesc.ArraySize = 1;
+	DepthTexDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+	DepthTexDesc.SampleDesc.Count = 1;
+	DepthTexDesc.Usage = D3D11_USAGE_DEFAULT;
+	DepthTexDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	DepthTexDesc.CPUAccessFlags = 0;
+	DepthTexDesc.MiscFlags = 0;
+
+	hr = Device->CreateTexture2D(&DepthTexDesc, nullptr, &PointShadowDepthTexture);
+	if (FAILED(hr))
+	{
+		UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE SHADOW DSV TEXTURE");
+		return;
+	}
+	StatData.VRAM_Point_Pass_DSV = static_cast<uint64>(PointResolution) * PointResolution * 1 * 4;
+
+	D3D11_DEPTH_STENCIL_VIEW_DESC PointDsvDesc = {};
+	PointDsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	PointDsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	PointDsvDesc.Texture2D.MipSlice = 0;
+
+	hr = Device->CreateDepthStencilView(PointShadowDepthTexture, &PointDsvDesc, &PointShadowDepthDSV);
+	if (FAILED(hr))
+	{
+		UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE SHADOW DSV");
+		return;
+	}
+
+	UpdateTotalVRAMStats();
 }
 
 void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
@@ -326,6 +336,9 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 		UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE DIR LIGHT TEXTURE");
 		return;
 	}
+
+	StatData.VRAM_Directional_Depth = static_cast<uint64_t>(DirResolution) * DirResolution * 1 * 4;
+	StatData.Config_DirResolution = InResolution;
 
 	// --- SRV (Texture2D) ---
 	D3D11_SHADER_RESOURCE_VIEW_DESC SrvDesc = {};
@@ -372,6 +385,8 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 	hr = Device->CreateTexture2D(&MomentsDesc, nullptr, &DirShadowMomentTexture);
 	if (FAILED(hr)) { return; }
 
+	StatData.VRAM_Directional_Moments = static_cast<uint64_t>(DirResolution) * DirResolution * 1 * 8;
+
 	// SRV for moments
 	D3D11_SHADER_RESOURCE_VIEW_DESC MomentsSRVDesc = {};
 	MomentsSRVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
@@ -395,6 +410,8 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 		UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE DIR LIGHT MOMENT RTV");
 		return;
 	}
+
+	UpdateTotalVRAMStats();
 }
 
 void FShadowMapManager::ReleaseSpotShadows()
@@ -752,4 +769,25 @@ ID3D11ShaderResourceView* FShadowMapManager::GetDirectionalSRVForImGuiDebug()
 
 	// 4. 복사된 텍스처의 SRV 반환
 	return ImGuiDebugSRV_Dir;
+}
+
+
+const FShadowStatData& FShadowMapManager::GetShadowStats() const
+{
+	StatData.Allocated_Directional = bIsDirShadowAllocated ? 1 : 0;
+	StatData.Allocated_Spot = CurrentSpotShadowIdx;
+	StatData.Allocated_PointCubes = CurrentPointCubeIdx;
+
+	return StatData;
+}
+
+void FShadowMapManager::UpdateTotalVRAMStats()
+{
+	StatData.VRAM_Total =
+			StatData.VRAM_Directional_Depth +
+			StatData.VRAM_Directional_Moments +
+			StatData.VRAM_Spot_Depth +
+			StatData.VRAM_Spot_Moments +
+			StatData.VRAM_Point_Moments +
+			StatData.VRAM_Point_Pass_DSV;
 }

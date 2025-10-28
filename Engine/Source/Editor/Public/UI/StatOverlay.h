@@ -11,7 +11,8 @@ enum class EStatType : uint8
 	Picking =	1 << 2,  // 4
 	Decal =		1 << 3,  // 8
 	Time =		1 << 4,	 // 16
-	All = FPS | Memory | Picking | Time | Decal
+	Shadow =		1 << 5,	 // 32
+	All = FPS | Memory | Picking | Decal | Time | Shadow
 };
 
 UCLASS()
@@ -26,33 +27,24 @@ public:
 	void Render();
 
 	// Stat control methods
-	void ShowFPS() { IsStatEnabled(EStatType::FPS) ? DisableStat(EStatType::FPS) : EnableStat(EStatType::FPS); }
-	void ShowMemory() { IsStatEnabled(EStatType::Memory) ? DisableStat(EStatType::Memory) : EnableStat(EStatType::Memory); }
-	void ShowPicking() { IsStatEnabled(EStatType::Picking) ? DisableStat(EStatType::Picking) : EnableStat(EStatType::Picking); }
-	void ShowTime() { IsStatEnabled(EStatType::Time) ? DisableStat(EStatType::Time) : EnableStat(EStatType::Time); }
-	void ShowDecal() { IsStatEnabled(EStatType::Decal) ? DisableStat(EStatType::Decal) : EnableStat(EStatType::Decal); }
-	void ShowAll() { IsStatEnabled(EStatType::All) ? DisableStat(EStatType::All) : EnableStat(EStatType::All); }
+	void ShowStat(EStatType Stat) { IsStatEnabled(Stat) ? DisableStat(Stat) : EnableStat(Stat); }
 
 	// API to update stats
 	void RecordPickingStats(float ElapsedMS);
 	void RecordDecalStats(uint32 InRenderedDecal, uint32 InCollidedCompCount);
-	
+
 private:
-	void RenderFPS(ID2D1DeviceContext* d2dCtx);
-	void RenderMemory(ID2D1DeviceContext* d2dCtx);
-	void RenderPicking(ID2D1DeviceContext* d2dCtx);
+	void RenderFPS(ID2D1DeviceContext* D2DCtx);
+	void RenderMemory(ID2D1DeviceContext* D2DCtx);
+	void RenderPicking(ID2D1DeviceContext* D2DCtx);
 	void RenderDecalInfo(ID2D1DeviceContext* D2DCtx);
-	void RenderTimeInfo(ID2D1DeviceContext* d2dCtx);
-	void RenderText(ID2D1DeviceContext* d2dCtx, const FString& Text, float X, float Y, float R, float G, float B);
-	template <typename T>
-	inline void SafeRelease(T*& ptr)
-	{
-		if (ptr)
-		{
-			ptr->Release();
-			ptr = nullptr;
-		}
-	}
+	void RenderShadow(ID2D1DeviceContext* D2DCtx);
+	void RenderTimeInfo(ID2D1DeviceContext* D2DCtx);
+	void RenderText(ID2D1DeviceContext* D2DCtx, const FString& Text, float X, float Y, float R, float G, float B);
+	void RenderTextLine(ID2D1DeviceContext* D2DCtx, const FString& Text, float r, float g, float b);
+
+	static constexpr float LineHeight = 20.0f;
+	float CurrentLineY = 0.0f;
 
 	// FPS Stats
 	float CurrentFPS = 0.0f;
@@ -68,7 +60,7 @@ private:
 	uint32 CollidedCompCount = 0;
 
 	// Rendering position
-	float OverlayX = 18.0f;
+	float OverlayX = 40.0f;
 	float OverlayY = 55.0f;
 
 	uint8 StatMask = static_cast<uint8>(EStatType::None);
@@ -81,6 +73,6 @@ private:
 	bool IsStatEnabled(EStatType InStatType) const;
 
 	IDWriteTextFormat* TextFormat = nullptr;
-	
+
 	IDWriteFactory* DWriteFactory = nullptr;
 };

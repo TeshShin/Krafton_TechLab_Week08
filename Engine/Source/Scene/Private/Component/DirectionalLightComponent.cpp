@@ -14,6 +14,7 @@ UDirectionalLightComponent::UDirectionalLightComponent()
 
 void UDirectionalLightComponent::DrawDebugArrow(TArray<FName>& InOutLabels)
 {
+	if (!IsVisibleInHierarchy()) { return; }
 	auto& LineManager = UBatchLineManager::GetInstance();
 	const FVector Start = GetWorldLocation();
 	const FVector End = Start + GetWorldForwardVector() * 2.0f;

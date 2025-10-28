@@ -19,7 +19,7 @@ FShadowPass::FShadowPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS) :
 	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/Lighting/ShadowMapShader.hlsl", &PS);
 
 	CBLightInfo = FRenderResourceFactory::CreateConstantBuffer<FShadowLightInfo>();
-	FShadowMapManager::GetInstance().Initialize(16, 2048, 16, 2048, 4096);
+	FShadowMapManager::GetInstance().Initialize(16, 1024, 16, 1024, 2048);
 }
 
 bool FShadowPass::CanRender(const FRenderingContext& Context)

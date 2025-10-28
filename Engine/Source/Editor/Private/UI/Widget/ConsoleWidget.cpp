@@ -482,37 +482,42 @@ void UConsoleWidget::HandleStatCommand(const FString& StatCommand)
 
 	if (StatCommand == "fps")
 	{
-		StatOverlay.ShowFPS();
+		StatOverlay.ShowStat(EStatType::FPS);
 		AddLog(ELogType::Success, "FPS overlay");
 	}
 	else if (StatCommand == "memory")
 	{
-		StatOverlay.ShowMemory();
+		StatOverlay.ShowStat(EStatType::Memory);
 		AddLog(ELogType::Success, "Memory overlay");
 	}
 	else if (StatCommand == "pick" || StatCommand == "picking")
 	{
-		StatOverlay .ShowPicking();
+		StatOverlay.ShowStat(EStatType::Picking);
 		AddLog(ELogType::Success, "Picking overlay");
 	}
 	else if (StatCommand == "time")
 	{
-		StatOverlay.ShowTime();
+		StatOverlay.ShowStat(EStatType::Time);
 		AddLog(ELogType::Success, "Time overlay");
 	}
 	else if (StatCommand == "decal")
 	{
-		StatOverlay.ShowDecal();
+		StatOverlay.ShowStat(EStatType::Decal);
 		AddLog(ELogType::Success, "Decal overlay");
+	}
+	else if (StatCommand == "shadow")
+	{
+		StatOverlay.ShowStat(EStatType::Shadow);
+		AddLog(ELogType::Success, "Shadow overlay");
 	}
 	else if (StatCommand == "all")
 	{
-		StatOverlay.ShowAll();
+		StatOverlay.ShowStat(EStatType::All);
 		AddLog(ELogType::Success, "All overlays");
 	}
 	else if (StatCommand == "none")
 	{
-		StatOverlay.ShowAll();
+		StatOverlay.ShowStat(EStatType::All);
 		AddLog(ELogType::Success, "All overlays disabled");
 	}
 	else
