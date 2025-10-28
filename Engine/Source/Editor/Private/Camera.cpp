@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "Editor/Public/Camera.h"
+
+#include "Editor/Public/Editor.h"
 #include "Manager/Public/InputManager.h"
 #include "Manager/Public/TimeManager.h"
 #include "Manager/Public/ConfigManager.h"
@@ -87,8 +89,6 @@ FVector UCamera::UpdateInput()
 
 void UCamera::Update(const D3D11_VIEWPORT& InViewport)
 {
-	//UpdateInput();
-
 	const FMatrix RotationMatrix = FMatrix::RotationMatrix(FVector::GetDegreeToRadian(GetRotation()));
 	const FVector4 Forward4 = FVector4::ForwardVector() * RotationMatrix;
 	const FVector4 WorldUp4 = FVector4::UpVector() * RotationMatrix;
@@ -119,6 +119,7 @@ void UCamera::Update(const D3D11_VIEWPORT& InViewport)
 
 	if (ULevel* Level = GWorld->GetLevel())
     {
+		CameraConstants.ShowFlags = GEditor->GetEditorModule()->GetShowFlags();
         ViewVolumeCuller.Cull(Level->GetStaticOctree(), Level->GetDynamicPrimitives(), CameraConstants);
     }
 }

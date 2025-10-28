@@ -279,7 +279,7 @@ void UMainBarWidget::RenderShowFlagsMenu()
 		}
 
 		// ShowFlags 가져오기
-		uint64 ShowFlags = Editor->GetShowFlags();
+		uint32 ShowFlags = Editor->GetShowFlags();
 
 		// BillBoard Text 표시 옵션
 		bool bShowBillboard = (ShowFlags & EEngineShowFlags::SF_Billboard) != 0;
@@ -287,12 +287,12 @@ void UMainBarWidget::RenderShowFlagsMenu()
 		{
 			if (bShowBillboard)
 			{
-				ShowFlags &= ~static_cast<uint64>(EEngineShowFlags::SF_Billboard);
+				ShowFlags &= ~static_cast<uint32>(EEngineShowFlags::SF_Billboard);
 				UE_LOG("MainBarWidget: 빌보드 비표시");
 			}
 			else
 			{
-				ShowFlags |= static_cast<uint64>(EEngineShowFlags::SF_Billboard);
+				ShowFlags |= static_cast<uint32>(EEngineShowFlags::SF_Billboard);
 				UE_LOG("MainBarWidget: 빌보드 표시");
 			}
 			Editor->SetShowFlags(ShowFlags);
@@ -304,12 +304,12 @@ void UMainBarWidget::RenderShowFlagsMenu()
 		{
 			if (bShowBounds)
 			{
-				ShowFlags &= ~static_cast<uint64>(EEngineShowFlags::SF_Bounds);
+				ShowFlags &= ~static_cast<uint32>(EEngineShowFlags::SF_Bounds);
 				UE_LOG("MainBarWidget: 바운딩박스 비표시");
 			}
 			else
 			{
-				ShowFlags |= static_cast<uint64>(EEngineShowFlags::SF_Bounds);
+				ShowFlags |= static_cast<uint32>(EEngineShowFlags::SF_Bounds);
 				UE_LOG("MainBarWidget: 바운딩박스 표시");
 			}
 			Editor->SetShowFlags(ShowFlags);
@@ -321,12 +321,12 @@ void UMainBarWidget::RenderShowFlagsMenu()
 		{
 			if (bShowStaticMesh)
 			{
-				ShowFlags &= ~static_cast<uint64>(EEngineShowFlags::SF_StaticMesh);
+				ShowFlags &= ~static_cast<uint32>(EEngineShowFlags::SF_StaticMesh);
 				UE_LOG("MainBarWidget: 스태틱 메쉬 비표시");
 			}
 			else
 			{
-				ShowFlags |= static_cast<uint64>(EEngineShowFlags::SF_StaticMesh);
+				ShowFlags |= static_cast<uint32>(EEngineShowFlags::SF_StaticMesh);
 				UE_LOG("MainBarWidget: 스태틱 메쉬 표시");
 			}
 			Editor->SetShowFlags(ShowFlags);
@@ -338,12 +338,12 @@ void UMainBarWidget::RenderShowFlagsMenu()
 		{
 			if (bShowText)
 			{
-				ShowFlags &= ~static_cast<uint64>(EEngineShowFlags::SF_Text);
+				ShowFlags &= ~static_cast<uint32>(EEngineShowFlags::SF_Text);
 				UE_LOG("MainBarWidget: 텍스트 비표시");
 			}
 			else
 			{
-				ShowFlags |= static_cast<uint64>(EEngineShowFlags::SF_Text);
+				ShowFlags |= static_cast<uint32>(EEngineShowFlags::SF_Text);
 				UE_LOG("MainBarWidget: 텍스트 표시");
 			}
 			Editor->SetShowFlags(ShowFlags);
@@ -355,30 +355,47 @@ void UMainBarWidget::RenderShowFlagsMenu()
 		{
 			if (bShowDecal)
 			{
-				ShowFlags &= ~static_cast<uint64>(EEngineShowFlags::SF_Decal);
+				ShowFlags &= ~static_cast<uint32>(EEngineShowFlags::SF_Decal);
 				UE_LOG("MainBarWidget: 데칼 비표시");
 			}
 			else
 			{
-				ShowFlags |= static_cast<uint64>(EEngineShowFlags::SF_Decal);
+				ShowFlags |= static_cast<uint32>(EEngineShowFlags::SF_Decal);
 				UE_LOG("MainBarWidget: 데칼 표시");
 			}
 			Editor->SetShowFlags(ShowFlags);
 		}
 
-		// Octree 표시 옵션
+		// Fog 표시 옵션
 		bool bShowFog = (ShowFlags & EEngineShowFlags::SF_Fog) != 0;
 		if (ImGui::MenuItem("Fog 표시", nullptr, bShowFog))
 		{
 			if (bShowFog)
 			{
-				ShowFlags &= ~static_cast<uint64>(EEngineShowFlags::SF_Fog);
+				ShowFlags &= ~static_cast<uint32>(EEngineShowFlags::SF_Fog);
 				UE_LOG("MainBarWidget: Fog 비표시");
 			}
 			else
 			{
-				ShowFlags |= static_cast<uint64>(EEngineShowFlags::SF_Fog);
+				ShowFlags |= static_cast<uint32>(EEngineShowFlags::SF_Fog);
 				UE_LOG("MainBarWidget: Fog 표시");
+			}
+			Editor->SetShowFlags(ShowFlags);
+		}
+
+		// Shadow 표시 옵션
+		bool bShowShadow = (ShowFlags & EEngineShowFlags::SF_Shadow) != 0;
+		if (ImGui::MenuItem("Shadow 표시", nullptr, bShowShadow))
+		{
+			if (bShowShadow)
+			{
+				ShowFlags &= ~static_cast<uint32>(EEngineShowFlags::SF_Shadow);
+				UE_LOG("MainBarWidget: Shadow 비표시");
+			}
+			else
+			{
+				ShowFlags |= static_cast<uint32>(EEngineShowFlags::SF_Shadow);
+				UE_LOG("MainBarWidget: Shadow 표시");
 			}
 			Editor->SetShowFlags(ShowFlags);
 		}
@@ -389,12 +406,12 @@ void UMainBarWidget::RenderShowFlagsMenu()
 		{
 			if (bShowOctree)
 			{
-				ShowFlags &= ~static_cast<uint64>(EEngineShowFlags::SF_Octree);
+				ShowFlags &= ~static_cast<uint32>(EEngineShowFlags::SF_Octree);
 				UE_LOG("MainBarWidget: Octree 비표시");
 			}
 			else
 			{
-				ShowFlags |= static_cast<uint64>(EEngineShowFlags::SF_Octree);
+				ShowFlags |= static_cast<uint32>(EEngineShowFlags::SF_Octree);
 				UE_LOG("MainBarWidget: Octree 표시");
 			}
 			Editor->SetShowFlags(ShowFlags);
@@ -406,12 +423,12 @@ void UMainBarWidget::RenderShowFlagsMenu()
 		{
 			if (bShowClusterHeat)
 			{
-				ShowFlags &= ~static_cast<uint64>(EEngineShowFlags::SF_ClusterHeat);
+				ShowFlags &= ~static_cast<uint32>(EEngineShowFlags::SF_ClusterHeat);
 				UE_LOG("MainBarWidget: 클러스터 히트맵 비표시");
 			}
 			else
 			{
-				ShowFlags |= static_cast<uint64>(EEngineShowFlags::SF_ClusterHeat);
+				ShowFlags |= static_cast<uint32>(EEngineShowFlags::SF_ClusterHeat);
 				UE_LOG("MainBarWidget: 클러스터 히트맵 표시");
 			}
 			Editor->SetShowFlags(ShowFlags);
@@ -423,12 +440,12 @@ void UMainBarWidget::RenderShowFlagsMenu()
 		{
 			if (bEnableFXAA)
 			{
-				ShowFlags &= ~static_cast<uint64>(EEngineShowFlags::SF_FXAA);
+				ShowFlags &= ~static_cast<uint32>(EEngineShowFlags::SF_FXAA);
 				UE_LOG("MainBarWidget: FXAA 비활성화");
 			}
 			else
 			{
-				ShowFlags |= static_cast<uint64>(EEngineShowFlags::SF_FXAA);
+				ShowFlags |= static_cast<uint32>(EEngineShowFlags::SF_FXAA);
 				UE_LOG("MainBarWidget: FXAA 활성화");
 			}
 			Editor->SetShowFlags(ShowFlags);

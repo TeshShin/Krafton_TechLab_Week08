@@ -24,7 +24,7 @@ FShadowPass::FShadowPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS) :
 
 bool FShadowPass::CanRender(const FRenderingContext& Context)
 {
-	return Context.ViewMode != EViewModeIndex::VMI_Unlit;
+	return (Context.ViewMode != EViewModeIndex::VMI_Unlit) && (Context.ShowFlags & EEngineShowFlags::SF_Shadow);
 }
 
 void FShadowPass::SetRenderTargets(class UDeviceResources* DeviceResources)

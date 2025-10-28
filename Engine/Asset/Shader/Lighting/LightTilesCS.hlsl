@@ -4,20 +4,17 @@
 // - Inputs : camera params + unified dynamic lights buffer (world space)
 // - Outputs: per-cluster light counts and indices
 // ================================================================
+#include "../Common/CommonConstants.hlsli"
 
 // Camera and tiling parameters
 cbuffer CameraCB : register(b0)
 {
-    row_major float4x4 View;
-    row_major float4x4 Proj;
     row_major float4x4 InvProj;
     uint2   ScreenSize;     // pixels (width, height)
     uint2   ViewportOrigin; // pixels (top-left x,y) [unused in CS, keeps CB layout in sync]
     uint    NumTilesX;      // dispatch dim X
     uint    NumTilesY;      // dispatch dim Y
     uint    NumZSlices;     // dispatch dim Z
-    float   NearZ;          // view-space near (>= 0)
-    float   FarZ;           // view-space far  (>  NearZ)
 };
 
 // Forward+ control parameters
@@ -87,7 +84,7 @@ Frustum BuildClusterFrustum(uint tileX, uint tileY, uint zSlice)
 
     // Detect orthographic vs perspective projection.
     // D3D-style: perspective has Proj[2][3] ~= 1 and Proj[3][3] ~= 0; ortho has Proj[2][3] ~= 0 and Proj[3][3] ~= 1
-    bool isOrtho = (abs(Proj[2][3]) < 1e-6f) && (abs(Proj[3][3] - 1.0f) < 1e-6f);
+    bool isOrtho = (abs(Projection[2][3]) < 1e-6f) && (abs(Projection[3][3] - 1.0f) < 1e-6f);
 
     // Tile bounds in NDC [-1,1]
     // X: 0..NumTilesX-1 maps left(-1) -> right(+1)
@@ -110,8 +107,8 @@ Frustum BuildClusterFrustum(uint tileX, uint tileY, uint zSlice)
     float zNear, zFar;
     if (!isOrtho)
     {
-        zNear = NearZ * pow(FarZ / NearZ, (float)zSlice / (float)max(NumZSlices, 1));
-        zFar  = NearZ * pow(FarZ / NearZ, (float)(zSlice + 1) / (float)max(NumZSlices, 1));
+        zNear = NearClip * pow(FarClip / NearClip, (float)zSlice / (float)max(NumZSlices, 1));
+        zFar  = NearClip * pow(FarClip / NearClip, (float)(zSlice + 1) / (float)max(NumZSlices, 1));
 
     	// Perspective: side planes pass through origin; build from corner rays
     	float3 r00 = UnprojectToViewRay(float2(ndcMin.x, ndcMin.y)); // bottom-left
@@ -130,8 +127,8 @@ Frustum BuildClusterFrustum(uint tileX, uint tileY, uint zSlice)
     {
         float t0 = (float)zSlice / (float)max(NumZSlices, 1);
         float t1 = (float)(zSlice + 1) / (float)max(NumZSlices, 1);
-        zNear = lerp(NearZ, FarZ, t0);
-        zFar  = lerp(NearZ, FarZ, t1);
+        zNear = lerp(NearClip, FarClip, t0);
+        zFar  = lerp(NearClip, FarClip, t1);
 
     	// Orthographic: side planes are axis-aligned slabs in view space with non-zero offsets.
     	// Unproject NDC corners to view space (z doesn't affect x/y in ortho; pick zNDC=0)

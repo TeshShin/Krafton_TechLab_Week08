@@ -15,6 +15,7 @@ struct FCameraConstants
 	FMatrix View;
 	FMatrix Projection;
 	FVector ViewWorldLocation;
+	uint32 ShowFlags;
 	float NearClip;
 	float FarClip;
 };
@@ -159,16 +160,12 @@ struct FLightMatrix
 
 struct FForwardPlusCameraConstants
 {
-	FMatrix View;
-	FMatrix Proj;
 	FMatrix InvProj;
 	std::array<uint32, 2>  ScreenSize;     // pixels (width, height)
 	std::array<uint32, 2>  ViewportOrigin; // pixels (top-left x,y)
 	uint32  NumTilesX;      // dispatch dim X
 	uint32  NumTilesY;      // dispatch dim Y
 	uint32  NumZSlices;     // dispatch dim Z
-	float   NearZ;          // view-space near (>= 0)
-	float   FarZ;           // view-space far  (>  NearZ)
 };
 
 struct FForwardPlusConstants

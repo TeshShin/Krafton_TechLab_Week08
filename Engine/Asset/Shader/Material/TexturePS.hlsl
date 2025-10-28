@@ -12,16 +12,12 @@
 // Camera and tiling parameters
 cbuffer FP_CameraCB : register(b2)
 {
-	row_major float4x4 FP_View;
-	row_major float4x4 FP_Projection;
 	row_major float4x4 FP_InvProj;
 	uint2   FP_ScreenSize;     // pixels (width, height)
 	uint2   FP_ViewportOrigin; // pixels (top-left x,y)
 	uint    FP_NumTilesX;      // dispatch dim X
 	uint    FP_NumTilesY;      // dispatch dim Y
 	uint    FP_NumZSlices;     // dispatch dim Z
-	float   FP_NearZ;          // view-space near (>= 0)
-	float   FP_FarZ;           // view-space far  (>  NearZ)
 }
 
 // Forward+ control parameters
@@ -88,29 +84,29 @@ uint FP_ComputeClusterID(float4 svpos /* SV_POSITION */, float3 worldPos)
     int tileY = clamp(int(floor(pix.y * (float)FP_NumTilesY / max(FP_ScreenSize.y, 1))), 0, int(FP_NumTilesY - 1));
 
     // LH view space depth (camera looks +Z)
-    float3 posVS = mul(float4(worldPos, 1.0f), FP_View).xyz;
+    float3 posVS = mul(float4(worldPos, 1.0f), View).xyz;
     float depthVS = posVS.z;
 
     // Detect orthographic vs perspective to match the compute shader partitioning
     // D3D-style: perspective has FP_Projection[2][3] ~= 1 and FP_Projection[3][3] ~= 0;
     //            orthographic has FP_Projection[2][3] ~= 0 and FP_Projection[3][3] ~= 1
-    bool isOrtho = (abs(FP_Projection[2][3]) < 1e-6f) && (abs(FP_Projection[3][3] - 1.0f) < 1e-6f);
+    bool isOrtho = (abs(Projection[2][3]) < 1e-6f) && (abs(Projection[3][3] - 1.0f) < 1e-6f);
 
     // Match CS z-slicing: logarithmic for perspective, linear for orthographic
     int zSlice;
     if (!isOrtho)
     {
         // Clamp depth to [NearZ, FarZ]
-        float depthClamped = clamp(depthVS, FP_NearZ + 1e-6f, FP_FarZ - 1e-6f);
-        float logDen = log(FP_FarZ / FP_NearZ);
-        float sliceF = (log(depthClamped / FP_NearZ) / max(logDen, 1e-6f)) * FP_NumZSlices;
+        float depthClamped = clamp(depthVS, NearClip + 1e-6f, FarClip - 1e-6f);
+        float logDen = log(FarClip / NearClip);
+        float sliceF = (log(depthClamped / NearClip) / max(logDen, 1e-6f)) * FP_NumZSlices;
         zSlice = clamp(int(floor(sliceF)), 0, int(FP_NumZSlices - 1));
     }
     else
     {
         // Linear partitioning across [NearZ, FarZ]
-        float depthClamped = clamp(depthVS, FP_NearZ, FP_FarZ);
-        float t = (depthClamped - FP_NearZ) / max(FP_FarZ - FP_NearZ, 1e-6f);
+        float depthClamped = clamp(depthVS, NearClip, FarClip);
+        float t = (depthClamped - NearClip) / max(FarClip - NearClip, 1e-6f);
         float sliceF = t * FP_NumZSlices;
         zSlice = clamp(int(floor(sliceF)), 0, int(FP_NumZSlices - 1));
     }
@@ -129,7 +125,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 	if (MaterialFlags & HAS_DIFFUSE_MAP)
 	{
 		DiffuseColor *= DiffuseTexture.Sample(SamplerWrap, UV);
-	} 
+	}
 
     // Ambient color for material
 	float4 AmbientColor = Ka;
@@ -202,48 +198,58 @@ PS_OUTPUT mainPS(PS_INPUT Input)
        uint li = FP_ClusterIndex[base + i];
 
        FLightingResult LightResult;
-		 
-//--- 1. VSM ----------------------------------------------
+
+    	bool bShowShadows = (ShowFlags & SF_Shadow) != 0;
+    	if (bShowShadows)
+    	{
+    		//--- 1. VSM ----------------------------------------------
 #if USE_VSM
-       // VSM은 <float2> 텍스처와 '일반' 샘플러(SamplerState)를 사용합니다.
-       // (참고: CalculateDynamicLightWithVSM의 마지막 인자(ViewSpaceDepth)는
-       // 내부에서 사용되지 않으므로 더미 값 0.0f를 전달합니다.)
-       LightResult = CalculateDynamicLightWithVSM(
-           DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, max(Ns, 1.0f),
-           SpotMomentsAtlas,        // t14 <float2>
-           SpotLightShadowMatrices, // t12
-           PointMomentsAtlas,       // t16 <float2>
-           DirectionalMoment,       // t18 <float2>
-           DirectionalShadowMatrix, // (CBuffer에서 온다고 가정)
-           ShadowLinearSampler,     // s2 (일반 샘플러)
-           0.0f);     // (Dummy 값)
+    		// VSM은 <float2> 텍스처와 '일반' 샘플러(SamplerState)를 사용합니다.
+    		// (참고: CalculateDynamicLightWithVSM의 마지막 인자(ViewSpaceDepth)는
+    		// 내부에서 사용되지 않으므로 더미 값 0.0f를 전달합니다.)
+    		LightResult = CalculateDynamicLightWithVSM(
+				DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, SpecularPower,
+				SpotMomentsAtlas,        // t14 <float2>
+				SpotLightShadowMatrices, // t12
+				PointMomentsAtlas,       // t16 <float2>
+				DirectionalMoment,       // t18 <float2>
+				DirectionalShadowMatrix, // (CBuffer에서 온다고 가정)
+				ShadowLinearSampler,     // s2 (일반 샘플러)
+				0.0f);     // (Dummy 값)
 
-//--- 2. PCF ---------------------------------------------
+    		//--- 2. PCF ---------------------------------------------
 // #elif USE_PCF
-//        // (필터 크기는 예시로 11을 사용. CBuffer의 상수로 대체 가능)
-//        LightResult = CalculateDynamicLightWithPCF(
-//            DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, max(Ns, 1.0f),
-//            SpotShadowAtlas,         // t13 <float>
-//            SpotLightShadowMatrices, // t12
-//            PointShadowAtlas,        // t15 <float>
-//            DirectionalTexture,      // t17 <float>
-//            DirectionalShadowMatrix, // (CBuffer)
-//            ShadowSampler,           // s1 (비교 샘플러)
-//            11);                     // (PCF 필터 크기)
+    		//        // (필터 크기는 예시로 11을 사용. CBuffer의 상수로 대체 가능)
+    		//        LightResult = CalculateDynamicLightWithPCF(
+    		//            DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, SpecularPower,
+    		//            SpotShadowAtlas,         // t13 <float>
+    		//            SpotLightShadowMatrices, // t12
+    		//            PointShadowAtlas,        // t15 <float>
+    		//            DirectionalTexture,      // t17 <float>
+    		//            DirectionalShadowMatrix, // (CBuffer)
+    		//            ShadowSampler,           // s1 (비교 샘플러)
+    		//            11);                     // (PCF 필터 크기)
 
-//--- 3. Hard Shadow ---------------------------------------------
+    		//--- 3. Hard Shadow ---------------------------------------------
 #else
-       LightResult = CalculateDynamicLightWithShadows(
-          DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, max(Ns, 1.0f),
-          SpotShadowAtlas,         // t13 <float>
-          SpotLightShadowMatrices, // t12
-          PointShadowAtlas,        // t15 <float>
-          DirectionalTexture,      // t17 <float>
-          DirectionalShadowMatrix, // (CBuffer)
-          ShadowSampler);          // s1 (비교 샘플러)
+    		LightResult = CalculateDynamicLightWithShadows(
+			   DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, SpecularPower,
+			   SpotShadowAtlas,         // t13 <float>
+			   SpotLightShadowMatrices, // t12
+			   PointShadowAtlas,        // t15 <float>
+			   DirectionalTexture,      // t17 <float>
+			   DirectionalShadowMatrix, // (CBuffer)
+			   ShadowSampler);          // s1 (비교 샘플러)
 #endif
+    		//-------------------------------------------------------------------------
+    	}
+        else
+        {
+			   LightResult = CalculateDynamicLight(
+			   	DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, SpecularPower);
+        }
 //-------------------------------------------------------------------------
-		 
+
        TotalDiffuse  += LightResult.Diffuse;
        TotalSpecular += LightResult.Specular;
        TotalAmbient  += LightResult.Ambient;
