@@ -141,16 +141,12 @@ void FStaticMeshPass::CreateClusterBuffers(FRenderingContext& Context, uint32 Nu
 	auto* CurrentCamera = Context.CurrentCamera;
 
 	FForwardPlusCameraConstants FPcam = {};
-	FPcam.View        = CurrentCamera->GetCameraConstants().View;                // row_major
-	FPcam.Proj        = CurrentCamera->GetCameraConstants().Projection;          // row_major
 	FPcam.InvProj     = CurrentCamera->GetCameraConstantsInverse().Projection;
     FPcam.ScreenSize  = {Width, Height};
     FPcam.ViewportOrigin = { static_cast<uint32>(Context.Viewport.TopLeftX), static_cast<uint32>(Context.Viewport.TopLeftY) };
 	FPcam.NumTilesX   = NumTilesX;
 	FPcam.NumTilesY   = NumTilesY;
 	FPcam.NumZSlices  = NumZSlices;
-	FPcam.NearZ       = CurrentCamera->GetNearZ();
-	FPcam.FarZ        = CurrentCamera->GetFarZ();
 
 	FForwardPlusConstants FPparams = {};
 	FPparams.NumLights            = NumLights;

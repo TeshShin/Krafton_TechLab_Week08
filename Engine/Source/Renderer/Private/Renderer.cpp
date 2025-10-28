@@ -133,12 +133,15 @@ void URenderer::CreateConstantBuffers()
 
 	Pipeline->SetConstantBuffer(11, EShaderType::EST_Vertex, CameraCB);
 	Pipeline->SetConstantBuffer(11, EShaderType::EST_Pixel, CameraCB);
+	Pipeline->SetConstantBuffer(11, EShaderType::EST_Compute, CameraCB);
 
 	Pipeline->SetConstantBuffer(12, EShaderType::EST_Vertex, ModelCB);
 	Pipeline->SetConstantBuffer(12, EShaderType::EST_Pixel, ModelCB);
+	Pipeline->SetConstantBuffer(12, EShaderType::EST_Compute, ModelCB);
 
 	Pipeline->SetConstantBuffer(13, EShaderType::EST_Vertex, ViewportCB);
 	Pipeline->SetConstantBuffer(13, EShaderType::EST_Pixel, ViewportCB);
+	Pipeline->SetConstantBuffer(13, EShaderType::EST_Compute, ViewportCB);
 }
 
 void URenderer::CreateRenderPasses()

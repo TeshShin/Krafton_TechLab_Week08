@@ -32,8 +32,8 @@ public:
 	void SetViewMode(EViewModeIndex InNewViewMode) { CurrentViewMode = InNewViewMode; }
 	EViewModeIndex GetViewMode() const { return CurrentViewMode; }
 
-	uint64 GetShowFlags() const { return ShowFlags; }
-	void SetShowFlags(uint64 InShowFlags) { ShowFlags = InShowFlags; }
+	uint32 GetShowFlags() const { return ShowFlags; }
+	void SetShowFlags(uint32 InShowFlags) { ShowFlags = InShowFlags; }
 
 	void SetSingleViewportLayout(int InActiveIndex);
 	void RestoreMultiViewportLayout();
@@ -93,14 +93,15 @@ private:
 	FViewportClient* InteractionViewport = nullptr; // 뷰포트의 상호작용을 고정하는 포인터
 
 	EViewModeIndex CurrentViewMode = EViewModeIndex::VMI_Lit_Phong;
-	uint64 ShowFlags =
-		static_cast<uint64>(EEngineShowFlags::SF_Billboard) |
-		static_cast<uint64>(EEngineShowFlags::SF_Bounds) |
-		static_cast<uint64>(EEngineShowFlags::SF_StaticMesh) |
-		static_cast<uint64>(EEngineShowFlags::SF_Text) |
-		static_cast<uint64>(EEngineShowFlags::SF_Decal) |
-		static_cast<uint64>(EEngineShowFlags::SF_Fog) |
-		static_cast<uint64>(EEngineShowFlags::SF_FXAA);
+	uint32 ShowFlags =
+		static_cast<uint32>(EEngineShowFlags::SF_Billboard) |
+		static_cast<uint32>(EEngineShowFlags::SF_Bounds) |
+		static_cast<uint32>(EEngineShowFlags::SF_StaticMesh) |
+		static_cast<uint32>(EEngineShowFlags::SF_Text) |
+		static_cast<uint32>(EEngineShowFlags::SF_Decal) |
+		static_cast<uint32>(EEngineShowFlags::SF_Fog) |
+		static_cast<uint32>(EEngineShowFlags::SF_FXAA) |
+		static_cast<uint32>(EEngineShowFlags::SF_Shadow);
 
 	TArray<FName> DebugArrowLabels;
 	bool bWasInPIE = false;

@@ -158,7 +158,7 @@ enum class EViewModeIndex : uint32
 /**
  * @brief Level Show Flag Enum
  */
-enum class EEngineShowFlags : uint64
+enum class EEngineShowFlags : uint32
 {
 	SF_Billboard = 1 << 0,
 	SF_Bounds = 1 << 1,
@@ -167,18 +167,19 @@ enum class EEngineShowFlags : uint64
 	SF_Decal = 1 << 4,
 	SF_FXAA = 1 << 5,
 	SF_Fog = 1 << 6,
-	SF_Octree = 1 << 7,
-	SF_ClusterHeat = 1 << 8,
+	SF_Shadow = 1 << 7,
+	SF_Octree = 1 << 8,
+	SF_ClusterHeat = 1 << 9,
 };
 
-inline uint64 operator|(EEngineShowFlags lhs, EEngineShowFlags rhs)
+inline uint32 operator|(EEngineShowFlags lhs, EEngineShowFlags rhs)
 {
-	return static_cast<uint64>(lhs) | static_cast<uint64>(rhs);
+	return static_cast<uint32>(lhs) | static_cast<uint32>(rhs);
 }
 
-inline uint64 operator&(uint64 lhs, EEngineShowFlags rhs)
+inline uint32 operator&(uint32 lhs, EEngineShowFlags rhs)
 {
-	return lhs & static_cast<uint64>(rhs);
+	return lhs & static_cast<uint32>(rhs);
 }
 
 enum class EShaderType

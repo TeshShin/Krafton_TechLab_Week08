@@ -9,16 +9,12 @@
 // Camera and tiling parameters (must match TexturePS / LightTilesComputeShader)
 cbuffer FP_CameraCB : register(b2)
 {
-    row_major float4x4 FP_View;
-    row_major float4x4 FP_Projection;
     row_major float4x4 FP_InvProj;
     uint2   FP_ScreenSize;     // pixels (width, height)
     uint2   FP_ViewportOrigin; // pixels (top-left x,y)
     uint    FP_NumTilesX;      // dispatch dim X
     uint    FP_NumTilesY;      // dispatch dim Y
     uint    FP_NumZSlices;     // dispatch dim Z
-    float   FP_NearZ;          // view-space near (>= 0)
-    float   FP_FarZ;           // view-space far  (>  NearZ)
 };
 
 cbuffer FP_ForwardPlusCB : register(b3)
