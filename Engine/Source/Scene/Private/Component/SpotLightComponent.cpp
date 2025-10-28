@@ -202,18 +202,21 @@ void USpotLightComponent::UpdateLightMatricesInternal(const FCameraConstants& In
 			// 4) 라이트 월드 위치를 카메라 후투영(Post-perspective) 공간으로 변환
 			const FVector LightWorldPosition = GetWorldLocation();
 			const FVector4 LightInViewH = CameraViewMatrix.TransformHomogeneous(LightWorldPosition);
-			const FVector LightInView = FVector(LightInViewH.X, LightInViewH.Y, LightInViewH.Z);
+			FVector LightInView = FVector(LightInViewH.X, LightInViewH.Y, LightInViewH.Z);
+			// Near+ε 이상으로 클램프해 W<0 회피 (D3D LH에서 w=z)
+			const float EpsZ = 1e-4f;
+			if (LightInView.Z < CameraNearZ + EpsZ)
+			{
+				LightInView.Z = CameraNearZ + EpsZ;
+			}
+
+			// 클립 좌표 및 후투영 정규화
 			const FVector4 LightInClipH = CameraProjectionMatrix.TransformHomogeneous(LightInView);
 			FVector LightInPostPerspective = FVector(LightInClipH.X, LightInClipH.Y, LightInClipH.Z);
-			// 수정
-			const float EpsW = 1e-4f;
-			// W의 부호를 보존하지 않습니다. 절댓값으로 고정해 반전 문제 방지
-			float W = std::max(std::abs(LightInClipH.W), EpsW);
-			const float InvW = 1.0f / W;
-
+			const float InvW = 1.0f / std::max(LightInClipH.W, EpsZ);
 			LightInPostPerspective.X *= InvW;
 			LightInPostPerspective.Y *= InvW;
-			LightInPostPerspective.Z *= InvW; // DX: z in [0,1]
+			LightInPostPerspective.Z *= InvW; // DX: [0,1]
 
 			// 5) 후투영 공간에서 라이트 뷰(MVL) 구성: 라이트를 L에 두고 원점(0,0,0)을 바라봄
 			const FVector Eye = LightInPostPerspective;
@@ -306,9 +309,8 @@ void USpotLightComponent::UpdateLightMatricesInternal(const FCameraConstants& In
 				const FVector4 CornerInClipH = LightProjectionInPostPerspective.TransformHomogeneous(CornerInView);
 
 				// 수정
-				float Wc = std::max(std::abs(CornerInClipH.W), EpsW);
+				float Wc = std::max(CornerInClipH.W, EpsZ);
 				const float InvWc = 1.0f / Wc;
-
 				const float Xndc = CornerInClipH.X * InvWc;
 				const float Yndc = CornerInClipH.Y * InvWc;
 
