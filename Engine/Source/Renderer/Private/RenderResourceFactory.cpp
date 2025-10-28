@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Renderer/Public/RenderResourceFactory.h"
 #include "Renderer/Public/ShaderFactory.h"
 #include "Renderer/Public/Renderer.h"
@@ -121,7 +121,14 @@ ID3D11SamplerState* FRenderResourceFactory::CreateSamplerState(D3D11_FILTER InFi
 
 ID3D11RasterizerState* FRenderResourceFactory::GetRasterizerState(const FRenderState& InRenderState)
 {
-	const FRasterKey Key{ ToD3D11(InRenderState.FillMode), ToD3D11(InRenderState.CullMode) };
+	const FRasterKey Key
+	{
+		ToD3D11(InRenderState.FillMode),
+		ToD3D11(InRenderState.CullMode),
+		InRenderState.DepthBias,
+		InRenderState.SlopeScaledDepthBias,
+		InRenderState.DepthBiasClamp
+	};
 	if (auto Iter = RasterCache.find(Key); Iter != RasterCache.end())
 	{
 		return Iter->second;
@@ -132,6 +139,10 @@ ID3D11RasterizerState* FRenderResourceFactory::GetRasterizerState(const FRenderS
 	RasterizerDesc.CullMode = Key.CullMode;
 	RasterizerDesc.FrontCounterClockwise = TRUE;
 	RasterizerDesc.DepthClipEnable = TRUE;
+
+	RasterizerDesc.DepthBias = Key.DepthBias;
+	RasterizerDesc.SlopeScaledDepthBias = Key.SlopeScaledDepthBias;
+	RasterizerDesc.DepthBiasClamp = Key.DepthBiasClamp;
 
 	ID3D11RasterizerState* RasterizerState = nullptr;
 	if (FAILED(URenderer::GetInstance().GetDevice()->CreateRasterizerState(&RasterizerDesc, &RasterizerState)))

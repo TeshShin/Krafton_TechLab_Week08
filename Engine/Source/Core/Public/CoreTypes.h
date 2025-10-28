@@ -84,6 +84,11 @@ struct FRenderState
 {
 	ECullMode CullMode = ECullMode::None;
 	EFillMode FillMode = EFillMode::Solid;
+
+	// Shadow acne 완화용
+	int32 DepthBias = 0;                  // D3D11_RASTERIZER_DESC::DepthBias
+	float SlopeScaledDepthBias = 0.0f;    // D3D11_RASTERIZER_DESC::SlopeScaledDepthBias
+	float DepthBiasClamp = 0.0f;          // D3D11_RASTERIZER_DESC::DepthBiasClamp
 };
 
 /**

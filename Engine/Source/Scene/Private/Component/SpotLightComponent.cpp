@@ -6,6 +6,7 @@
 #include "Editor/Public/UI/Widget/Component/SpotLightComponentWidget.h"
 #include "Manager/Public/AssetManager.h"
 #include "Renderer/Public/LightData.h"
+#include "Renderer/Public/ShadowMapManager.h"
 
 IMPLEMENT_CLASS(USpotLightComponent, UPointLightComponent)
 
@@ -60,6 +61,7 @@ FUnifiedDynamicLight USpotLightComponent::GetUnifiedLightData() const
     LightData.Param1 = OuterConeAngle;
     LightData.LightType = static_cast<uint32>(GetLightType());
 	LightData.ShadowBias = 0.001f;
+
 
     return LightData;
 }
@@ -327,18 +329,38 @@ void USpotLightComponent::UpdateLightMatricesInternal(const FCameraConstants& In
 			const float Hx = std::max(HalfWidth, MinHalf);
 			const float Hy = std::max(HalfHeight, MinHalf);
 
-			// NDC에서 [-1,1]로 스케일/오프셋되는 Crop 행렬 (clip space에서 동작하도록 w-가중 translation)
-			// NDC' = S * NDC + T
+			// 1) 기존 스케일 계산 유지
 			const float Sx = 1.0f / Hx;
 			const float Sy = 1.0f / Hy;
-			const float Tx = -CenterX * Sx;
-			const float Ty = -CenterY * Sy;
 
+			// 2) 초기 오프셋(중심) 계산
+			float Tx = -CenterX * Sx;
+			float Ty = -CenterY * Sy;
+
+			// 3) 텍셀 스냅을 위한 해상도 가져오기
+			const uint32 SpotShadowResolution = FShadowMapManager::GetInstance().GetSpotResolution();
+			const float TexelSize = 1.0f / static_cast<float>(SpotShadowResolution);
+
+			// 4) 현재 중심이 텍스처 공간에서 어디에 오는지 계산(NDC→[0,1])
+			//    u_c = 0.5*(Sx * CenterX + Tx) + 0.5
+			//    v_c = 0.5*(Sy * CenterY + Ty) + 0.5
+			float UCenter = 0.5f * (Sx * CenterX + Tx) + 0.5f;
+			float VCenter = 0.5f * (Sy * CenterY + Ty) + 0.5f;
+
+			// 5) 텍셀 그리드로 스냅(가장 가까운 텍셀 중심)
+			UCenter = std::round(UCenter / TexelSize) * TexelSize;
+			VCenter = std::round(VCenter / TexelSize) * TexelSize;
+
+			// 6) 스냅된 중심을 만족하도록 Tx, Ty 재계산
+			Tx = 2.0f * (UCenter - 0.5f) - Sx * CenterX;
+			Ty = 2.0f * (VCenter - 0.5f) - Sy * CenterY;
+
+			// 7) Crop 행렬 구성 (w-가중 translation)
 			FMatrix Crop = FMatrix::Identity();
-			Crop.Data[0][0] = Sx;      // scale x
-			Crop.Data[1][1] = Sy;      // scale y
-			Crop.Data[3][0] = Tx;      // translate x (w-가중)
-			Crop.Data[3][1] = Ty;      // translate y (w-가중)
+			Crop.Data[0][0] = Sx;  // scale x
+			Crop.Data[1][1] = Sy;  // scale y
+			Crop.Data[3][0] = Tx;  // translate x
+			Crop.Data[3][1] = Ty;  // translate y
 
 			//// --- 최종 View/Projection 조립: View = Vcamera, Projection = Pcamera * MVL * PL * Crop ---
 			//CachedLightViewMatrices.emplace_back(CameraViewMatrix);
