@@ -118,10 +118,7 @@ void UDirectionalLightComponent::UpdateLightMatricesInternal(const FCameraConsta
 	// --- LiSPSM 모드: 추후 구현, 현재는 LVP로 폴백 ---
 	else if (GetShadowProjectionMode() == EShadowProjectionMode::LiSPSM)
 	{
-		CachedLightViewMatrices.emplace_back(LightView);
-		CachedLightProjectionMatrix = OrthographicProjection;
-		CachedLightViewProjection.emplace_back(CachedLightViewMatrices[0] * CachedLightProjectionMatrix);
-		return;
+		// TODO : LiSPSM 구현
 	}
 	else if (GetShadowProjectionMode() == EShadowProjectionMode::PSM)
 	{
