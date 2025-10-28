@@ -303,7 +303,7 @@ const FVector& UCamera::GetRotation()
 	if (bOverrideComponent && OverrideTargetComponent)
 	{
 		FVector Rotation = OverrideTargetComponent->GetWorldRotation();
-		return FVector(Rotation.X, -Rotation.Y, -Rotation.Z);
+		return FVector(Rotation.X, Rotation.Y, Rotation.Z);
 	}
 	else
 	{

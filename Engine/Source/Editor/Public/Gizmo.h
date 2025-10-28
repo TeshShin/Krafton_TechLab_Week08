@@ -52,7 +52,7 @@ public:
 	*/
 	void SetLocation(const FVector& Location);
 	void SetGizmoDirection(EGizmoDirection Direction) { GizmoDirection = Direction; }
-	void SetComponentRotation(const FVector& Rotation) { TargetComponent->SetWorldRotation(Rotation); }
+	void SetComponentRotation(const FQuaternion& Rotation) { TargetComponent->SetWorldRotation(Rotation); }
 	void SetComponentScale(const FVector& Scale) { TargetComponent->SetWorldScale3D(Scale); }
 
 	void ChangeWorldLocalMode() { bIsWorld = !bIsWorld; }
@@ -67,6 +67,7 @@ public:
 	const FVector& GetGizmoLocation() { return Primitives[static_cast<int>(GizmoMode)][0].Location; }
 	const FVector& GetComponentRotation() { return TargetComponent->GetWorldRotation(); }
 	const FVector& GetComponentScale() { return TargetComponent->GetWorldScale3D(); }
+	const FVector& GetStoredDragAxis() { return StoredDragAxis; }
 	const FVector& GetDragStartMouseLocation() { return DragStartMouseLocation; }
 	const FVector& GetDragStartActorLocation() { return DragStartActorLocation; }
 	const FVector& GetDragStartActorRotation() { return DragStartActorRotation; }
@@ -120,6 +121,7 @@ private:
 	USceneComponent* TargetComponent = nullptr;
 
 	TArray<FVector4> GizmoColor;
+	FVector StoredDragAxis;
 	FVector DragStartActorLocation;
 	FVector DragStartMouseLocation;
 	FVector DragStartActorRotation;
