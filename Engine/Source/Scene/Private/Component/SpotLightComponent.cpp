@@ -203,10 +203,10 @@ void USpotLightComponent::UpdateLightMatricesInternal(const FCameraConstants& In
 			const FVector LightInView = FVector(LightInViewH.X, LightInViewH.Y, LightInViewH.Z);
 			const FVector4 LightInClipH = CameraProjectionMatrix.TransformHomogeneous(LightInView);
 			FVector LightInPostPerspective = FVector(LightInClipH.X, LightInClipH.Y, LightInClipH.Z);
+			// 수정
 			const float EpsW = 1e-4f;
-			float W = LightInClipH.W;
-			const float SignW = (W >= 0.0f) ? 1.0f : -1.0f;
-			W = SignW * std::max(std::abs(W), EpsW); // 부호 유지 + 절대값 클램프
+			// W의 부호를 보존하지 않습니다. 절댓값으로 고정해 반전 문제 방지
+			float W = std::max(std::abs(LightInClipH.W), EpsW);
 			const float InvW = 1.0f / W;
 
 			LightInPostPerspective.X *= InvW;
@@ -303,10 +303,8 @@ void USpotLightComponent::UpdateLightMatricesInternal(const FCameraConstants& In
 
 				const FVector4 CornerInClipH = LightProjectionInPostPerspective.TransformHomogeneous(CornerInView);
 
-				// w 클램프 (부호 유지)
-				float Wc = CornerInClipH.W;
-				const float SignWc = (Wc >= 0.0f) ? 1.0f : -1.0f;
-				Wc = SignWc * std::max(std::abs(Wc), EpsW);
+				// 수정
+				float Wc = std::max(std::abs(CornerInClipH.W), EpsW);
 				const float InvWc = 1.0f / Wc;
 
 				const float Xndc = CornerInClipH.X * InvWc;
@@ -342,11 +340,18 @@ void USpotLightComponent::UpdateLightMatricesInternal(const FCameraConstants& In
 			Crop.Data[3][0] = Tx;      // translate x (w-가중)
 			Crop.Data[3][1] = Ty;      // translate y (w-가중)
 
-			// --- 최종 View/Projection 조립: View = Vcamera, Projection = Pcamera * MVL * PL * Crop ---
-			CachedLightViewMatrices.emplace_back(CameraViewMatrix);
-			CachedLightProjectionMatrix = CameraProjectionMatrix
-				* LightViewInPostPerspective
-				* (LightProjectionInPostPerspective * Crop);
+			//// --- 최종 View/Projection 조립: View = Vcamera, Projection = Pcamera * MVL * PL * Crop ---
+			//CachedLightViewMatrices.emplace_back(CameraViewMatrix);
+			//CachedLightProjectionMatrix = CameraProjectionMatrix
+			//	* LightViewInPostPerspective
+			//	* (LightProjectionInPostPerspective * Crop);
+
+			// View = V * P * MVL  (PSM에서 깊이 z는 이 공간의 z)
+			const FMatrix LightViewPSM = CameraViewMatrix * CameraProjectionMatrix * LightViewInPostPerspective;
+			CachedLightViewMatrices.emplace_back(LightViewPSM);
+			// Projection = PL * Crop
+			const FMatrix LightProjectionPSM = LightProjectionInPostPerspective * Crop;
+			CachedLightProjectionMatrix = LightProjectionPSM;
 
 			CachedLightViewProjection.emplace_back(CachedLightViewMatrices[0] * CachedLightProjectionMatrix);
 			bIsLightVPDirty = false;
