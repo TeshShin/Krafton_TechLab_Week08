@@ -139,7 +139,7 @@ void USpotLightComponent::UpdateLightMatricesInternal(const FCameraConstants& In
 	const float AspectRatio = 1.0f;
 	const FMatrix LVPProjection = FMatrix::CreatePerspectiveFOV(FovY, AspectRatio, NearZLVP, FarZLVP);
 
-	if (GetShadowProjectionMode() == EShadowProjectionMode::LVP)
+	if (GetShadowProjectionMode() == EShadowProjectionMode::Basic)
 	{
 		CachedLightViewMatrices.emplace_back(LightView);
 		CachedLightProjectionMatrix = LVPProjection;
@@ -177,7 +177,7 @@ void USpotLightComponent::UpdateLightMatricesInternal(const FCameraConstants& In
 		//    PInv[1][1] = tan(FovY/2), PInv[0][0] = Aspect * tan(FovY/2)
 		const FMatrix CameraProjectionInverseMatrix = InCameraInvConstants.Projection;
 		const float TanHalfFovY = CameraProjectionInverseMatrix.Data[1][1];
-		// 보호: 직교 카메라 등 예외 시 LVP로 폴백
+		// 보호: 직교 카메라 등 예외 시 Basic로 폴백
 		if (TanHalfFovY <= 0.0001f)
 		{
 			CachedLightViewMatrices.emplace_back(CameraViewMatrix);
@@ -207,7 +207,7 @@ void USpotLightComponent::UpdateLightMatricesInternal(const FCameraConstants& In
 		const float EpsilonW = 1e-6f;
 		const float EpsilonZ = 1e-4f;
 
-		// W == 0(또는 너무 작음): 안전하게 LVP로 폴백
+		// W == 0(또는 너무 작음): 안전하게 Basic로 폴백
 		if (std::abs(WClip) <= EpsilonW)
 		{
 			CachedLightViewMatrices.emplace_back(LightView);

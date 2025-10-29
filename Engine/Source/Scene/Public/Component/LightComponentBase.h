@@ -15,7 +15,7 @@ enum class ELightComponentType
 UENUM()
 enum class EShadowProjectionMode
 {
-	LVP = 0,
+	Basic = 0,
 	PSM = 1,
 	LiSPSM = 2, // Directional 예정
 	CSM = 3,
@@ -196,7 +196,7 @@ protected:
 	float ShadowSlopeBias = 0;
 	float ShadowSharpen = 1.0f;
 
-	EShadowProjectionMode ShadowProjectionMode = EShadowProjectionMode::LVP;
+	EShadowProjectionMode ShadowProjectionMode = EShadowProjectionMode::Basic;
 
 protected:
 	uint32 NumOfCascade = 12;

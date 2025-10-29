@@ -92,19 +92,19 @@ void ULightComponentWidget::RenderWidget()
 
 				if (LightType == ELightComponentType::LightType_Directional)
 				{
-					const char* ModeItems[] = { "LVP", "CSM" };
+					const char* ModeItems[] = { "Basic", "CSM" };
 					if (ImGui::Combo("Shadow Projection", &CurrentMode, ModeItems, IM_ARRAYSIZE(ModeItems)))
 					{
-						EShadowProjectionMode ShadowProjectionMode = CurrentMode == 0 ? EShadowProjectionMode::LVP : EShadowProjectionMode::CSM;
+						EShadowProjectionMode ShadowProjectionMode = CurrentMode == 0 ? EShadowProjectionMode::Basic : EShadowProjectionMode::CSM;
 						LightComponent->SetShadowProjectionMode(ShadowProjectionMode);
 					}
 				}
 				else
 				{
-					const char* ModeItems[] = { "LVP", "PSM" };
+					const char* ModeItems[] = { "Basic", "PSM" };
 					if (ImGui::Combo("Shadow Projection", &CurrentMode, ModeItems, IM_ARRAYSIZE(ModeItems)))
 					{
-						EShadowProjectionMode ShadowProjectionMode = CurrentMode == 0 ? EShadowProjectionMode::LVP : EShadowProjectionMode::PSM;
+						EShadowProjectionMode ShadowProjectionMode = CurrentMode == 0 ? EShadowProjectionMode::Basic : EShadowProjectionMode::PSM;
 						LightComponent->SetShadowProjectionMode(ShadowProjectionMode);
 					}
 				}

@@ -92,7 +92,7 @@ void UDirectionalLightComponent::UpdateLightMatricesInternal(const FCameraConsta
 	const FVector LightPosition = FrustumCenterWorld - LightDirection * 1000.0f; // 프러스텀 중심에서 뒤로
 	const FMatrix LightView = FMatrix::CreateViewFromAxes(LightPosition, LightRight, LightUp, LightDirection);
 
-	// --- 3) 기존 LVP: Ortho 투영 (깊이 안정용) ---
+	// --- 3) 기존 Basic: Ortho 투영 (깊이 안정용) ---
 	FVector MinBounds(FLT_MAX, FLT_MAX, FLT_MAX);
 	FVector MaxBounds(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 	for (int i = 0; i < 8; ++i)
@@ -110,15 +110,15 @@ void UDirectionalLightComponent::UpdateLightMatricesInternal(const FCameraConsta
 	const FMatrix OrthographicProjection = FMatrix::CreateOrthographicOffCenter(
 		MinBounds.X, MaxBounds.X, MinBounds.Y, MaxBounds.Y, NearZ, FarZ);
 
-	// --- LVP 모드: 기존 동작 유지 ---
-	if (GetShadowProjectionMode() == EShadowProjectionMode::LVP)
+	// --- Basic 모드: 기존 동작 유지 ---
+	if (GetShadowProjectionMode() == EShadowProjectionMode::Basic)
 	{
 		CachedLightViewMatrices.emplace_back(LightView);
 		CachedLightProjectionMatrix = OrthographicProjection;
 		CachedLightViewProjection.emplace_back(CachedLightViewMatrices[0] * CachedLightProjectionMatrix);
 		return;
 	}
-	// // --- LiSPSM 모드: 추후 구현, 현재는 LVP로 폴백 ---
+	// // --- LiSPSM 모드: 추후 구현, 현재는 Basic로 폴백 ---
 	// else if (GetShadowProjectionMode() == EShadowProjectionMode::LiSPSM)
 	// {
 	// 	// TODO : LiSPSM 구현
