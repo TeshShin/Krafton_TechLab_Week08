@@ -141,8 +141,11 @@ public:
 	int32 GetShadowMapIdx() const { return ShadowMapIdx; }
 	void SetShadowMapIdx(int32 InShadowIdx) { ShadowMapIdx = InShadowIdx; }
 
+	float GetShadowResolutionScale() const { return ShadowResolutionScale; }
+	void SetShadowResolutionScale(float InResolutionScale) { ShadowResolutionScale = clamp(InResolutionScale, 0.0f, 1.0f); }
+
 	float GetShadowSharpen() const { return ShadowSharpen; }
-	void SetShadowSharpen(float InShadowSharpen) { ShadowSharpen = InShadowSharpen; }
+	void SetShadowSharpen(float InShadowSharpen) { ShadowSharpen = clamp(InShadowSharpen, 0.0f, 1.0f); }
 
 	EShadowProjectionMode GetShadowProjectionMode() const { return ShadowProjectionMode; }
 	void SetShadowProjectionMode(EShadowProjectionMode InMode)

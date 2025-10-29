@@ -559,11 +559,11 @@ uint32 FShadowMapManager::GetResolution(class ULightComponentBase* Light) const
 	switch (Light->GetLightType())
 	{
 	case ELightComponentType::LightType_Spot:
-		return ShadowSettings.SpotResolution;
+		return ShadowSettings.SpotResolution * Light->GetShadowResolutionScale();
 	case ELightComponentType::LightType_Point:
-		return ShadowSettings.PointResolution;
+		return ShadowSettings.PointResolution * Light->GetShadowResolutionScale();
 	case ELightComponentType::LightType_Directional:
-		return ShadowSettings.DirResolution;
+		return ShadowSettings.DirResolution * Light->GetShadowResolutionScale();
 	default:
 		break;
 	}

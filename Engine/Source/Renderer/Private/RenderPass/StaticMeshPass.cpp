@@ -439,6 +439,7 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 			UnifiedLight.ShadowFilterSize = std::lerp(GlobalSettings.MinGaussRadius, GlobalSettings.MaxGaussRadius, T);
 			UnifiedLight.ShadowGaussSigma = std::lerp(GlobalSettings.MinGaussSigma, GlobalSettings.MaxGaussSigma, T);
 		}
+		UnifiedLight.ShadowResolutionScale = Light->GetShadowResolutionScale();
 		UnifiedLights.push_back(UnifiedLight);
 
 		int32 ShadowMapIdx = Light->GetShadowMapIdx();

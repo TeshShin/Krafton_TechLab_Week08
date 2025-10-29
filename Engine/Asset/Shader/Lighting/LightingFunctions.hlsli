@@ -129,6 +129,8 @@ struct FUnifiedDynamicLight
 	int ShadowMapIndex;        // 4 bytes - Shadow Texture2D Array Index
 	int ShadowFilterSize;      // 4 bytes  - PCF/Box Size, Gauss Radius
 	float ShadowGaussSigma;      // 4 bytes - VSM Gaussian Sigma
+	float ShadowResolutionScale; // 4 bytes - Shadow Map Resolution
+	float Pad[3];				 // 12 bytes - Padding
 };
 
 FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower)
@@ -293,22 +295,18 @@ void BuildOrthonormalBasis(float3 N, out float3 T, out float3 B)
 //==============================================================================
 
 float PCF_Texture2DArray(Texture2DArray<float> ShadowMap, SamplerComparisonState Sampler,
-                         float3 uvw, float RefZ, int FilterSize)
+                         float3 uvw, float RefZ, int FilterSize, float TexSize)
 {
-    float2 texSize;
-    int index;
-    ShadowMap.GetDimensions(texSize.x, texSize.y, index);
-
     int R = FilterSize / 2;
     float ShadowSamples = 0.0;
 
-    float2 st = floor(uvw.xy * texSize);
+    float2 st = floor(uvw.xy * TexSize);
 
     for (int y = -R; y <= R; ++y)
     {
         for (int x = -R; x <= R; ++x)
         {
-            float2 uv = (st + float2(x, y) + 0.5) / texSize;
+            float2 uv = (st + float2(x, y) + 0.5) / TexSize;
             ShadowSamples += ShadowMap.SampleCmpLevelZero(Sampler, float3(uv, uvw.z), RefZ);
         }
     }
@@ -317,21 +315,18 @@ float PCF_Texture2DArray(Texture2DArray<float> ShadowMap, SamplerComparisonState
 }
 
 float PCF_Texture2D(Texture2D<float> ShadowMap, SamplerComparisonState Sampler,
-                    float2 uv, float RefZ, int FilterSize)
+                    float2 uv, float RefZ, int FilterSize, float TexSize)
 {
-    float2 texSize;
-    ShadowMap.GetDimensions(texSize.x, texSize.y);
-
     int R = FilterSize / 2;
     float ShadowSamples = 0.0;
 
-    float2 st = floor(uv * texSize);
+    float2 st = floor(uv * TexSize);
 
     for (int y = -R; y <= R; ++y)
     {
         for (int x = -R; x <= R; ++x)
         {
-            float2 sampleUV = (st + float2(x, y) + 0.5) / texSize;
+            float2 sampleUV = (st + float2(x, y) + 0.5) / TexSize;
             ShadowSamples += ShadowMap.SampleCmpLevelZero(Sampler, sampleUV, RefZ);
         }
     }
@@ -340,22 +335,18 @@ float PCF_Texture2D(Texture2D<float> ShadowMap, SamplerComparisonState Sampler,
 }
 
 float PCF_TextureCubeArray(TextureCubeArray<float> ShadowMap, SamplerComparisonState Sampler,
-                           float4 uvw, float RefZ, int FilterSize)
+                           float4 uvw, float RefZ, int FilterSize, float Resolution)
 {
 	// 1. 커널 반경(R) 및 총 샘플 수 계산
 	int R = FilterSize / 2;
 	float totalSamples = (float)FilterSize * FilterSize;
 
-	// 2. 큐브맵 해상도(width)를 가져와 "텍셀 크기" 계산
-	uint width, height, elements;
-	ShadowMap.GetDimensions(width, height, elements);
-
-	// 3. "텍셀 크기"를 기반으로 방향 벡터를 얼마나 변경할지 "섭동 크기"를 정의합니다.
+	// 2. "텍셀 크기"를 기반으로 방향 벡터를 얼마나 변경할지 "섭동 크기"를 정의합니다.
 	// 이 값은 씬의 스케일이나 원하는 부드러움에 따라 조절이 필요할 수 있습니다.
 	// (1.0 / width)는 텍스처 중앙에서 약 1픽셀에 해당하는 각도(라디안)와 비슷합니다.
-	float perturbationScale = (1.0 / (float)width) * 2.0; // 2.0은 임의의 스케일 값
+	float perturbationScale = (1.0 / Resolution) * 2.0; // 2.0은 임의의 스케일 값
 
-	// 4. 현재 샘플링 방향(V)의 접선 공간(T1, T2) 계산
+	// 3. 현재 샘플링 방향(V)의 접선 공간(T1, T2) 계산
 	float3 V = uvw.xyz;
 	// V와 거의 평행하지 않은 "안전한" up 벡터를 찾습니다.
 	float3 up = abs(V.y) > 0.99 ? float3(1, 0, 0) : float3(0, 1, 0);
@@ -364,26 +355,26 @@ float PCF_TextureCubeArray(TextureCubeArray<float> ShadowMap, SamplerComparisonS
 	// T2 (Bitangent)
 	float3 T2 = normalize(cross(V, T1));
 
-	// 5. 2D 커널 루프를 돌며 샘플 누적
+	// 4. 2D 커널 루프를 돌며 샘플 누적
 	float ShadowSamples = 0.0;
 
 	for (int y = -R; y <= R; ++y)
 	{
 		for (int x = -R; x <= R; ++x)
 		{
-			// 6. (x, y) 오프셋을 접선 공간에 적용하여 새로운 방향 벡터 계산
+			// 5. (x, y) 오프셋을 접선 공간에 적용하여 새로운 방향 벡터 계산
 			float2 offset = float2(x, y) * perturbationScale;
 			float3 perturbed_V = normalize(V + T1 * offset.x + T2 * offset.y);
 
-			// 7. 새 방향 벡터와 원래 배열 인덱스(uvw.w)로 샘플링 좌표 생성
+			// 6. 새 방향 벡터와 원래 배열 인덱스(uvw.w)로 샘플링 좌표 생성
 			float4 sample_uvw = float4(perturbed_V, uvw.w);
 
-			// 8. 샘플링 및 누적
+			// 7. 샘플링 및 누적
 			ShadowSamples += ShadowMap.SampleCmpLevelZero(Sampler, sample_uvw, RefZ);
 		}
 	}
 
-	// 9. 평균값 반환
+	// 8. 평균값 반환
 	return ShadowSamples / totalSamples;
 }
 
@@ -392,7 +383,7 @@ float PCF_TextureCubeArray(TextureCubeArray<float> ShadowMap, SamplerComparisonS
 //==============================================================================
 
 // M1 = E(x), M2 = E(x^2)
-float VSM_Visibility(float2 Moments, float t)
+float VSM_Visibility(float2 Moments, float t, float LightBleedReduction)
 {
     if (t <= Moments.x)
     {
@@ -409,10 +400,7 @@ float VSM_Visibility(float2 Moments, float t)
     float pMax = variance / (d * d + variance);
 
     // Reduce light bleeding
-    #ifndef VSM_LIGHT_BLEED_REDUCTION
-    #define VSM_LIGHT_BLEED_REDUCTION 0.3f
-    #endif
-    pMax = ReduceLightBleeding(pMax, VSM_LIGHT_BLEED_REDUCTION);
+    pMax = ReduceLightBleeding(pMax, LightBleedReduction);
 
     return saturate(pMax);
 }
@@ -421,15 +409,11 @@ float VSM_Visibility(float2 Moments, float t)
 // [VSM] Box-filtered
 //--------------------------------------------------------------------------------------
 float2 SampleVSMBox(Texture2DArray<float2> ShadowMomentsArray, SamplerState Sampler,
-                    float3 uvw, int KernelSize)
+                    float3 uvw, int KernelSize, float TexSize)
 {
     int radius = max(0, (KernelSize & 1) ? KernelSize / 2 : (KernelSize - 1) / 2);
 
-    uint2 texSize;
-    float element;
-    ShadowMomentsArray.GetDimensions(texSize.x, texSize.y, element);
-
-    float2 st = texSize * uvw.xy;
+    float2 st = TexSize * uvw.xy;
     float2 sum = float2(0.0, 0.0);
     int count = (2 * radius + 1) * (2 * radius + 1);
 
@@ -437,25 +421,21 @@ float2 SampleVSMBox(Texture2DArray<float2> ShadowMomentsArray, SamplerState Samp
     {
         for (int j = -radius; j <= radius; j++)
         {
-            float2 uv = (st + float2(i, j) + 0.5f) / texSize;
+            float2 uv = (st + float2(i, j) + 0.5f) / TexSize;
             sum += ShadowMomentsArray.SampleLevel(Sampler, float3(uv, uvw.z), 0.0).xy;
         }
     }
     return (count > 0) ? (sum / count) : ShadowMomentsArray.SampleLevel(Sampler, uvw, 0.0).xy;
 }
 float2 SampleVSMBox_Point(TextureCubeArray<float2> ShadowMomentsArray, SamplerState Sampler,
-                    float4 dir, uint KernelSize)
+                    float4 dir, uint KernelSize, float Resolution)
 {
     int radius = max(0, (KernelSize & 1) ? KernelSize / 2 : (KernelSize - 1) / 2);
-
-    float Width, Height;
-    float element;
-    ShadowMomentsArray.GetDimensions(Width, Height, element);
 
 	float3 T, B;
 	BuildOrthonormalBasis(normalize(dir.xyz), T, B);
 
-	float TexelAngle = 1 / Width;
+	float TexelAngle = 1 / Resolution;
 
     float2 sum = float2(0.0, 0.0);
     int count = (2 * radius + 1) * (2 * radius + 1);
@@ -475,14 +455,11 @@ float2 SampleVSMBox_Point(TextureCubeArray<float2> ShadowMomentsArray, SamplerSt
 }
 
 float2 SampleVSMBox_Texture2D(Texture2D<float2> ShadowMoments, SamplerState Sampler,
-                              float2 uv, uint KernelSize)
+                              float2 uv, uint KernelSize, float TexSize)
 {
     int radius = max(0, (KernelSize & 1) ? KernelSize / 2 : (KernelSize - 1) / 2);
 
-    uint2 texSize;
-    ShadowMoments.GetDimensions(texSize.x, texSize.y);
-
-    float2 st = texSize * uv;
+    float2 st = TexSize * uv;
     float2 sum = float2(0.0, 0.0);
     int count = (2 * radius + 1) * (2 * radius + 1);
 
@@ -490,7 +467,7 @@ float2 SampleVSMBox_Texture2D(Texture2D<float2> ShadowMoments, SamplerState Samp
     {
         for (int j = -radius; j <= radius; j++)
         {
-            float2 sampleUV = (st + float2(i, j) + 0.5f) / texSize;
+            float2 sampleUV = (st + float2(i, j) + 0.5f) / TexSize;
             sum += ShadowMoments.SampleLevel(Sampler, sampleUV, 0.0).xy;
         }
     }
@@ -501,15 +478,11 @@ float2 SampleVSMBox_Texture2D(Texture2D<float2> ShadowMoments, SamplerState Samp
 // [VSM] Gaussian-filtered
 //--------------------------------------------------------------------------------------
 float2 SampleVSMGaussian(Texture2DArray<float2> ShadowMomentsArray, SamplerState Sampler,
-                         float3 uvw, int radius, float sigma)
+                         float3 uvw, int radius, float sigma, float TexSize)
 {
     radius = max(0, radius);
 
-    uint2 texSize;
-    float element;
-    ShadowMomentsArray.GetDimensions(texSize.x, texSize.y, element);
-
-    float2 st = texSize * uvw.xy;
+    float2 st = TexSize * uvw.xy;
 
     float oneDsum = 0.0f;
     [loop]
@@ -535,7 +508,7 @@ float2 SampleVSMGaussian(Texture2DArray<float2> ShadowMomentsArray, SamplerState
             float wx = exp(-0.5f * jx * jx);
             float w = wx * wy;
 
-            float2 uv = (st + float2(x, y) + 0.5f) / texSize;
+            float2 uv = (st + float2(x, y) + 0.5f) / TexSize;
             acc += w * ShadowMomentsArray.SampleLevel(Sampler, float3(uv, uvw.z), 0.0).xy;
         }
     }
@@ -544,14 +517,11 @@ float2 SampleVSMGaussian(Texture2DArray<float2> ShadowMomentsArray, SamplerState
 }
 
 float2 SampleVSMGaussian_Point(TextureCubeArray<float2>ShadowMomentsArray, SamplerState Sampler,
-                         float4 dir, int radius, float sigma)
+                         float4 dir, int radius, float sigma, float Resolution)
 {
 	radius = max(0, radius);
 
-	uint Width, Height, Elements;
-	ShadowMomentsArray.GetDimensions(Width, Height, Elements);
-
-	float texelAngle = 1.0f / Width;
+	float texelAngle = 1.0f / Resolution;
 
 	float oneDsum = 0.0f;
     [loop]
@@ -590,14 +560,11 @@ float2 SampleVSMGaussian_Point(TextureCubeArray<float2>ShadowMomentsArray, Sampl
 }
 
 float2 SampleVSMGaussian_Texture2D(Texture2D<float2> ShadowMoments, SamplerState Sampler,
-                                   float2 uv, int radius, float sigma)
+                                   float2 uv, int radius, float sigma, float TexSize)
 {
     radius = max(0, radius);
 
-    uint2 texSize;
-    ShadowMoments.GetDimensions(texSize.x, texSize.y);
-
-    float2 st = texSize * uv;
+    float2 st = TexSize * uv;
 
     float oneDsum = 0.0f;
     [loop]
@@ -623,7 +590,7 @@ float2 SampleVSMGaussian_Texture2D(Texture2D<float2> ShadowMoments, SamplerState
             float wx = exp(-0.5f * jx * jx);
             float w = wx * wy;
 
-            float2 sampleUV = (st + float2(x, y) + 0.5f) / texSize;
+            float2 sampleUV = (st + float2(x, y) + 0.5f) / TexSize;
             acc += w * ShadowMoments.SampleLevel(Sampler, sampleUV, 0.0).xy;
         }
     }
@@ -663,7 +630,10 @@ FLightingResult CalculateDynamicLightWithPCF_Directional(
         else
         {
             // Soft shadow (PCF)
-            ShadowFactor = PCF_Texture2D(DirectionalShadowMap, ShadowSampler, uvw.xy, RefZ, FilterSize);
+        	uint Width, Height;
+        	DirectionalShadowMap.GetDimensions(Width, Height);
+        	float TexSize = (float)Width;
+            ShadowFactor = PCF_Texture2D(DirectionalShadowMap, ShadowSampler, uvw.xy, RefZ, FilterSize, TexSize);
         }
     }
 
@@ -690,6 +660,14 @@ FLightingResult CalculateDynamicLightWithPCF_Spot(
     {
         FLightViewProj ViewProj = SpotLightShadowMatrices[Light.ShadowMapIndex];
         float3 uvw = GetSampleCoords(WorldPos, ViewProj.ViewMatrix, ViewProj.ProjectionMatrix);
+
+    	uint GlobalAtlasWidth, GlobalAtlasHeight, NumSlices;
+    	SpotShadowAtlas.GetDimensions(GlobalAtlasWidth, GlobalAtlasHeight, NumSlices);
+    	float fGlobalAtlasWidth = (float)GlobalAtlasWidth;
+
+    	// 2. UV 좌표에 라이트의 'ResolutionScale'을 곱하여 UV를 보정합니다.
+    	uvw.xy = uvw.xy * Light.ShadowResolutionScale;
+
         float3 SampleCoords = float3(uvw.xy, Light.ShadowMapIndex);
         float RefZ = uvw.z - Light.ShadowBias;
 
@@ -701,7 +679,7 @@ FLightingResult CalculateDynamicLightWithPCF_Spot(
         else
         {
             // Soft shadow (PCF)
-            ShadowFactor = PCF_Texture2DArray(SpotShadowAtlas, ShadowSampler, SampleCoords, RefZ, FilterSize);
+            ShadowFactor = PCF_Texture2DArray(SpotShadowAtlas, ShadowSampler, SampleCoords, RefZ, FilterSize, fGlobalAtlasWidth);
         }
     }
 
@@ -740,8 +718,11 @@ FLightingResult CalculateDynamicLightWithPCF_Point(
         else
         {
             // Soft shadow (PCF - simplified for cube maps)
-            ShadowFactor = PCF_TextureCubeArray(PointShadowAtlas, ShadowSampler, ShadowCoord, RefZ, FilterSize);
-        }
+        	uint Width, Height, Slices;
+        	PointShadowAtlas.GetDimensions(Width, Height, Slices);
+        	float fResolution = (float)Width;
+
+        	ShadowFactor = PCF_TextureCubeArray(PointShadowAtlas, ShadowSampler, ShadowCoord, RefZ, FilterSize, fResolution);        }
     }
 
     Result.Diffuse *= ShadowFactor;
@@ -769,23 +750,27 @@ FLightingResult CalculateDynamicLightWithVSM_Directional(
                                       DirectionalShadowMatrix.ProjectionMatrix);
     	float t = mul(float4(WorldPos, 1.0f), DirectionalShadowMatrix.ViewMatrix).z; // uvw.z;
 
+    	uint Width, Height;
+    	DirectionalMomentsMap.GetDimensions(Width, Height);
+    	float TexSize = (float)Width;
+
         float2 moments;
         if (ShadowSettings.FilterType == SHADOW_FILTER_VSM_GAUSSIAN) // Gaussian
         {
             moments = SampleVSMGaussian_Texture2D(DirectionalMomentsMap, ShadowSampler, uvw.xy,
-            	Light.ShadowFilterSize, Light.ShadowGaussSigma);
+            	Light.ShadowFilterSize, Light.ShadowGaussSigma, TexSize);
         }
         else if (ShadowSettings.FilterType == SHADOW_FILTER_VSM_BOX) // Box
         {
             moments = SampleVSMBox_Texture2D(DirectionalMomentsMap, ShadowSampler,
-                                             uvw.xy, Light.ShadowFilterSize);
+                                             uvw.xy, Light.ShadowFilterSize, TexSize);
         }
         else // No filter
         {
             moments = DirectionalMomentsMap.SampleLevel(ShadowSampler, uvw.xy, 0.0).xy;
         }
 
-        ShadowFactor = VSM_Visibility(moments, t);
+        ShadowFactor = VSM_Visibility(moments, t, ShadowSettings.VSM_LightBleedReduction);
     }
 
     Result.Diffuse *= ShadowFactor;
@@ -811,6 +796,12 @@ FLightingResult CalculateDynamicLightWithVSM_Spot(
     {
         FLightViewProj ViewProj = SpotLightShadowMatrices[Light.ShadowMapIndex];
         float3 uvw = GetSampleCoords(WorldPos, ViewProj.ViewMatrix, ViewProj.ProjectionMatrix);
+
+    	uint GlobalAtlasWidth, GlobalAtlasHeight, NumSlices;
+    	SpotMomentsAtlas.GetDimensions(GlobalAtlasWidth, GlobalAtlasHeight, NumSlices);
+    	float fGlobalAtlasWidth = (float)GlobalAtlasWidth;
+        uvw.xy = uvw.xy * Light.ShadowResolutionScale;
+
         float3 SampleCoords = float3(uvw.xy, Light.ShadowMapIndex);
         float t = mul(float4(WorldPos, 1.0f), ViewProj.ViewMatrix).z; // uvw.z;
 
@@ -818,19 +809,19 @@ FLightingResult CalculateDynamicLightWithVSM_Spot(
         if (ShadowSettings.FilterType == SHADOW_FILTER_VSM_GAUSSIAN) // Gaussian
         {
             moments = SampleVSMGaussian(SpotMomentsAtlas, ShadowSampler, SampleCoords,
-            	Light.ShadowFilterSize, Light.ShadowGaussSigma);
+            	Light.ShadowFilterSize, Light.ShadowGaussSigma, fGlobalAtlasWidth);
         }
         else if (ShadowSettings.FilterType == SHADOW_FILTER_VSM_BOX) // Box
         {
             moments = SampleVSMBox(SpotMomentsAtlas, ShadowSampler,
-                                   SampleCoords, Light.ShadowFilterSize);
+                                   SampleCoords, Light.ShadowFilterSize, fGlobalAtlasWidth);
         }
         else // No filter
         {
             moments = SpotMomentsAtlas.SampleLevel(ShadowSampler, SampleCoords, 0.0).xy;
         }
 
-        ShadowFactor = VSM_Visibility(moments, t);
+        ShadowFactor = VSM_Visibility(moments, t, ShadowSettings.VSM_LightBleedReduction);
     }
 
     Result.Diffuse *= ShadowFactor;
@@ -859,23 +850,28 @@ FLightingResult CalculateDynamicLightWithVSM_Point(
         float3 SwizzledDir = float3(LightToPixelDir.y, LightToPixelDir.z, LightToPixelDir.x);
 
         float4 SampleCoords = float4(SwizzledDir, Light.ShadowMapIndex);
+
+    	uint Width, Height, Slices;
+    	PointMomentsAtlas.GetDimensions(Width, Height, Slices);
+    	float Resolution = (float)Width;
+
         float2 moments = PointMomentsAtlas.SampleLevel(ShadowSampler, SampleCoords, 0.0).xy;
 
 		if (ShadowSettings.FilterType == SHADOW_FILTER_VSM_GAUSSIAN) // Gaussian
 		{
 			moments = SampleVSMGaussian_Point(PointMomentsAtlas, ShadowSampler, SampleCoords,
-				Light.ShadowFilterSize, Light.ShadowGaussSigma);
+				Light.ShadowFilterSize, Light.ShadowGaussSigma, Resolution);
 		}
 		else if (ShadowSettings.FilterType == SHADOW_FILTER_VSM_BOX) // Box
 		{
 			moments = SampleVSMBox_Point(PointMomentsAtlas, ShadowSampler,
-								   SampleCoords, Light.ShadowFilterSize);
+								   SampleCoords, Light.ShadowFilterSize, Resolution);
 		}
 		else // No filter
 		{
 			moments = PointMomentsAtlas.SampleLevel(ShadowSampler, SampleCoords, 0.0).xy;
 		}
-        ShadowFactor = VSM_Visibility(moments, LinearDepth);
+        ShadowFactor = VSM_Visibility(moments, LinearDepth, ShadowSettings.VSM_LightBleedReduction);
     }
 
     Result.Diffuse *= ShadowFactor;

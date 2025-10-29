@@ -99,7 +99,7 @@ void UControlPanelWidget::RenderWidget()
             ImGui::Separator();
             ImGui::Text("VSM Settings");
 
-            ImGui::SliderFloat("Light Bleed Reduction", &ShadowSettings.VSM_LightBleedReduction, 0.0f, 1.0f);
+            ImGui::SliderFloat("Light Bleed Reduction", &ShadowSettings.VSM_LightBleedReduction, 0.0f, 0.999f);
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("Reduces light bleeding artifacts common in VSM.");
 

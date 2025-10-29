@@ -49,6 +49,8 @@ struct FUnifiedDynamicLight
 	int ShadowMapIndex;        // 4 bytes - Shadow Texture2D Array Index
 	int ShadowFilterSize;      // 4 bytes  - PCF/Box Size, Gauss Radius
 	float ShadowGaussSigma;      // 4 bytes - VSM Gaussian Sigma
+	float ShadowResolutionScale;   // 4 bytes - Shadow Map Resolution
+	float Pad[3];				 // 12 bytes - Padding
 };
 
 // Inputs/Outputs
