@@ -12,7 +12,7 @@ UPointLightComponent::UPointLightComponent()
 {
 	bCastShadows = true;
 	CachedLightViewProjection.reserve(6);
-	ShadowBias = 0.;
+	ShadowBias = 0.005f;
 }
 
 void UPointLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)

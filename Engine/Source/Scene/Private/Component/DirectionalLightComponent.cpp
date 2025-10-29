@@ -10,9 +10,8 @@ IMPLEMENT_CLASS(UDirectionalLightComponent, ULightComponent)
 UDirectionalLightComponent::UDirectionalLightComponent()
 {
 	bCastShadows = true;
-	ShadowBias = 0.001f;
+	ShadowBias = 0.005f;
 }
-
 
 void UDirectionalLightComponent::DrawDebugArrow(TArray<FName>& InOutLabels)
 {

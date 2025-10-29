@@ -37,15 +37,15 @@ void FShadowPass::Execute(FRenderingContext& Context)
 	ID3D11DeviceContext* DeviceContext = URenderer::GetInstance().GetDeviceContext();
 	// ECullMode::Back -> Front 로 교체, Bias 채워진 RenderState 사용
 	FRenderState ShadowRenderState;
-	ShadowRenderState.CullMode = ECullMode::Front;           // Front-face culling으로 셀프 셰도우 감소
+	ShadowRenderState.CullMode = ECullMode::Back;           // Front-face culling으로 셀프 셰도우 감소
 	ShadowRenderState.FillMode = EFillMode::Solid;
 
 	// 해상도 기반 Bias 추천값 (스팟 섀도우 기준)
-	const uint32 SpotRes = FShadowMapManager::GetInstance().GetSpotResolution();
-	ShadowRenderState.DepthBias = 0;                         // D32_FLOAT에선 보통 0
+	//const uint32 SpotRes = FShadowMapManager::GetInstance().GetSpotResolution();
+	//ShadowRenderState.DepthBias = 0;                         // D32_FLOAT에선 보통 0
 	// TODO - 추후에 사용하게 된다면 수치 조정할 것
-	ShadowRenderState.SlopeScaledDepthBias = 1.5f;           // 1.0~2.5 범위에서 조정
-	ShadowRenderState.DepthBiasClamp = 2.0f / SpotRes;       // 텍셀 단위 클램프 (~2 texels)
+	//ShadowRenderState.SlopeScaledDepthBias = 1.5f;           // 1.0~2.5 범위에서 조정
+	//ShadowRenderState.DepthBiasClamp = 2.0f / SpotRes;       // 텍셀 단위 클램프 (~2 texels)
 
 	FPipelineInfo PipelineInfo =
 	{
