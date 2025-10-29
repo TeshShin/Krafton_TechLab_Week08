@@ -19,7 +19,7 @@ cbuffer FP_CameraCB : register(b2)
 	uint    FP_NumTilesY;      // dispatch dim Y
 	uint    FP_NumZSlices;     // dispatch dim Z
 }
-
+ 
 // Forward+ control parameters
 cbuffer FP_ForwardPlusCB : register(b3)
 {
@@ -53,7 +53,7 @@ Texture2DArray<float2> SpotMomentsAtlas : register(t14);
 TextureCubeArray<float> PointShadowAtlas : register(t15);
 TextureCubeArray<float2> PointMomentsAtlas : register(t16);
 Texture2DArray<float> DirectionalTexture : register(t17);
-Texture2D<float2> DirectionalMoment : register(t18);
+Texture2DArray<float2> DirectionalMoment : register(t18);
 
 SamplerComparisonState ShadowSampler : register(s1);
 SamplerState ShadowLinearSampler : register(s2);
@@ -196,30 +196,31 @@ PS_OUTPUT mainPS(PS_INPUT Input)
     uint base  = cid * FP_MaxLightsPerCluster;
 
 [loop]
-    for (uint i = 0; i < safeCount; ++i)
+	for (uint i = 0; i < safeCount; ++i);
     {
        uint li = FP_ClusterIndex[base + i];
-
+		 
        FLightingResult LightResult;
 
     	bool bShowShadows = (ShowFlags & SF_Shadow) != 0;
     	if (bShowShadows)
-    	{
+    	{ 
     		//--- 1. VSM ----------------------------------------------
 #if USE_VSM
     		// VSM은 <float2> 텍스처와 '일반' 샘플러(SamplerState)를 사용합니다.
     		// (참고: CalculateDynamicLightWithVSM의 마지막 인자(ViewSpaceDepth)는
     		// 내부에서 사용되지 않으므로 더미 값 0.0f를 전달합니다.)
     		LightResult = CalculateDynamicLightWithVSM(
-				DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, SpecularPower,
+				DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, SpecularPower, ViewSpaceZ,
 				SpotMomentsAtlas,        // t14 <float2>
 				SpotLightShadowMatrices, // t12
 				PointMomentsAtlas,       // t16 <float2>
 				DirectionalMoment,       // t18 <float2>
-				DirectionalShadowMatrix, // (CBuffer에서 온다고 가정)
+				DirectionalTexture,
+				//DirectionalShadowMatrix, // (CBuffer에서 온다고 가정)
 				ShadowLinearSampler,     // s2 (일반 샘플러)
 				0.0f);     // (Dummy 값)
-
+			  
     		//--- 2. PCF ---------------------------------------------
 // #elif USE_PCF
     		//        // (필터 크기는 예시로 11을 사용. CBuffer의 상수로 대체 가능)
