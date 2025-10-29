@@ -8,6 +8,16 @@
 #include "Asset/Public/Texture.h"
 #include "Editor/Public/Camera.h"
 #include "Renderer/Public/ShadowMapManager.h"
+#include "Renderer/Public/Optimization/CSM.h"
+
+// Mirror of HLSL b4 cbuffer for directional CSM
+struct FDirectionalCSMConstants
+{
+    uint32 DirNumCascades;
+    float Pad[3];
+    float DirCascadeSplits[10];
+    FLightViewProj DirCascadeMatrices[10];
+};
 
 FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS, ID3D11DepthStencilState* InDisabledDS)
 	: FRenderPass(InPipeline), DS(InDS), DisabledDS(InDisabledDS)
@@ -57,7 +67,7 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11DepthStencilState*
 	SpotLightMatricesStructuredBuffer = FRenderResourceFactory::CreateStructuredBuffer<FLightViewProj>(SpotLightMatricesCapacity);
 	SpotLightMatricesSRV = FRenderResourceFactory::CreateBufferSRV(SpotLightMatricesStructuredBuffer, SpotLightMatricesCapacity);
 
-	CBDirectionalShadowMatrix = FRenderResourceFactory::CreateConstantBuffer<FLightViewProj>();
+	CBDirectionalCSM = FRenderResourceFactory::CreateConstantBuffer<FDirectionalCSMConstants>();
 
 	FRenderResourceFactory::CreateComputeShader(L"Asset/Shader/Lighting/LightTilesCS.hlsl", &LightTilesCS);
 
@@ -219,7 +229,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
         UnifiedLightStructuredBuffer, UnifiedLights);
     FRenderResourceFactory::UpdateStructuredBufferData(
         SpotLightMatricesStructuredBuffer, SpotLightMatrices);
-	Pipeline->SetConstantBuffer(4, EShaderType::EST_Pixel, CBDirectionalShadowMatrix);
+	Pipeline->SetConstantBuffer(4, EShaderType::EST_Pixel, CBDirectionalCSM);
 
     // After uploading current lights, build clusters using the compute shader
     CreateClusterBuffers(Context, UnifiedLights.size());
@@ -450,7 +460,35 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 			}
 			else if (Light->GetLightType() == ELightComponentType::LightType_Directional)
 			{
-				FRenderResourceFactory::UpdateConstantBufferData(CBDirectionalShadowMatrix, LightViewProj);
+				// Build directional CSM constants
+				FDirectionalCSMConstants csm = {};
+				// Gather per-cascade matrices
+				const TArray<FMatrix>& viewMats = Light->GetLightViewMatrices(CamInv);
+				const TArray<FMatrix>& projMats = Light->GetCSMDsvProjections(CamInv);
+				uint32 maxCascades = (uint32)std::min(viewMats.size(), projMats.size());
+				maxCascades = std::min<uint32>(maxCascades, 10u);
+
+				// Compute split distances to select cascade in shader
+				uint32 desired = std::max<uint32>(Light->GetNumOfCascade(), 1u);
+				desired = std::min<uint32>(desired, maxCascades);
+				csm.DirNumCascades = desired;
+				float lambda = Light->GetCascadeSplitLambda();
+				TArray<float> splits = CSM::ComputeCascadeSplitDistances(CamInv.NearClip, CamInv.FarClip, desired, lambda);
+				// Copy splits (size desired+1) into fixed array
+				uint32 splitCount = static_cast<uint32>(splits.size());
+				for (uint32 i = 0; i < std::min<uint32>(splitCount, 10u); ++i)
+				{
+					csm.DirCascadeSplits[i] = splits[i];
+				}
+
+				// Fill matrices
+				for (uint32 i = 0; i < desired; ++i)
+				{
+					csm.DirCascadeMatrices[i].ViewMatrix = viewMats[i];
+					csm.DirCascadeMatrices[i].ProjectionMatrix = projMats[i];
+				}
+
+				FRenderResourceFactory::UpdateConstantBufferData(CBDirectionalCSM, csm);
 			}
 		}
 	}
@@ -489,6 +527,6 @@ void FStaticMeshPass::Release()
 
 	SafeRelease(SpotLightMatricesStructuredBuffer);
 	SafeRelease(SpotLightMatricesSRV);
-	SafeRelease(CBDirectionalShadowMatrix);
+	SafeRelease(CBDirectionalCSM);
 }
 

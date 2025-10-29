@@ -1,9 +1,9 @@
 #include "../Material/TextureVS.hlsl"
 
 // VSM 토글 TODO:UI 연동
-#ifndef USE_VSM
-#define USE_VSM 1
-#endif
+//#ifndef USE_VSM
+//#define USE_VSM 1
+//#endif
 
 //--------------------------------------------------------------------------------------
 // [FORWARD PLUS RENDERING] Light Tile Clustering Data Structures
@@ -42,17 +42,17 @@ Texture2D BumpTexture : register(t5);		// map_bump
 SamplerState SamplerWrap : register(s0);
 
 // Shadow
-cbuffer DirectionalLightConstants : register(b4)
-{
-	FLightViewProj DirectionalShadowMatrix;
-};
+//cbuffer DirectionalLightConstants : register(b4)
+//{
+//	FLightViewProj DirectionalShadowMatrix;
+//};
 
 StructuredBuffer<FLightViewProj> SpotLightShadowMatrices : register(t12);
 Texture2DArray<float> SpotShadowAtlas : register(t13);
 Texture2DArray<float2> SpotMomentsAtlas : register(t14);
 TextureCubeArray<float> PointShadowAtlas : register(t15);
 TextureCubeArray<float2> PointMomentsAtlas : register(t16);
-Texture2D<float> DirectionalTexture : register(t17);
+Texture2DArray<float> DirectionalTexture : register(t17);
 Texture2D<float2> DirectionalMoment : register(t18);
 
 SamplerComparisonState ShadowSampler : register(s1);
@@ -185,6 +185,9 @@ PS_OUTPUT mainPS(PS_INPUT Input)
     float3 ViewDir = normalize(ViewWorldLocation - Input.WorldPosition);
     float SpecularPower = max(Ns, 1.0f); // Prevent division by zero
 
+	float3 posVS = mul(float4(Input.WorldPosition, 1.0f), View).xyz;
+	float ViewSpaceZ = posVS.z;	
+	
     uint cid   = FP_ComputeClusterID(Input.Position, Input.WorldPosition);
     uint count = FP_ClusterCount[cid];
     // Clamp to avoid reading past FP_ClusterIndex allocation when clusters overflow
@@ -233,12 +236,12 @@ PS_OUTPUT mainPS(PS_INPUT Input)
     		//--- 3. Hard Shadow ---------------------------------------------
 #else
     		LightResult = CalculateDynamicLightWithShadows(
-			   DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, SpecularPower,
+			   DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, SpecularPower, ViewSpaceZ,
 			   SpotShadowAtlas,         // t13 <float>
 			   SpotLightShadowMatrices, // t12
 			   PointShadowAtlas,        // t15 <float>
 			   DirectionalTexture,      // t17 <float>
-			   DirectionalShadowMatrix, // (CBuffer)
+			   //DirectionalShadowMatrix, // (CBuffer)
 			   ShadowSampler);          // s1 (비교 샘플러)
 #endif
     		//-------------------------------------------------------------------------

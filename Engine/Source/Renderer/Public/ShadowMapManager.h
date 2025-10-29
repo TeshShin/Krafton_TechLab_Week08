@@ -138,7 +138,7 @@ private:
 	ID3D11Texture2D* PointShadowDepthTexture = nullptr;
 	ID3D11DepthStencilView* PointShadowDepthDSV = nullptr;
 
-	// --- DirectionalLight 리소스 ---
+	// --- DirectionalLight 리소스 ---	
 	bool bIsDirShadowAllocated = false;
 	uint32 DirResolution = 0;
 	ID3D11Texture2D* DirShadowTexture = nullptr;

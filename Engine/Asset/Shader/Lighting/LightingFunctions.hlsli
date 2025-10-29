@@ -38,6 +38,17 @@
 #define VSM_LIGHT_BLEED_REDUCTION 0.5f
 #endif
 
+
+cbuffer DirectionalCSMLightConstants : register(b4)
+{
+	uint DirNumCascades;
+	float3 CSMPadding;
+
+	float DirCascadeSplits[10];
+	FLightViewProj DirCascadeMatrices[10];
+}
+
+
 float linstep(float minV, float maxV, float v)
 {
     return saturate((v - minV) / (maxV - minV));
@@ -68,7 +79,7 @@ struct FLightViewProj
 {
 	row_major float4x4 ViewMatrix;
 	row_major float4x4 ProjectionMatrix;
-};
+}; 
 
 //--------------------------------------------------------------------------------------
 // [LIGHTING MODELS] Modular lighting calculation functions
@@ -282,6 +293,29 @@ FLightingResult CalculateDynamicLightWithShadows(FUnifiedDynamicLight Light, flo
 
     return Result;
 }
+ 
+//--------------------------------------------------------------------------------------
+// CSM Helper Functions
+//--------------------------------------------------------------------------------------
+uint SelectCascadeIndex(float viewSpaceZ, uint numCascades)
+{
+	for (uint i = 0; i < numCascades; ++i)
+	{
+		if (viewSpaceZ <= DirCascadeSplits[i + 1])
+		{
+			return i;
+		}
+	}
+
+	return numCascades - 1;
+}
+
+//TODO: 경계선에서 blend 처리해주는 함수
+float ComputeCascadeBlendFactor()
+{
+	return 1;
+}
+
 
 //==============================================================================
 // Shadow Helper Functions
@@ -617,11 +651,45 @@ float2 SampleVSMGaussian_Texture2D(Texture2D<float2> ShadowMoments, SamplerState
 //--------------------------------------------------------------------------------------
 // PCF Shadow (Hard/Soft) - Directional Light
 //--------------------------------------------------------------------------------------
+
+
+float SampleCSMShadow_PCF(
+   float3 worldPos,
+    float viewSpaceZ,
+    Texture2DArray<float> DirectionalShadowArray,
+    SamplerComparisonState ShadowSampler,
+    float shadowBias,
+    int filterSize)
+{
+	uint numCascade = DirNumCascades;
+	if (numCascade == 0)
+		return 1.0f;
+
+	// Select Cascade Idx 
+	uint cascadeIdx = SelectCascadeIndex(viewSpaceZ, numCascade);
+
+	FLightViewProj viewProj = DirCascadeMatrices[cascadeIdx];
+	
+	float3 uvw = GetSampleCoords(worldPos, viewProj.ViewMatrix, viewProj.ProjectionMatrix);
+	float3 SampleCoords = float3(uvw.xy, cascadeIdx);
+	float refZ = uvw.z - shadowBias;
+
+	float shadow0 = (filterSize <= 1)
+        ? DirectionalShadowArray.SampleCmp(ShadowSampler, SampleCoords, refZ)
+        : PCF_Texture2DArray(DirectionalShadowArray, ShadowSampler, SampleCoords, refZ, filterSize);
+
+	return shadow0;
+	
+	// Compute Cascade Blend Factor
+}
+
+
 FLightingResult CalculateDynamicLightWithPCF_Directional(
     FUnifiedDynamicLight Light,
     float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower,
-    Texture2D<float> DirectionalShadowMap,
-    FLightViewProj DirectionalShadowMatrix,
+	float ViewSpaceZ,
+    Texture2DArray<float> DirectionalShadowArray,
+    //FLightViewProj DirectionalShadowMatrix,
     SamplerComparisonState ShadowSampler,
     int FilterSize)
 {
@@ -630,20 +698,27 @@ FLightingResult CalculateDynamicLightWithPCF_Directional(
 
     if (Light.bCastShadows > 0)
     {
-        float3 uvw = GetSampleCoords(WorldPos, DirectionalShadowMatrix.ViewMatrix,
-                                      DirectionalShadowMatrix.ProjectionMatrix);
-        float RefZ = uvw.z - Light.ShadowBias;
-
-        if (FilterSize <= 1)
-        {
-            // Hard shadow
-            ShadowFactor = DirectionalShadowMap.SampleCmp(ShadowSampler, uvw.xy, RefZ);
-        }
-        else
-        {
-            // Soft shadow (PCF)
-            ShadowFactor = PCF_Texture2D(DirectionalShadowMap, ShadowSampler, uvw.xy, RefZ, FilterSize);
-        }
+		// CSM도 껐다 켰는게 가능하도록 수정..?
+		ShadowFactor = SampleCSMShadow_PCF(
+            WorldPos, ViewSpaceZ,
+            DirectionalShadowArray, ShadowSampler,
+            Light.ShadowBias, FilterSize);
+		 
+		// CSM적용 전 코드
+        //float3 uvw = GetSampleCoords(WorldPos, DirectionalShadowMatrix.ViewMatrix,
+        //                              DirectionalShadowMatrix.ProjectionMatrix);
+        //float RefZ = uvw.z - Light.ShadowBias;
+		//
+		//if (FilterSize <= 1)
+        //{
+        //    // Hard shadow
+        //    ShadowFactor = DirectionalShadowMap.SampleCmp(ShadowSampler, uvw.xy, RefZ);
+        //}
+        //else
+        //{
+        //    // Soft shadow (PCF)
+        //    ShadowFactor = PCF_Texture2D(DirectionalShadowMap, ShadowSampler, uvw.xy, RefZ, FilterSize);
+        //}
     }
 
     Result.Diffuse *= ShadowFactor;
@@ -880,13 +955,13 @@ FLightingResult CalculateDynamicLightWithVSM_Point(
 //--------------------------------------------------------------------------------------
 FLightingResult CalculateDynamicLightWithPCF(
     FUnifiedDynamicLight Light,
-    float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower,
+    float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower, float ViewSpaceZ, 
     // PCF Resources
     Texture2DArray<float> SpotShadowAtlas,
     StructuredBuffer<FLightViewProj> SpotLightShadowMatrices,
     TextureCubeArray<float> PointShadowAtlas,
-    Texture2D<float> DirectionalShadowMap,
-    FLightViewProj DirectionalShadowMatrix,
+    Texture2DArray<float> DirectionalShadowArray,
+    //FLightViewProj DirectionalShadowMatrix,
     SamplerComparisonState ShadowSampler,
     int FilterSize)
 {
@@ -903,10 +978,14 @@ FLightingResult CalculateDynamicLightWithPCF(
     }
     else if (Light.LightType == LIGHT_TYPE_DIRECTIONAL)
     {
-        return CalculateDynamicLightWithPCF_Directional(Light, WorldPos, Normal, ViewDir, SpecularPower,
-                                                        DirectionalShadowMap, DirectionalShadowMatrix,
+       //return CalculateDynamicLightWithPCF_Directional(Light, WorldPos, Normal, ViewDir, SpecularPower,
+       //                                                 DirectionalShadowMap, DirectionalShadowMatrix,
+       //                                                 ShadowSampler, FilterSize);
+		 
+		return CalculateDynamicLightWithPCF_Directional(Light, WorldPos, Normal, ViewDir, SpecularPower,
+                                                        ViewSpaceZ, DirectionalShadowArray,
                                                         ShadowSampler, FilterSize);
-    }
+	}
 
     // No shadow
     return CalculateDynamicLight(Light, WorldPos, Normal, ViewDir, SpecularPower);
@@ -917,18 +996,18 @@ FLightingResult CalculateDynamicLightWithPCF(
 //--------------------------------------------------------------------------------------
 FLightingResult CalculateDynamicLightWithShadows(
     FUnifiedDynamicLight Light,
-    float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower,
+    float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower, float ViewSpaceZ,
     Texture2DArray<float> SpotShadowAtlas,
     StructuredBuffer<FLightViewProj> SpotLightShadowMatrices,
     TextureCubeArray<float> PointShadowAtlas,
-    Texture2D<float> DirectionalShadowMap,
-    FLightViewProj DirectionalShadowMatrix,
+    Texture2DArray<float> DirectionalShadowMap,
+    //FLightViewProj DirectionalShadowMatrix,
     SamplerComparisonState ShadowSampler)
 {
-    return CalculateDynamicLightWithPCF(Light, WorldPos, Normal, ViewDir, SpecularPower,
+	return CalculateDynamicLightWithPCF(Light, WorldPos, Normal, ViewDir, SpecularPower, ViewSpaceZ,
                                         SpotShadowAtlas, SpotLightShadowMatrices,
                                         PointShadowAtlas, DirectionalShadowMap,
-                                        DirectionalShadowMatrix, ShadowSampler, 1);
+                                        ShadowSampler, 1);
 }
 
 //--------------------------------------------------------------------------------------

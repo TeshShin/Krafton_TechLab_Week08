@@ -47,7 +47,7 @@ private:
 	ID3D11ShaderResourceView* SpotLightMatricesSRV = nullptr;
     uint32 SpotLightMatricesCapacity;
 	TArray<FLightViewProj> SpotLightMatrices;
-	ID3D11Buffer* CBDirectionalShadowMatrix;
+    ID3D11Buffer* CBDirectionalCSM = nullptr;
 
 	ID3D11ComputeShader* LightTilesCS = nullptr;
 
