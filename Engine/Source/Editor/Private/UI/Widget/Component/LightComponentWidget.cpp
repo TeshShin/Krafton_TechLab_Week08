@@ -61,9 +61,15 @@ void ULightComponentWidget::RenderWidget()
     			}
 
     			float ShadowSharpen = LightComponent->GetShadowSharpen();
-    			if (ImGui::DragFloat("Shadow Sharpen", &ShadowSharpen, 0.01f, 0.1f, 1.0f))
+    			if (ImGui::DragFloat("Shadow Sharpen", &ShadowSharpen, 0.01f, 0.f, 1.0f))
     			{
     				LightComponent->SetShadowSharpen(ShadowSharpen);
+    			}
+
+    			float ShadowResolutionScale = LightComponent->GetShadowResolutionScale();
+    			if (ImGui::DragFloat("Shadow Resolution Scale", &ShadowResolutionScale, 0.01f, 0.f, 1.0f))
+    			{
+    				LightComponent->SetShadowResolutionScale(ShadowResolutionScale);
     			}
     		}
 			// Shadow Projection Mode Toggle (Spot/Directional 지원)

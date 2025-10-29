@@ -73,13 +73,13 @@ void FShadowMapManager::Initialize(EShadowFilterType InFilterType, uint32 InMaxS
 void FShadowMapManager::InitializeSpotShadows(uint32 InMaxSpotShadows, uint32 InSpotResolution)
 {
 	ReleaseSpotShadows();
-	MaxSpotShadows = InMaxSpotShadows;
-    SpotResolution = InSpotResolution;
-    StatData.Config_SpotResolution = SpotResolution;
-    StatData.Config_MaxSpotShadows = MaxSpotShadows;
+	ShadowSettings.MaxSpotShadows = InMaxSpotShadows;
+    ShadowSettings.SpotResolution = InSpotResolution;
+    StatData.Config_SpotResolution = ShadowSettings.SpotResolution;
+    StatData.Config_MaxSpotShadows = ShadowSettings.MaxSpotShadows;
 
-	SpotShadowMapSliceDSVs.resize(MaxSpotShadows);
-	SpotShadowMomentsSliceRTVs.resize(MaxSpotShadows);
+	SpotShadowMapSliceDSVs.resize(ShadowSettings.MaxSpotShadows);
+	SpotShadowMomentsSliceRTVs.resize(ShadowSettings.MaxSpotShadows);
 
     HRESULT hr;
 
@@ -87,10 +87,10 @@ void FShadowMapManager::InitializeSpotShadows(uint32 InMaxSpotShadows, uint32 In
     {
         // --- (PCF) Texture2DArray ---
         D3D11_TEXTURE2D_DESC SpotTexDesc = {};
-        SpotTexDesc.Width = SpotResolution;
-        SpotTexDesc.Height = SpotResolution;
+        SpotTexDesc.Width = ShadowSettings.SpotResolution;
+        SpotTexDesc.Height = ShadowSettings.SpotResolution;
         SpotTexDesc.MipLevels = 1;
-        SpotTexDesc.ArraySize = MaxSpotShadows;
+        SpotTexDesc.ArraySize = ShadowSettings.MaxSpotShadows;
         SpotTexDesc.Format = DXGI_FORMAT_R32_TYPELESS; // PCF용
         SpotTexDesc.SampleDesc.Count = 1;
         SpotTexDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -105,14 +105,14 @@ void FShadowMapManager::InitializeSpotShadows(uint32 InMaxSpotShadows, uint32 In
             return;
         }
 
-        StatData.VRAM_Spot_Depth = static_cast<uint64_t>(SpotResolution) * SpotResolution * MaxSpotShadows * 4;
+        StatData.VRAM_Spot_Depth = static_cast<uint64_t>(ShadowSettings.SpotResolution) * ShadowSettings.SpotResolution * ShadowSettings.MaxSpotShadows * 4;
 
         // --- (PCF) SRV ---
         D3D11_SHADER_RESOURCE_VIEW_DESC SpotSrvDesc = {};
         SpotSrvDesc.Format = DXGI_FORMAT_R32_FLOAT;
         SpotSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
         SpotSrvDesc.Texture2DArray.MipLevels = 1;
-    	SpotSrvDesc.Texture2DArray.ArraySize = MaxSpotShadows;
+    	SpotSrvDesc.Texture2DArray.ArraySize = ShadowSettings.MaxSpotShadows;
     	SpotSrvDesc.Texture2DArray.MostDetailedMip = 0;
     	SpotSrvDesc.Texture2DArray.FirstArraySlice = 0;
 
@@ -129,7 +129,7 @@ void FShadowMapManager::InitializeSpotShadows(uint32 InMaxSpotShadows, uint32 In
         SpotDsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
         SpotDsvDesc.Texture2DArray.MipSlice = 0;
 
-        for (uint32 i = 0; i < MaxSpotShadows; ++i)
+        for (uint32 i = 0; i < ShadowSettings.MaxSpotShadows; ++i)
         {
             SpotDsvDesc.Texture2DArray.FirstArraySlice = i;
             SpotDsvDesc.Texture2DArray.ArraySize = 1;
@@ -147,10 +147,10 @@ void FShadowMapManager::InitializeSpotShadows(uint32 InMaxSpotShadows, uint32 In
     {
         // --- (VSM) Moments Texture2DArray ---
         D3D11_TEXTURE2D_DESC MomentsDesc = {};
-        MomentsDesc.Width = SpotResolution;
-        MomentsDesc.Height = SpotResolution;
+        MomentsDesc.Width = ShadowSettings.SpotResolution;
+        MomentsDesc.Height = ShadowSettings.SpotResolution;
         MomentsDesc.MipLevels = 1;
-        MomentsDesc.ArraySize = MaxSpotShadows;
+        MomentsDesc.ArraySize = ShadowSettings.MaxSpotShadows;
         MomentsDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
         MomentsDesc.SampleDesc.Count = 1;
         MomentsDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -163,14 +163,14 @@ void FShadowMapManager::InitializeSpotShadows(uint32 InMaxSpotShadows, uint32 In
         {
            return;
         }
-        StatData.VRAM_Spot_Moments = static_cast<uint64>(SpotResolution) * SpotResolution * MaxSpotShadows * 8;
+        StatData.VRAM_Spot_Moments = static_cast<uint64>(ShadowSettings.SpotResolution) * ShadowSettings.SpotResolution * ShadowSettings.MaxSpotShadows * 8;
 
         // --- (VSM) SRV ---
         D3D11_SHADER_RESOURCE_VIEW_DESC MomentsSRVDesc = {};
         MomentsSRVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
         MomentsSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
         MomentsSRVDesc.Texture2DArray.MipLevels = 1;
-        MomentsSRVDesc.Texture2DArray.ArraySize = MaxSpotShadows;
+        MomentsSRVDesc.Texture2DArray.ArraySize = ShadowSettings.MaxSpotShadows;
     	MomentsSRVDesc.Texture2DArray.FirstArraySlice = 0;
     	MomentsSRVDesc.Texture2DArray.MostDetailedMip = 0;
 
@@ -185,7 +185,7 @@ void FShadowMapManager::InitializeSpotShadows(uint32 InMaxSpotShadows, uint32 In
         RTVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
         RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
         RTVDesc.Texture2DArray.MipSlice = 0;
-        for (uint32 i = 0; i < MaxSpotShadows; ++i)
+        for (uint32 i = 0; i < ShadowSettings.MaxSpotShadows; ++i)
         {
            RTVDesc.Texture2DArray.FirstArraySlice = i;
            RTVDesc.Texture2DArray.ArraySize = 1;
@@ -204,8 +204,8 @@ void FShadowMapManager::InitializeSpotShadows(uint32 InMaxSpotShadows, uint32 In
 void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uint32 InPointResolution)
 {
     ReleasePointShadows();
-    MaxPointShadowCubes = InMaxPointShadowCubes;
-	PointResolution = InPointResolution;
+    ShadowSettings.MaxPointShadows = InMaxPointShadowCubes;
+	ShadowSettings.PointResolution = InPointResolution;
 
 	HRESULT hr;
 
@@ -231,10 +231,10 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
 
     // --- TextureCubeArray ---
     D3D11_TEXTURE2D_DESC RTVTexDesc = {};
-    RTVTexDesc.Width = PointResolution;
-    RTVTexDesc.Height = PointResolution;
+    RTVTexDesc.Width = ShadowSettings.PointResolution;
+    RTVTexDesc.Height = ShadowSettings.PointResolution;
     RTVTexDesc.MipLevels = 1;
-    RTVTexDesc.ArraySize = MaxPointShadowCubes * 6;
+    RTVTexDesc.ArraySize = ShadowSettings.MaxPointShadows * 6;
     RTVTexDesc.Format = TextureFormat;
     RTVTexDesc.SampleDesc.Count = 1;
     RTVTexDesc.SampleDesc.Quality = 0;
@@ -252,11 +252,11 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
 
 	if (ShadowSettings.FilterType == EShadowFilterType::SFT_None || ShadowSettings.FilterType == EShadowFilterType::SFT_PCF)
     {
-        StatData.VRAM_Point_RTV = static_cast<uint64>(PointResolution) * PointResolution * (MaxPointShadowCubes * 6) * BytesPerPixel;
+        StatData.VRAM_Point_RTV = static_cast<uint64>(ShadowSettings.PointResolution) * ShadowSettings.PointResolution * (ShadowSettings.MaxPointShadows * 6) * BytesPerPixel;
     }
     else
     {
-        StatData.VRAM_Point_Moments = static_cast<uint64>(PointResolution) * PointResolution * (MaxPointShadowCubes * 6) * BytesPerPixel;
+        StatData.VRAM_Point_Moments = static_cast<uint64>(ShadowSettings.PointResolution) * ShadowSettings.PointResolution * (ShadowSettings.MaxPointShadows * 6) * BytesPerPixel;
     }
 
     // --- SRV 생성 (TextureCubeArray) ---
@@ -266,7 +266,7 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
     PointSrvDesc.TextureCubeArray.MostDetailedMip = 0;
     PointSrvDesc.TextureCubeArray.MipLevels = 1;
     PointSrvDesc.TextureCubeArray.First2DArrayFace = 0;
-    PointSrvDesc.TextureCubeArray.NumCubes = MaxPointShadowCubes;
+    PointSrvDesc.TextureCubeArray.NumCubes = ShadowSettings.MaxPointShadows;
 
     hr = Device->CreateShaderResourceView(PointShadowCubeArrayTexture, &PointSrvDesc, &PointShadowCubeArraySRV);
     if (FAILED(hr))
@@ -281,9 +281,9 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
     PointRtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
     PointRtvDesc.Texture2DArray.MipSlice = 0;
 
-    PointShadowCubeSliceRTVs.resize(MaxPointShadowCubes * 6);
+    PointShadowCubeSliceRTVs.resize(ShadowSettings.MaxPointShadows * 6);
 
-    for (uint32 i = 0; i < MaxPointShadowCubes * 6; ++i)
+    for (uint32 i = 0; i < ShadowSettings.MaxPointShadows * 6; ++i)
     {
         PointRtvDesc.Texture2DArray.FirstArraySlice = i;
         PointRtvDesc.Texture2DArray.ArraySize = 1;
@@ -299,8 +299,8 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
 
     // --- 섀도우 패스 전용 공용 DSV ---
     D3D11_TEXTURE2D_DESC DepthTexDesc = {};
-    DepthTexDesc.Width = PointResolution;
-    DepthTexDesc.Height = PointResolution;
+    DepthTexDesc.Width = ShadowSettings.PointResolution;
+    DepthTexDesc.Height = ShadowSettings.PointResolution;
     DepthTexDesc.MipLevels = 1;
     DepthTexDesc.ArraySize = 1;
     DepthTexDesc.Format = DXGI_FORMAT_R32_TYPELESS;
@@ -316,7 +316,7 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
        UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE SHADOW DSV TEXTURE");
        return;
     }
-    StatData.VRAM_Point_Pass_DSV = static_cast<uint64>(PointResolution) * PointResolution * 1 * 4;
+    StatData.VRAM_Point_Pass_DSV = static_cast<uint64>(ShadowSettings.PointResolution) * ShadowSettings.PointResolution * 1 * 4;
 
     D3D11_DEPTH_STENCIL_VIEW_DESC PointDsvDesc = {};
     PointDsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
@@ -331,15 +331,15 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
     }
 
     // --- 공통 설정 ---
-    StatData.Config_PointResolution = PointResolution;
-    StatData.Config_MaxPointShadowCubes = MaxPointShadowCubes;
+    StatData.Config_PointResolution = ShadowSettings.PointResolution;
+    StatData.Config_MaxPointShadowCubes = ShadowSettings.MaxPointShadows;
     UpdateTotalVRAMStats();
 }
 
 void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 {
     ReleaseDirectionalShadow();
-    DirResolution = InResolution;
+    ShadowSettings.DirResolution = InResolution;
     StatData.Config_DirResolution = InResolution;
     HRESULT hr;
 
@@ -347,8 +347,8 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
     {
         // --- (PCF) 단일 Texture2D (Depth) ---
         D3D11_TEXTURE2D_DESC TexDesc = {};
-        TexDesc.Width = DirResolution;
-        TexDesc.Height = DirResolution;
+        TexDesc.Width = ShadowSettings.DirResolution;
+        TexDesc.Height = ShadowSettings.DirResolution;
         TexDesc.MipLevels = 1;
         TexDesc.ArraySize = 1;
         TexDesc.Format = DXGI_FORMAT_R32_TYPELESS;
@@ -364,7 +364,7 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
             return;
         }
 
-        StatData.VRAM_Directional_Depth = static_cast<uint64_t>(DirResolution) * DirResolution * 1 * 4;
+        StatData.VRAM_Directional_Depth = static_cast<uint64_t>(ShadowSettings.DirResolution) * ShadowSettings.DirResolution * 1 * 4;
 
         // --- (PCF) SRV (Texture2D) ---
         D3D11_SHADER_RESOURCE_VIEW_DESC SrvDesc = {};
@@ -395,8 +395,8 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
     {
         // --- (VSM) Moments Texture2D (RG32_FLOAT) ---
         D3D11_TEXTURE2D_DESC MomentsDesc = {};
-        MomentsDesc.Width = DirResolution;
-        MomentsDesc.Height = DirResolution;
+        MomentsDesc.Width = ShadowSettings.DirResolution;
+        MomentsDesc.Height = ShadowSettings.DirResolution;
         MomentsDesc.MipLevels = 1;
         MomentsDesc.ArraySize = 1;
         MomentsDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
@@ -412,7 +412,7 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
             return;
         }
 
-        StatData.VRAM_Directional_Moments = static_cast<uint64_t>(DirResolution) * DirResolution * 1 * 8;
+        StatData.VRAM_Directional_Moments = static_cast<uint64_t>(ShadowSettings.DirResolution) * ShadowSettings.DirResolution * 1 * 8;
 
         // --- (VSM) SRV ---
         D3D11_SHADER_RESOURCE_VIEW_DESC MomentsSRVDesc = {};
@@ -446,11 +446,11 @@ void FShadowMapManager::ReleaseSpotShadows()
 {
 	SafeRelease(SpotShadowMapArrayTexture);
 	SafeRelease(SpotShadowMapArraySRV);
-	for (uint32 Idx = 0; Idx < MaxSpotShadows; ++Idx)
+	for (uint32 Idx = 0; Idx < ShadowSettings.MaxSpotShadows; ++Idx)
 	{
 		SafeRelease(SpotShadowMapSliceDSVs[Idx]);
 	}
-	for (uint32 Idx = 0; Idx < MaxSpotShadows; ++Idx)
+	for (uint32 Idx = 0; Idx < ShadowSettings.MaxSpotShadows; ++Idx)
 	{
 		SafeRelease(SpotShadowMomentsSliceRTVs[Idx]);
 	}
@@ -460,7 +460,7 @@ void FShadowMapManager::ReleasePointShadows()
 {
 	SafeRelease(PointShadowCubeArrayTexture);
 	SafeRelease(PointShadowCubeArraySRV);
-	for (uint32 Idx = 0; Idx < MaxPointShadowCubes * 6; ++Idx)
+	for (uint32 Idx = 0; Idx < ShadowSettings.MaxPointShadows * 6; ++Idx)
 	{
 		SafeRelease(PointShadowCubeSliceRTVs[Idx]);
 	}
@@ -526,14 +526,14 @@ void FShadowMapManager::AllocateShadowMap(class ULightComponentBase* Light)
 	switch (Light->GetLightType())
 	{
 	case ELightComponentType::LightType_Spot:
-		if (CurrentSpotShadowIdx <= MaxSpotShadows)
+		if (CurrentSpotShadowIdx <= ShadowSettings.MaxSpotShadows)
 		{
 			Light->SetShadowMapIdx(CurrentSpotShadowIdx++);
 			return;
 		}
 		break;
 	case ELightComponentType::LightType_Point:
-		if (CurrentPointCubeIdx <= MaxPointShadowCubes)
+		if (CurrentPointCubeIdx <= ShadowSettings.MaxPointShadows)
 		{
 			Light->SetShadowMapIdx(CurrentPointCubeIdx++);
 			return;
@@ -559,11 +559,11 @@ uint32 FShadowMapManager::GetResolution(class ULightComponentBase* Light) const
 	switch (Light->GetLightType())
 	{
 	case ELightComponentType::LightType_Spot:
-		return SpotResolution;
+		return ShadowSettings.SpotResolution * Light->GetShadowResolutionScale();
 	case ELightComponentType::LightType_Point:
-		return PointResolution;
+		return ShadowSettings.PointResolution * Light->GetShadowResolutionScale();
 	case ELightComponentType::LightType_Directional:
-		return DirResolution;
+		return ShadowSettings.DirResolution * Light->GetShadowResolutionScale();
 	default:
 		break;
 	}
@@ -625,7 +625,7 @@ ID3D11ShaderResourceView* FShadowMapManager::GetSpotLightSRV() const
 
 ID3D11DepthStencilView* FShadowMapManager::GetSpotLightDSV(uint32 SpotShadowIdx) const
 {
-	if (SpotShadowIdx < 0 || SpotShadowIdx >= MaxSpotShadows)
+	if (SpotShadowIdx < 0 || SpotShadowIdx >= ShadowSettings.MaxSpotShadows)
 	{
 		return nullptr;
 	}
@@ -639,7 +639,7 @@ ID3D11DepthStencilView* FShadowMapManager::GetSpotLightDSV(uint32 SpotShadowIdx)
 
 ID3D11RenderTargetView* FShadowMapManager::GetSpotLightRTV(uint32 SpotShadowIdx) const
 {
-	if (SpotShadowIdx < 0 || SpotShadowIdx >= MaxSpotShadows)
+	if (SpotShadowIdx < 0 || SpotShadowIdx >= ShadowSettings.MaxSpotShadows)
 	{
 		return nullptr;
 	}
@@ -664,7 +664,7 @@ ID3D11DepthStencilView* FShadowMapManager::GetPointLightDSV() const
 
 ID3D11RenderTargetView* FShadowMapManager::GetPointLightRTV(uint32 PointShadowIdx, uint32 PointSliceIdx) const
 {
-	if (PointShadowIdx < 0 || PointShadowIdx > MaxPointShadowCubes || PointSliceIdx < 0 || PointSliceIdx >= 6) { return nullptr; }
+	if (PointShadowIdx < 0 || PointShadowIdx >ShadowSettings.MaxPointShadows || PointSliceIdx < 0 || PointSliceIdx >= 6) { return nullptr; }
 	return PointShadowCubeSliceRTVs[PointShadowIdx * 6 + PointSliceIdx];
 }
 
@@ -693,16 +693,32 @@ ID3D11RenderTargetView* FShadowMapManager::GetDirectionalLightRTV() const
 
 void FShadowMapManager::UpdateShadowSettings(const FShadowSettings& InSettings)
 {
-	if (InSettings.FilterType != ShadowSettings.FilterType) { UpdateFilterType(InSettings.FilterType); }
+	bool bReinitialize = false;
+	if (InSettings.FilterType != ShadowSettings.FilterType ||
+		InSettings.MaxSpotShadows != ShadowSettings.MaxSpotShadows ||
+		InSettings.SpotResolution != ShadowSettings.SpotResolution ||
+		InSettings.MaxPointShadows != ShadowSettings.MaxPointShadows ||
+		InSettings.PointResolution != ShadowSettings.PointResolution ||
+		InSettings.DirResolution != ShadowSettings.DirResolution)
+	{
+		bReinitialize = true;
+	}
+
 	ShadowSettings = InSettings;
+
+	if (bReinitialize)
+	{
+		Initialize(ShadowSettings.FilterType, ShadowSettings.MaxSpotShadows, ShadowSettings.SpotResolution,
+				   ShadowSettings.MaxPointShadows, ShadowSettings.PointResolution, ShadowSettings.DirResolution);
+	}
 }
 
 void FShadowMapManager::UpdateFilterType(const EShadowFilterType& InFilterType)
 {
 	if (InFilterType == ShadowSettings.FilterType) { return; }
 	ShadowSettings.FilterType = InFilterType;
-	Initialize(ShadowSettings.FilterType, MaxSpotShadows, SpotResolution,
-		MaxPointShadowCubes, PointResolution, DirResolution);
+	Initialize(ShadowSettings.FilterType, ShadowSettings.MaxSpotShadows, ShadowSettings.SpotResolution,
+		ShadowSettings.MaxPointShadows, ShadowSettings.PointResolution, ShadowSettings.DirResolution);
 }
 
 void FShadowMapManager::InitializeForDebug()
@@ -842,7 +858,7 @@ void FShadowMapManager::InitializeForDebug()
 ID3D11ShaderResourceView* FShadowMapManager::GetSpotSRVForImGuiDebug(uint32 SpotIndex)
 {
     if (!Context || !SpotShadowMapArrayTexture || !ImGuiDebugTexture_Spot || !ImGuiDebugSRV_Spot) { return nullptr; }
-    if (SpotIndex >= MaxSpotShadows) { return nullptr; }
+    if (SpotIndex >= ShadowSettings.MaxSpotShadows) { return nullptr; }
 
     UINT SrcSubresource = D3D11CalcSubresource(0, SpotIndex, 1);
     UINT DstSubresource = 0;
@@ -857,7 +873,7 @@ ID3D11ShaderResourceView* FShadowMapManager::GetSpotSRVForImGuiDebug(uint32 Spot
 
 void FShadowMapManager::UpdatePointShadowDebugTextures(uint32 CubeIndex)
 {
-	if (!Context || !PointShadowCubeArrayTexture || CubeIndex >= MaxPointShadowCubes)
+	if (!Context || !PointShadowCubeArrayTexture || CubeIndex >= ShadowSettings.MaxPointShadows)
 	{
 		return;
 	}
@@ -915,7 +931,6 @@ ID3D11ShaderResourceView* FShadowMapManager::GetDirectionalSRVForImGuiDebug()
 	// 4. 복사된 텍스처의 SRV 반환
 	return ImGuiDebugSRV_Dir;
 }
-
 
 const FShadowStatData& FShadowMapManager::GetShadowStats() const
 {

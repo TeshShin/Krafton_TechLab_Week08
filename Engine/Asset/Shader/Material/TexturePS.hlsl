@@ -237,7 +237,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 				   DirectionalTexture,      // t17 <float>
 				   DirectionalShadowMatrix, // (CBuffer)
 				   ShadowSampler);          // s1 (비교 샘플러)
-				//-------------------------------------------------------------------------
+				//-----------------------------------------------------------------
 			}
     	}
         else
