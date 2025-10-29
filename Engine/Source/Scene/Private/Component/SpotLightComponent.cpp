@@ -220,7 +220,7 @@ void USpotLightComponent::UpdateLightMatricesInternal(const FCameraConstants& In
 
 			// 5) 후투영 공간에서 라이트 뷰(MVL) 구성: 라이트를 L에 두고 원점(0,0,0)을 바라봄
 			const FVector Eye = LightInPostPerspective;
-			const FVector Target(0.0f, 0.0f, 0.0f);
+			const FVector Target(0.0f, 0.0f, 0.5f);
 			FVector ForwardPP = Target - Eye;
 			if (!ForwardPP.IsNearlyZero()) { ForwardPP.Normalize(); }
 			FVector UpPP = FVector::UnitZ();
@@ -254,8 +254,8 @@ void USpotLightComponent::UpdateLightMatricesInternal(const FCameraConstants& In
 
 			float MaxTanHalfFovX = 0.0f;
 			float MaxTanHalfFovY = 0.0f;
-			float NearZ_PSM = FLT_MAX;
-			float FarZ_PSM = 0.0f;
+			float NearZPSM = FLT_MAX;
+			float FarZPSM = 0.0f;
 
 			const float EpsilonZ = 1e-4f;
 			for (int CornerIndex = 0; CornerIndex < 8; ++CornerIndex)
@@ -278,22 +278,22 @@ void USpotLightComponent::UpdateLightMatricesInternal(const FCameraConstants& In
 
 				if (Zv > 0.0f)
 				{
-					if (Zv < NearZ_PSM) { NearZ_PSM = Zv; }
-					if (Zv > FarZ_PSM) { FarZ_PSM = Zv; }
+					if (Zv < NearZPSM) { NearZPSM = Zv; }
+					if (Zv > FarZPSM) { FarZPSM = Zv; }
 				}
 			}
 
 			// 안정화: 근/원거리, FOV, 종횡비(섀도우 아틀라스 정사각형)
-			if (!(NearZ_PSM < FLT_MAX)) { NearZ_PSM = 0.01f; }
-			NearZ_PSM = std::max(NearZ_PSM, 0.001f);
-			FarZ_PSM = std::max(FarZ_PSM, NearZ_PSM + 0.01f);
+			if (!(NearZPSM < FLT_MAX)) { NearZPSM = 0.01f; }
+			NearZPSM = std::max(NearZPSM, 0.001f);
+			FarZPSM = std::max(FarZPSM, NearZPSM + 0.01f);
 
 			const float TanHalfFovMax = std::max(MaxTanHalfFovX, MaxTanHalfFovY);
-			const float FovY_PSM = 2.0f * std::atan(TanHalfFovMax);
+			const float FovPSM = 2.0f * std::atan(TanHalfFovMax);
 			const float AspectPSM = 1.0f;
 
 			const FMatrix LightProjectionInPostPerspective =
-				FMatrix::CreatePerspectiveFOV(FovY_PSM, AspectPSM, NearZ_PSM, FarZ_PSM);
+				FMatrix::CreatePerspectiveFOV(FovPSM, AspectPSM, NearZPSM, FarZPSM);
 			// 7) Crop/Offset 정규화 행렬 계산
 			// --- [Crop/Offset 정규화] MVL*PL 적용 후 유닛 큐브 8 코너를 NDC로 보낸 뒤, XY를 [-1,1]로 맵핑 ---
 			float MinX = FLT_MAX, MinY = FLT_MAX;
@@ -321,7 +321,7 @@ void USpotLightComponent::UpdateLightMatricesInternal(const FCameraConstants& In
 			}
 
 			// 여유 패딩으로 경계 클리핑 방지 (1~3% 추천)
-			const float Expand = 1.05f;
+			const float Expand = 1.00f;
 			const float CenterX = 0.5f * (MinX + MaxX);
 			const float CenterY = 0.5f * (MinY + MaxY);
 			const float HalfWidth = 0.5f * (MaxX - MinX) * Expand;
@@ -347,7 +347,7 @@ void USpotLightComponent::UpdateLightMatricesInternal(const FCameraConstants& In
 			//    u_c = 0.5*(Sx * CenterX + Tx) + 0.5
 			//    v_c = 0.5*(Sy * CenterY + Ty) + 0.5
 			float UCenter = 0.5f * (Sx * CenterX + Tx) + 0.5f;
-			float VCenter = 0.5f * (Sy * CenterY + Ty) + 0.5f;
+			float VCenter = -0.5f * (Sy * CenterY + Ty) + 0.5f;
 
 			// 5) 텍셀 그리드로 스냅(가장 가까운 텍셀 중심)
 			UCenter = std::round(UCenter / TexelSize) * TexelSize;
