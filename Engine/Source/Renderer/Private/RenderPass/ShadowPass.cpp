@@ -111,9 +111,9 @@ void FShadowPass::Execute(FRenderingContext& Context)
             }
             else
             {
-            	ID3D11RenderTargetView* RTV[] = { nullptr };
             	if (Light->GetLightType() == ELightComponentType::LightType_Spot)
             	{
+            		ID3D11RenderTargetView* RTV[] = { nullptr };
             		ID3D11DepthStencilView* DSV = ShadowMapManager.GetSpotLightDSV(Light->GetShadowMapIdx());
             		RTV[0] = ShadowMapManager.GetSpotMomentsRTV(Light->GetShadowMapIdx());
             		Pipeline->SetRenderTargets(1, RTV, DSV);
@@ -124,6 +124,7 @@ void FShadowPass::Execute(FRenderingContext& Context)
             		// If using CSM, render each cascade slice with its own View/Projection and DSV
             		if (Light->GetShadowProjectionMode() == EShadowProjectionMode::CSM)
             		{
+						// cascade 가 최대 크기를 넘지 않도록 보정
             			const TArray<FMatrix>& ViewMats = Light->GetLightViewMatrices(CamInv);
             			const TArray<FMatrix>& DsvProjMats = Light->GetCSMDsvProjections(CamInv);
 						const uint32 numView = static_cast<uint32>(ViewMats.size());
@@ -133,14 +134,21 @@ void FShadowPass::Execute(FRenderingContext& Context)
 						const uint32 mgrCascades = ShadowMapManager.GetDirectionalMaxNumCascades();
 						if (mgrCascades < numSlices) numSlices = mgrCascades;
 
-            			RTV[0] = ShadowMapManager.GetDirectionalMomentRTV();
+						 
             			for (uint32 ci = 0; ci < numSlices; ++ci)
             			{
+							// Cascade에 맞는 DSV, RTV를 얻는다. 
             				ID3D11DepthStencilView* sliceDSV = ShadowMapManager.GetDirectionalLightDSV(ci);
-            				LightInfo.LightView = ViewMats[ci];
-            				LightInfo.LightProjection = DsvProjMats[ci];
-            				FRenderResourceFactory::UpdateConstantBufferData(CBLightInfo, LightInfo);
-            				Pipeline->SetRenderTargets(1, RTV, sliceDSV);
+							ID3D11RenderTargetView* sliceMomentRTV = ShadowMapManager.GetDirectionalMomentRTV(ci);
+
+							// Cascade에 맞는 Light Info 업데이트 
+							LightInfo.LightView = ViewMats[ci];
+            				LightInfo.LightProjection = DsvProjMats[ci]; 
+							FRenderResourceFactory::UpdateConstantBufferData(CBLightInfo, LightInfo);
+
+							ID3D11RenderTargetView* RTV[] = { sliceMomentRTV };
+							Pipeline->SetRenderTargets(1, RTV, sliceDSV);
+
             				RenderAllStaticMeshes(Context);
             			}
             		}
@@ -148,8 +156,8 @@ void FShadowPass::Execute(FRenderingContext& Context)
             		{
             			// Non-CSM directional shadow renders to the first slice
             			ID3D11DepthStencilView* DSV = ShadowMapManager.GetDirectionalLightDSV();
-            			RTV[0] = ShadowMapManager.GetDirectionalMomentRTV();
-            			Pipeline->SetRenderTargets(1, RTV, DSV);
+						ID3D11RenderTargetView* RTV[] = { ShadowMapManager.GetDirectionalMomentRTV() };
+             			Pipeline->SetRenderTargets(1, RTV, DSV);
             			RenderAllStaticMeshes(Context);
             		}
             	}
