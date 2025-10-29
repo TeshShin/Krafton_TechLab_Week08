@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "LightComponentBase.h"
 
 UCLASS()
@@ -37,4 +37,8 @@ public:
 	 * @note Derived classes should override this to provide specific light data
 	 */
 	struct FUnifiedDynamicLight GetUnifiedLightData() const override = 0;
+
+protected:
+	uint32 NumOfCascade = 3;
+	float CascadeSpitLambda = 0.5;
 };

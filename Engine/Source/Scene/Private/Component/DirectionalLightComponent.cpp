@@ -3,6 +3,7 @@
 #include "Manager/Public/AssetManager.h"
 #include "Renderer/Public/LightData.h"
 #include "Editor/Public/Line/BatchLineManager.h"
+#include "Renderer/Public/Optimization/CSM.h"
 
 IMPLEMENT_CLASS(UDirectionalLightComponent, ULightComponent)
 
@@ -124,5 +125,26 @@ void UDirectionalLightComponent::UpdateLightMatricesInternal(const FCameraConsta
 	else if (GetShadowProjectionMode() == EShadowProjectionMode::PSM)
 	{
 		// TODO : PSM 구현
+		
+	}
+	else if (GetShadowProjectionMode() == EShadowProjectionMode::CSM)
+	{
+		// TODO : CSM 구현
+		CachedLightViewProjection.clear();
+		CachedLightViewMatrices.clear();
+		CachedCSMDSVProjection.clear();
+
+		const uint32 NumCascade = std::max<uint32>(NumOfCascade, 1);
+		const float Lambda = std::clamp(CascadeSpitLambda, 0.0f, 1.0f);
+
+		TArray<float> SplitView = CSM::ComputeCascadeSplitDistances(NearZ, FarZ, NumCascade, Lambda);
+		TArray<TArray<FVector>> CascadeCornersNDC = CSM::BuildCascadeCornersNDC(NearZ, FarZ, SplitView, false/*orthographic*/);
+		TArray<TArray<FVector>> CascadeCornersWS = CSM::BuildCascadeCornersWorldFromNDC(InverseView, CascadeCornersNDC);
+
+		const FVector LightDir = GetWorldForwardVector().GetNormalized();
+		TArray<FMatrix> LightVP = CSM::BuildCascadeLightVP(LightDir, CascadeCornersWS, 1000.0f, CachedLightViewMatrices, CachedCSMDSVProjection);
+
+		CachedLightViewProjection = std::move(LightVP);
+		return;
 	}
 }

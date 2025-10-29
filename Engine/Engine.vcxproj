@@ -434,6 +434,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClInclude Include="Source\Physics\Public\OBB.h" />
     <ClInclude Include="Source\Renderer\Public\DeviceResources.h" />
     <ClInclude Include="Source\Renderer\Public\LightData.h" />
+    <ClInclude Include="Source\Renderer\Public\Optimization\CSM.h" />
     <ClInclude Include="Source\Renderer\Public\Optimization\OcclusionCuller.h" />
     <ClInclude Include="Source\Renderer\Public\Optimization\ViewVolumeCuller.h" />
     <ClInclude Include="Source\Renderer\Public\Pipeline.h" />
@@ -520,6 +521,7 @@ xcopy "$(ProjectDir)Data" "$(OutDir)Data" /E /I /Y</Command>
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\ComponentWidget.cpp" />
     <ClCompile Include="Source\Editor\Private\UI\Widget\Component\SpotLightComponentWidget.cpp" />
     <ClCompile Include="Source\Editor\Private\UI\Widget\ControlPanelWidget.cpp" />
+    <ClCompile Include="Source\Renderer\Private\Optimization\CSM.cpp" />
     <ClCompile Include="Source\Renderer\Private\RenderPass\EditorDepthPass.cpp" />
     <ClCompile Include="Source\Renderer\Private\RenderPass\EditorOverlayPass.cpp" />
     <ClCompile Include="Source\Renderer\Private\RenderPass\ShadowPass.cpp" />

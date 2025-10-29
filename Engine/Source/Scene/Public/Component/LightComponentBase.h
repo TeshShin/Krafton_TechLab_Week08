@@ -18,6 +18,7 @@ enum class EShadowProjectionMode
 	LVP = 0,
 	PSM = 1,
 	LiSPSM = 2, // Directional 예정
+	CSM = 3,
 };
 DECLARE_ENUM_REFLECTION(ELightComponentType)
 
@@ -153,6 +154,8 @@ protected:
 
 	mutable TArray<FMatrix> CachedLightViewProjection;
 	mutable TArray<FMatrix> CachedLightViewMatrices;
+	mutable TArray<FMatrix> CachedCSMDSVProjection;
+
 	mutable FMatrix CachedLightProjectionMatrix;
 	mutable bool bIsLightVPDirty = true;
 

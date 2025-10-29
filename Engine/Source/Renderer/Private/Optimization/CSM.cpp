@@ -235,7 +235,9 @@ namespace CSM
 
 	TArray<FMatrix> BuildCascadeLightVP(const FVector& lightDirection,
 		const TArray<TArray<FVector>>& cascadesWorld,
-		float viewOffset)
+		float viewOffset,
+		TArray<FMatrix>& ViewMatix,
+		TArray<FMatrix>& ProjMatrix)
 	{
 		// 1) World -> Light space
 		auto cascadesLS = TransformCascadesToLightView(lightDirection, cascadesWorld, viewOffset);
@@ -248,6 +250,8 @@ namespace CSM
 		// 4) Rebuild view per cascade (same as in step 4) and compose VP
 		TArray<FMatrix> lightVP;
 		lightVP.resize(cascadesWorld.size());
+		ViewMatix.resize(cascadesWorld.size());
+		ProjMatrix.resize(cascadesWorld.size());
 		for (size_t ci = 0; ci < cascadesWorld.size(); ++ci)
 		{
 			// Compute center again for the view placement
@@ -262,6 +266,9 @@ namespace CSM
 
 			FMatrix view = BuildDirectionalLightView(lightDirection, center, viewOffset);
 			lightVP[ci] = view * proj[ci];
+
+			ViewMatix[ci] = view;
+			ProjMatrix[ci] = proj[ci];
 		}
 		return lightVP;
 	}

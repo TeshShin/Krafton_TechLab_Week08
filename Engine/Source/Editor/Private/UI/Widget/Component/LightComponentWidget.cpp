@@ -63,7 +63,7 @@ void ULightComponentWidget::RenderWidget()
 
 				if (LightComponent->GetLightType() == ELightComponentType::LightType_Directional)
 				{
-					const char* ModeItems[] = { "LVP", "PSM", "LiSPSM (TODO)" };
+					const char* ModeItems[] = { "LVP", "PSM", "LiSPSM (TODO)", "CSM"};
 					if (ImGui::Combo("Shadow Projection", &CurrentMode, ModeItems, IM_ARRAYSIZE(ModeItems)))
 					{
 						LightComponent->SetShadowProjectionMode(static_cast<EShadowProjectionMode>(CurrentMode));

@@ -139,5 +139,7 @@ namespace CSM
 	 */
 	TArray<FMatrix> BuildCascadeLightVP(const FVector& lightDirection,
 		const TArray<TArray<FVector>>& cascadesWorld,
-		float viewOffset = 1000.0f);
+		float viewOffset,
+		TArray<FMatrix>& ViewMatix,
+		TArray<FMatrix>& ProjMatrix);
 }
