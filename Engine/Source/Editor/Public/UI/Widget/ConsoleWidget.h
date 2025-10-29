@@ -60,6 +60,7 @@ public:
 	// Console command
 	void ProcessCommand(const char* InCommand);
 	void HandleStatCommand(const FString& StatCommand);
+	void HandleShadowFilterCommand(const FString& InArgs);
 	void ExecuteTerminalCommand(const char* InCommand);
 
 	// Use external terminal

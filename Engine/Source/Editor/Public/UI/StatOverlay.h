@@ -27,7 +27,7 @@ public:
 	void Render();
 
 	// Stat control methods
-	void ShowStat(EStatType Stat) { IsStatEnabled(Stat) ? DisableStat(Stat) : EnableStat(Stat); }
+	void ToggleStat(EStatType Stat) { IsStatEnabled(Stat) ? DisableStat(Stat) : EnableStat(Stat); }
 
 	// API to update stats
 	void RecordPickingStats(float ElapsedMS);

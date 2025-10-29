@@ -188,3 +188,12 @@ enum class EShaderType
 	EST_Pixel,
 	EST_Compute,
 };
+
+enum class EShadowFilterType : uint8
+{
+	SFT_None = 0,
+	SFT_PCF,
+	SFT_VSM,
+	SFT_VSM_Box,
+	SFT_VSM_Gaussian,
+};

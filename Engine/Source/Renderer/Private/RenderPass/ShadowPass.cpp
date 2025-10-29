@@ -19,7 +19,7 @@ FShadowPass::FShadowPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS) :
 	FRenderResourceFactory::CreatePixelShader(L"Asset/Shader/Lighting/ShadowMapShader.hlsl", &PS);
 
 	CBLightInfo = FRenderResourceFactory::CreateConstantBuffer<FShadowLightInfo>();
-	FShadowMapManager::GetInstance().Initialize(16, 1024, 16, 1024, 2048);
+	FShadowMapManager::GetInstance().Initialize(EShadowFilterType::SFT_None, 16, 1024, 16, 1024, 2048);
 }
 
 bool FShadowPass::CanRender(const FRenderingContext& Context)
@@ -68,67 +68,53 @@ void FShadowPass::Execute(FRenderingContext& Context)
 	ShadowViewport.MaxDepth = 1.0f;
 
 	FCameraConstants CamInv = Context.CurrentCamera->GetCameraConstantsInverse();
-    TArray<ID3D11RenderTargetView*> PointRTVs;
 
-    for (ULightComponentBase* Light : Context.Lights)
-    {
-        Light->SetShadowMapIdx(-1);
-        if (Light->IsVisibleInHierarchy() && Light->DoesCastShadows())
-        {
-            ShadowMapManager.AllocateShadowMap(Light);
-            if (Light->GetShadowMapIdx() == -1) { continue; }
+	for (ULightComponentBase* Light : Context.Lights)
+	{
+	    Light->SetShadowMapIdx(-1);
+	    if (!Light->IsVisibleInHierarchy() || !Light->DoesCastShadows()) { continue; }
 
-        	const TArray<FMatrix>& ViewMatrices = Light->GetLightViewMatrices(CamInv);
-        	FShadowLightInfo LightInfo;
-        	LightInfo.LightPosition = Light->GetWorldLocation();
-        	LightInfo.LightType = static_cast<uint32>(Light->GetLightType());
-        	LightInfo.LightView = ViewMatrices[0];
-        	LightInfo.LightProjection = Light->GetLightProjectionMatrix(CamInv);
-        	FRenderResourceFactory::UpdateConstantBufferData(CBLightInfo, LightInfo);
+	    ShadowMapManager.AllocateShadowMap(Light);
+	    if (Light->GetShadowMapIdx() == -1) { continue; }
 
-            const uint32 Resolution = ShadowMapManager.GetResolution(Light);
-            ShadowViewport.Width = static_cast<float>(Resolution);
-            ShadowViewport.Height = static_cast<float>(Resolution);
-            DeviceContext->RSSetViewports(1, &ShadowViewport);
+	    const TArray<FMatrix>& ViewMatrices = Light->GetLightViewMatrices(CamInv);
+	    const uint32 Resolution = ShadowMapManager.GetResolution(Light);
+	    ShadowViewport.Width = static_cast<float>(Resolution);
+	    ShadowViewport.Height = static_cast<float>(Resolution);
+	    DeviceContext->RSSetViewports(1, &ShadowViewport);
 
-            if (Light->GetLightType() == ELightComponentType::LightType_Point)
-            {
-            	UPointLightComponent* PointLight = Cast<UPointLightComponent>(Light);
-                ShadowMapManager.GetPointShadowRTVs(Light, PointRTVs);
-                ID3D11DepthStencilView* SharedDSV = ShadowMapManager.GetPointShadowDepthDSV();
+	    FShadowLightInfo LightInfo;
+	    LightInfo.LightPosition = Light->GetWorldLocation();
+	    LightInfo.LightType = static_cast<uint32>(Light->GetLightType());
+	    LightInfo.LightProjection = Light->GetLightProjectionMatrix(CamInv);
+	    if (Light->GetLightType() == ELightComponentType::LightType_Point)
+	    {
+	        LightInfo.LightRadius = Cast<UPointLightComponent>(Light)->GetAttenuationRadius();
+	    }
 
-				LightInfo.LightRadius = PointLight->GetAttenuationRadius();
-                for (uint32 Idx = 0; Idx < PointRTVs.size(); Idx++)
-                {
-                	DeviceContext->ClearDepthStencilView(SharedDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	    const uint32 NumPasses = ShadowMapManager.GetShadowPassCount(Light);
 
-                	LightInfo.LightView = ViewMatrices[Idx];
-                	FRenderResourceFactory::UpdateConstantBufferData(CBLightInfo, LightInfo);
+	    for (uint32 PassIndex = 0; PassIndex < NumPasses; ++PassIndex)
+	    {
+	        ID3D11DepthStencilView* DSV = nullptr;
+	        ID3D11RenderTargetView* RTV[] = { nullptr };
+	        ShadowMapManager.GetShadowPassViews(Light, PassIndex, &RTV[0], &DSV);
 
-                    Pipeline->SetRenderTargets(1, &PointRTVs[Idx], SharedDSV);
-                	RenderAllStaticMeshes(Context);
-                }
-            }
-            else
-            {
-            	ID3D11DepthStencilView* DSV = nullptr;
-            	ID3D11RenderTargetView* RTV[] = { nullptr };
-            	if (Light->GetLightType() == ELightComponentType::LightType_Spot)
-            	{
-            		DSV = ShadowMapManager.GetSpotLightDSV(Light->GetShadowMapIdx());
-            		RTV[0] = ShadowMapManager.GetSpotMomentsRTV(Light->GetShadowMapIdx());
-            	}
-            	else if (Light->GetLightType() == ELightComponentType::LightType_Directional)
-            	{
-            		DSV = ShadowMapManager.GetDirectionalLightDSV();
-            		RTV[0] = ShadowMapManager.GetDirectionalMomentRTV();
-            	}
+	        if (Light->GetLightType() == ELightComponentType::LightType_Point)
+	        {
+	            DeviceContext->ClearDepthStencilView(DSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	        }
 
-            	Pipeline->SetRenderTargets(1, RTV, DSV);
-            	RenderAllStaticMeshes(Context);
-            }
-        }
-    }
+	        LightInfo.LightView = ViewMatrices[PassIndex];
+	        FRenderResourceFactory::UpdateConstantBufferData(CBLightInfo, LightInfo);
+
+	    	PipelineInfo.PixelShader = RTV[0] == nullptr ? nullptr : PS;
+	    	Pipeline->UpdatePipeline(PipelineInfo);
+
+	        Pipeline->SetRenderTargets(1, RTV, DSV);
+	        RenderAllStaticMeshes(Context);
+	    }
+	}
 
     DeviceContext->RSSetViewports(1, &Context.Viewport);
 }
@@ -153,8 +139,6 @@ void FShadowPass::RenderAllStaticMeshes(const FRenderingContext& Context) const
 
         if (CurrentMeshAsset != MeshAsset)
         {
-           // 섀도우 셰이더의 InputLayout이 Position만 받더라도,
-           // 실제 버퍼는 FNormalVertex 크기로 생성되었으므로 Stride는 원본과 동일해야 합니다.
            Pipeline->SetVertexBuffer(MeshComp->GetVertexBuffer(), sizeof(FNormalVertex));
            Pipeline->SetIndexBuffer(MeshComp->GetIndexBuffer(), 0);
            CurrentMeshAsset = MeshAsset;

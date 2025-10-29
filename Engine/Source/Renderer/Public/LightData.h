@@ -31,12 +31,12 @@ struct FUnifiedDynamicLight
     float FalloffExponent;      // 4 bytes  - Radial falloff exponent (2.0 - 16.0)
     float Param0;               // 4 bytes  - Spot: InnerConeAngle (radians)
     float Param1;               // 4 bytes  - Spot: OuterConeAngle (radians)
-    float Param2;               // 4 bytes  - Reserved for future use
     uint32 LightType;           // 4 bytes  - EDynamicLightType enum value
 	/// Shadow ///
 	float ShadowBias;            // 4 bytes - Shadow Bias
 	uint32 bCastShadows;         // 4 bytes - Light Does Cast Shadows
-	int32 ShadowMapIndex;        // 4 bytes - Shadow Texture2D Array Index, 나중에 ShadowAtlas를 위해서.
-	float Padding;        // 4 bytes - four Byte
+	int32 ShadowMapIndex;        // 4 bytes - Shadow Texture2D Array Index
+	int32 ShadowFilterSize;      // 4 bytes  - PCF/Box Size, Gauss Radius
+	float ShadowGaussSigma;      // 4 bytes - VSM Gaussian Sigma
 };
 static_assert(sizeof(FUnifiedDynamicLight) == 80, "FUnifiedDynamicLight must be 80 bytes for proper GPU alignment");
