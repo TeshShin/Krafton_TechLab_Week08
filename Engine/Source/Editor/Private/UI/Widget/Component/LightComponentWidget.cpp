@@ -99,8 +99,11 @@ void ULightComponentWidget::RenderWidget()
 
 						if (ImGui::CollapsingHeader("CSM Depth Slices", ImGuiTreeNodeFlags_DefaultOpen))
 						{
-							ImGui::Text("Cascades: %u", (uint32)SMM.GetDirectionalNumCascades());
-							for (uint32 i = 0; i < (uint32)SMM.GetDirectionalNumCascades(); ++i)
+							const uint32 lightCasc = LightComponent->GetNumOfCascade();
+							const uint32 smmCasc   = (uint32)SMM.GetDirectionalNumCascades();
+							const uint32 debugCascades = (lightCasc < smmCasc) ? lightCasc : smmCasc;
+							ImGui::Text("Cascades: %u", debugCascades);
+							for (uint32 i = 0; i < debugCascades; ++i)
 							{
 								ID3D11ShaderResourceView* srv = SMM.GetDirectionalSRVForImGuiDebug(i);
 								if (srv)

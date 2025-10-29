@@ -111,21 +111,48 @@ void FShadowPass::Execute(FRenderingContext& Context)
             }
             else
             {
-            	ID3D11DepthStencilView* DSV = nullptr;
             	ID3D11RenderTargetView* RTV[] = { nullptr };
             	if (Light->GetLightType() == ELightComponentType::LightType_Spot)
             	{
-            		DSV = ShadowMapManager.GetSpotLightDSV(Light->GetShadowMapIdx());
+            		ID3D11DepthStencilView* DSV = ShadowMapManager.GetSpotLightDSV(Light->GetShadowMapIdx());
             		RTV[0] = ShadowMapManager.GetSpotMomentsRTV(Light->GetShadowMapIdx());
+            		Pipeline->SetRenderTargets(1, RTV, DSV);
+            		RenderAllStaticMeshes(Context);
             	}
             	else if (Light->GetLightType() == ELightComponentType::LightType_Directional)
             	{
-            		DSV = ShadowMapManager.GetDirectionalLightDSV();
-            		RTV[0] = ShadowMapManager.GetDirectionalMomentRTV();
-            	}
+            		// If using CSM, render each cascade slice with its own View/Projection and DSV
+            		if (Light->GetShadowProjectionMode() == EShadowProjectionMode::CSM)
+            		{
+            			const TArray<FMatrix>& ViewMats = Light->GetLightViewMatrices(CamInv);
+            			const TArray<FMatrix>& DsvProjMats = Light->GetCSMDsvProjections(CamInv);
+						const uint32 numView = static_cast<uint32>(ViewMats.size());
+						const uint32 numProj = static_cast<uint32>(DsvProjMats.size());
+						uint32 numSlices = numView;
+						if (numProj < numSlices) numSlices = numProj;
+						const uint32 mgrCascades = ShadowMapManager.GetDirectionalNumCascades();
+						if (mgrCascades < numSlices) numSlices = mgrCascades;
 
-            	Pipeline->SetRenderTargets(1, RTV, DSV);
-            	RenderAllStaticMeshes(Context);
+            			RTV[0] = ShadowMapManager.GetDirectionalMomentRTV();
+            			for (uint32 ci = 0; ci < numSlices; ++ci)
+            			{
+            				ID3D11DepthStencilView* sliceDSV = ShadowMapManager.GetDirectionalLightDSV(ci);
+            				LightInfo.LightView = ViewMats[ci];
+            				LightInfo.LightProjection = DsvProjMats[ci];
+            				FRenderResourceFactory::UpdateConstantBufferData(CBLightInfo, LightInfo);
+            				Pipeline->SetRenderTargets(1, RTV, sliceDSV);
+            				RenderAllStaticMeshes(Context);
+            			}
+            		}
+            		else
+            		{
+            			// Non-CSM directional shadow renders to the first slice
+            			ID3D11DepthStencilView* DSV = ShadowMapManager.GetDirectionalLightDSV();
+            			RTV[0] = ShadowMapManager.GetDirectionalMomentRTV();
+            			Pipeline->SetRenderTargets(1, RTV, DSV);
+            			RenderAllStaticMeshes(Context);
+            		}
+            	}
             }
         }
     }
