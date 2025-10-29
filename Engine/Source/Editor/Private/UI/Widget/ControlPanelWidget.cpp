@@ -20,6 +20,49 @@ void UControlPanelWidget::RenderWidget()
 
 	if (ImGui::CollapsingHeader("Shadow Settings"))
     {
+		ImGui::Text("Shadow Limits");
+		ImGui::TextDisabled("Max number of shadow-casting lights per frame.");
+
+		ImGui::DragInt("Max Spot Shadows", reinterpret_cast<int*>(&ShadowSettings.MaxSpotShadows), 1.0f, 0, 64);
+		ImGui::DragInt("Max Point Shadows", reinterpret_cast<int*>(&ShadowSettings.MaxPointShadows), 1.0f, 0, 64);
+
+		ImGui::Separator();
+		ImGui::Text("Shadow Map Resolutions");
+
+		const char* resNames[] = { "256", "512", "1024", "2048", "4096" };
+		const uint32 resValues[] = { 256, 512, 1024, 2048, 4096 };
+		const int resCount = IM_ARRAYSIZE(resNames);
+
+		// 현재 해상도 값(e.g., 1024)에 해당하는 콤보 박스 인덱스(e.g., 3)를 찾는 람다
+		auto findResIndex = [&](uint32 res) -> int {
+			for (int i = 0; i < resCount; ++i) {
+				if (resValues[i] == res) return i;
+			}
+			return 3; // 기본값: 1024 (인덱스 3)
+		};
+
+		// Directional Light 해상도
+		int dirIdx = findResIndex(ShadowSettings.DirResolution);
+		if (ImGui::Combo("Directional Resolution", &dirIdx, resNames, resCount))
+		{
+			ShadowSettings.DirResolution = resValues[dirIdx];
+		}
+
+		// Spot Light 해상도
+		int spotIdx = findResIndex(ShadowSettings.SpotResolution);
+		if (ImGui::Combo("Spot Resolution", &spotIdx, resNames, resCount))
+		{
+			ShadowSettings.SpotResolution = resValues[spotIdx];
+		}
+
+		// Point Light 해상도
+		int pointIdx = findResIndex(ShadowSettings.PointResolution);
+		if (ImGui::Combo("Point Resolution", &pointIdx, resNames, resCount))
+		{
+			ShadowSettings.PointResolution = resValues[pointIdx];
+		}
+		ImGui::Separator();
+
         const char* filterNames[] = {
             "None (No Shadows)",
             "PCF (Hard)",
@@ -33,7 +76,6 @@ void UControlPanelWidget::RenderWidget()
         {
             ShadowSettings.FilterType = static_cast<EShadowFilterType>(CurrentFilterType);
         }
-
         // --- PCF 설정 ---
         if (ShadowSettings.FilterType == EShadowFilterType::SFT_PCF)
         {
@@ -68,7 +110,6 @@ void UControlPanelWidget::RenderWidget()
                 ImGui::Text("VSM Box Quality Range");
                 ImGui::TextDisabled("Set the Min(Sharp) and Max(Soft) kernel size.");
 
-                // ⭐️ 변경점: Min/Max 값을 직접 수정합니다.
                 ImGui::DragInt("Min Box Size (Sharp)", &ShadowSettings.MinBoxSize, 2.0f, 1, 49);
                 ImGui::DragInt("Max Box Size (Soft)", &ShadowSettings.MaxBoxSize, 2.0f, 1, 49);
 

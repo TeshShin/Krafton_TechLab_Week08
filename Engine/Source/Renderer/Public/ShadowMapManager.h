@@ -33,6 +33,16 @@ struct FShadowStatData
 struct FShadowSettings
 {
 	EShadowFilterType FilterType = EShadowFilterType::SFT_None;
+
+	// -- Max Shadows --
+	uint32 MaxSpotShadows = 0;
+	uint32 MaxPointShadows = 0;
+
+	// -- Resolution --
+	uint32 DirResolution = 0;
+	uint32 SpotResolution = 0;
+	uint32 PointResolution = 0;
+
 	// -- PCF --
 	int32 MinPCFSize = 1;
 	int32 MaxPCFSize = 9;
@@ -107,21 +117,21 @@ public:
     ID3D11ShaderResourceView* GetSpotLightSRV() const;
     ID3D11DepthStencilView* GetSpotLightDSV(uint32 SpotShadowIdx) const;
 	ID3D11RenderTargetView* GetSpotLightRTV(uint32 SpotShadowIdx) const;
-    uint32 GetSpotResolution() const { return SpotResolution; }
-	uint32 GetMaxSpotShadows() const { return MaxSpotShadows; }
+    uint32 GetSpotResolution() const { return ShadowSettings.SpotResolution; }
+	uint32 GetMaxSpotShadows() const { return ShadowSettings.MaxSpotShadows; }
 
     // --- Point Light Getters ---
 	ID3D11ShaderResourceView* GetPointLightSRV() const;
 	ID3D11DepthStencilView* GetPointLightDSV() const;
 	ID3D11RenderTargetView* GetPointLightRTV(uint32 PointShadowIdx, uint32 PointSliceIdx) const;
-    uint32 GetPointResolution() const { return PointResolution; }
-	uint32 GetMaxPointShadowCubes() const { return MaxPointShadowCubes; }
+    uint32 GetPointResolution() const { return ShadowSettings.PointResolution; }
+	uint32 GetMaxPointShadows() const { return ShadowSettings.MaxPointShadows; }
 
 	// --- Directional Light Getters ---
 	ID3D11ShaderResourceView* GetDirectionalLightSRV() const;
 	ID3D11DepthStencilView* GetDirectionalLightDSV() const;
 	ID3D11RenderTargetView* GetDirectionalLightRTV() const;
-	uint32 GetDirectionalResolution() const { return DirResolution; }
+	uint32 GetDirectionalResolution() const { return ShadowSettings.DirResolution; }
 
 private:
     // D3D11 핵심 오브젝트
@@ -132,8 +142,6 @@ private:
     ID3D11SamplerState* ShadowMapSamplerState = nullptr;
 
     // --- SpotLight 리소스 ---
-    uint32 MaxSpotShadows = 0;
-    uint32 SpotResolution = 0;
     uint32 CurrentSpotShadowIdx = 0;
 
     ID3D11Texture2D* SpotShadowMapArrayTexture = nullptr;
@@ -142,8 +150,6 @@ private:
 	TArray<ID3D11RenderTargetView*> SpotShadowMomentsSliceRTVs;
 
     // --- PointLight 리소스 ---
-    uint32 MaxPointShadowCubes = 0;
-    uint32 PointResolution = 0;
     uint32 CurrentPointCubeIdx = 0; // 큐브 기준 인덱스
 
     ID3D11Texture2D* PointShadowCubeArrayTexture = nullptr; // D3D11_RESOURCE_MISC_TEXTURECUBE 플래그 포함
@@ -154,7 +160,6 @@ private:
 
 	// --- DirectionalLight 리소스 ---
 	bool bIsDirShadowAllocated = false;
-	uint32 DirResolution = 0;
 	ID3D11Texture2D* DirShadowTexture = nullptr;
 	ID3D11ShaderResourceView* DirShadowSRV = nullptr;
 	ID3D11DepthStencilView* DirShadowDSV = nullptr;

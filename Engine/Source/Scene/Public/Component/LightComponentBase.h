@@ -161,6 +161,7 @@ protected:
 
 	bool bCastShadows = false;
 	int32 ShadowMapIdx = -1;
+	float ShadowResolutionScale = 1.0f;
 	float ShadowSharpen = 1.0f;
 
 	EShadowProjectionMode ShadowProjectionMode = EShadowProjectionMode::LVP;
