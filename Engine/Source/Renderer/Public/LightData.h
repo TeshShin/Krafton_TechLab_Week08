@@ -40,6 +40,6 @@ struct FUnifiedDynamicLight
 	int32 ShadowFilterSize;      // 4 bytes - PCF/Box Size, Gauss Radius
 	float ShadowGaussSigma;      // 4 bytes - VSM Gaussian Sigma
 	float ShadowResolutionScale;   // 4 bytes - Shadow Map Resolution
-	float Pad[2];				 // 12 bytes - Padding
+	float Pad[2];				 // 8 bytes - Padding
 };
 static_assert(sizeof(FUnifiedDynamicLight) == 96, "FUnifiedDynamicLight must be 96 bytes for proper GPU alignment");
