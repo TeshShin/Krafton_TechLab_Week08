@@ -130,7 +130,7 @@ void FShadowPass::Execute(FRenderingContext& Context)
 						const uint32 numProj = static_cast<uint32>(DsvProjMats.size());
 						uint32 numSlices = numView;
 						if (numProj < numSlices) numSlices = numProj;
-						const uint32 mgrCascades = ShadowMapManager.GetDirectionalNumCascades();
+						const uint32 mgrCascades = ShadowMapManager.GetDirectionalMaxNumCascades();
 						if (mgrCascades < numSlices) numSlices = mgrCascades;
 
             			RTV[0] = ShadowMapManager.GetDirectionalMomentRTV();

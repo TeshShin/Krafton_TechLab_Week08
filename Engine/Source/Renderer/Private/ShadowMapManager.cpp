@@ -322,7 +322,7 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 	TexDesc.Width = DirResolution;
 	TexDesc.Height = DirResolution;
 	TexDesc.MipLevels = 1;
-	TexDesc.ArraySize = DirLightNumCascades;
+	TexDesc.ArraySize = DirLightMaxNumCascades;
 	TexDesc.Format = DXGI_FORMAT_R32_TYPELESS;
 	TexDesc.SampleDesc.Count = 1;
 	TexDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -338,7 +338,7 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 	}
 
 	//StatData.VRAM_Directional_Depth = static_cast<uint64_t>(DirResolution) * DirResolution * 1 * 4;
-	StatData.VRAM_Directional_Depth = static_cast<uint64_t>(DirResolution) * DirResolution * DirLightNumCascades * 4;
+	StatData.VRAM_Directional_Depth = static_cast<uint64_t>(DirResolution) * DirResolution * DirLightMaxNumCascades * 4;
 	StatData.Config_DirResolution = InResolution;
 
 	// --- SRVs (Texture2D) ---
@@ -348,7 +348,7 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 	SrvDesc.Texture2DArray.MostDetailedMip = 0;
 	SrvDesc.Texture2DArray.MipLevels = 1;
 	SrvDesc.Texture2DArray.FirstArraySlice = 0;
-	SrvDesc.Texture2DArray.ArraySize = DirLightNumCascades;
+	SrvDesc.Texture2DArray.ArraySize = DirLightMaxNumCascades;
 
 	hr = Device->CreateShaderResourceView(DirShadowTexture, &SrvDesc, &DirShadowSRV);
 	if (FAILED(hr))
@@ -364,8 +364,8 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 	DsvDesc.Texture2DArray.MipSlice = 0;
 	DsvDesc.Flags = 0;
 	 
-	DirLightCascadeDSVs.resize(DirLightNumCascades);
-	for (uint32 i = 0; i < DirLightNumCascades; ++i)
+	DirLightCascadeDSVs.resize(DirLightMaxNumCascades);
+	for (uint32 i = 0; i < DirLightMaxNumCascades; ++i)
 	{
 		DsvDesc.Texture2DArray.FirstArraySlice = i;
 		DsvDesc.Texture2DArray.ArraySize = 1;
@@ -462,7 +462,8 @@ void FShadowMapManager::ReleaseDirectionalShadow()
 	for (auto* dsv : DirLightCascadeDSVs) { SafeRelease(dsv); }
 	DirLightCascadeDSVs.clear();
 
-	SafeRelease(DirShadowDSV);
+	//DirShadwoDSV = DirLightCascadeDSVs[0]으로 사용중 
+	//SafeRelease(DirShadowDSV);
 	SafeRelease(DirShadowSRV);
 	SafeRelease(DirShadowTexture);
 
@@ -506,7 +507,7 @@ void FShadowMapManager::ClearShadowMaps()
 	Context->ClearDepthStencilView(DirShadowDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
 	Context->ClearRenderTargetView(DirShadowMomentRTV, ClearColor);
 
-	for (uint32 i = 0; i < DirLightNumCascades; ++i)
+	for (uint32 i = 0; i < DirLightMaxNumCascades; ++i)
 		if (i < DirLightCascadeDSVs.size() && DirLightCascadeDSVs[i])
 			Context->ClearDepthStencilView(DirLightCascadeDSVs[i], D3D11_CLEAR_DEPTH, 1.0f, 0);
 	 
@@ -589,7 +590,7 @@ void FShadowMapManager::GetPointShadowRTVs(class ULightComponentBase* Light, TAr
 
 ID3D11DepthStencilView* FShadowMapManager::GetDirectionalLightDSV(uint32 CascadeIdx) const
 {
-	if (CascadeIdx >= DirLightNumCascades) return nullptr;
+	if (CascadeIdx >= DirLightMaxNumCascades) return nullptr;
 	return DirLightCascadeDSVs[CascadeIdx];
 }
 
@@ -691,8 +692,8 @@ void FShadowMapManager::InitializeForDebug()
 		D3D11_TEXTURE2D_DESC srcDesc = {};
 		DirShadowTexture->GetDesc(&srcDesc);
 
-		ImGuiDebugTextures_Dir.resize(DirLightNumCascades, nullptr);
-		ImGuiDebugSRVs_Dir.resize(DirLightNumCascades, nullptr);
+		ImGuiDebugTextures_Dir.resize(DirLightMaxNumCascades, nullptr);
+		ImGuiDebugSRVs_Dir.resize(DirLightMaxNumCascades, nullptr);
 
 		D3D11_TEXTURE2D_DESC Desc = {};
 		Desc.Width = srcDesc.Width;
@@ -704,7 +705,7 @@ void FShadowMapManager::InitializeForDebug()
 		Desc.Usage = D3D11_USAGE_DEFAULT;
 		Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
-		for (uint32 i = 0; i < DirLightNumCascades; ++i)
+		for (uint32 i = 0; i < DirLightMaxNumCascades; ++i)
 		{
 			HRESULT hr = Device->CreateTexture2D(&Desc, nullptr, &ImGuiDebugTextures_Dir[i]);
 			if (FAILED(hr)) { UE_LOG_ERROR("Create Dir Debug Tex failed"); return; }
@@ -800,7 +801,7 @@ ID3D11ShaderResourceView* FShadowMapManager::GetDirectionalSRVForImGuiDebug()
 
 ID3D11ShaderResourceView* FShadowMapManager::GetDirectionalSRVForImGuiDebug(uint32 CascadeIdx)
 {
-	if (!Context || CascadeIdx >= DirLightNumCascades) return nullptr;
+	if (!Context || CascadeIdx >= DirLightMaxNumCascades) return nullptr;
 
 	const UINT srcSubresource = D3D11CalcSubresource(0, CascadeIdx, 1);
 	const UINT dstSubresource = 0;

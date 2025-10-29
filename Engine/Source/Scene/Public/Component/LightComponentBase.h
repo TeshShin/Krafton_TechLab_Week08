@@ -171,6 +171,6 @@ protected:
 
 
 protected:
-	uint32 NumOfCascade = 3;
+	uint32 NumOfCascade = 10;
 	float CascadeSpitLambda = 0.5;
 };

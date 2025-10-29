@@ -102,7 +102,7 @@ public:
 	ID3D11ShaderResourceView* GetDirectionalMomentSRV() const { return DirShadowMomentSRV; }
 	ID3D11RenderTargetView* GetDirectionalMomentRTV() const { return DirShadowMomentRTV; }
 	ID3D11DepthStencilView* GetDirectionalLightDSV(uint32 CascadeIdx) const;
-	uint32 GetDirectionalNumCascades() const { return DirLightNumCascades; }
+	uint32 GetDirectionalMaxNumCascades() const { return DirLightMaxNumCascades; }
 private:
     // D3D11 핵심 오브젝트
     ID3D11Device* Device = nullptr;
@@ -150,7 +150,7 @@ private:
 	TArray<ID3D11Texture2D*> ImGuiDebugTextures_Dir; 
 	TArray<ID3D11ShaderResourceView*> ImGuiDebugSRVs_Dir;
 
-	uint32 DirLightNumCascades = 4; 
+	uint32 DirLightMaxNumCascades = 10; 
 	TArray<ID3D11DepthStencilView*> DirLightCascadeDSVs; 
 
 	// --- VSM Moments (RG32F) 리소스 ---
