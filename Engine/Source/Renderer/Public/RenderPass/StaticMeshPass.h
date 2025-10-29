@@ -2,12 +2,6 @@
 #include "Renderer/Public/RenderPass/RenderPass.h"
 #include "Renderer/Public/LightData.h"
 
-struct FLightViewProj
-{
-	FMatrix ViewMatrix;
-	FMatrix ProjectionMatrix;
-};
-
 struct FShadowConstants
 {
 	// 0=None, 1=PCF, 2=VSM, 3=VSM_Box, 4=VSM_Gaussian
@@ -21,7 +15,7 @@ class FStaticMeshPass : public FRenderPass
 public:
     FStaticMeshPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS, ID3D11DepthStencilState* InDisabledDS);
 
-	virtual bool CanRender(const FRenderingContext& Context);
+	bool CanRender(const FRenderingContext& Context) override;
 	void SetRenderTargets(class UDeviceResources* DeviceResources) override;
 	void Execute(FRenderingContext& Context) override;
     void Release() override;

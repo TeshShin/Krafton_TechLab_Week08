@@ -46,12 +46,17 @@ cbuffer DirectionalLightConstants : register(b5)
 	FLightViewProj DirectionalShadowMatrix;
 };
 
+cbuffer DirectionalCSMLightConstants : register(b6)
+{
+	FDirectionalCSMLightConstants DirectionalCSMLightConstants;
+}
+
 StructuredBuffer<FLightViewProj> SpotLightShadowMatrices : register(t12);
 Texture2DArray<float> SpotShadowAtlas : register(t13);
 Texture2DArray<float2> SpotMomentsAtlas : register(t14);
 TextureCubeArray<float> PointShadowAtlas : register(t15);
 TextureCubeArray<float2> PointMomentsAtlas : register(t16);
-Texture2DArray<float> DirectionalTexture : register(t17);
+Texture2DArray<float> DirectionalTextureArray : register(t17);
 Texture2DArray<float2> DirectionalMoment : register(t18);
 
 SamplerComparisonState ShadowSampler : register(s1);
@@ -212,8 +217,8 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 					SpotLightShadowMatrices, // t12
 					PointMomentsAtlas,       // t16 <float2>
 					DirectionalMoment,       // t18 <float2>
-					//DirectionalShadowMatrix, // b5
-					DirectionalTexture,
+					DirectionalTextureArray,
+					DirectionalCSMLightConstants,
 					ShadowLinearSampler,     // s2 (일반 샘플러)
 					ShadowSettings);		 // b4
 			}
@@ -221,12 +226,12 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 			{
 				//--- 2. PCF ---------------------------------------------
 				LightResult = CalculateDynamicLightWithPCF(
-					DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, SpecularPower,
+					DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, SpecularPower, ViewSpaceZ,
 					SpotShadowAtlas,         // t13 <float>
 					SpotLightShadowMatrices, // t12
 					PointShadowAtlas,        // t15 <float>
-					DirectionalTexture,      // t17 <float>
-					DirectionalShadowMatrix, // (CBuffer)
+					DirectionalTextureArray,      // t17 <float>
+					DirectionalCSMLightConstants, // (CBuffer)
 					ShadowSampler,           // s1 (비교 샘플러)
 					DynamicLights[li].ShadowFilterSize); // (PCF 필터 크기)
 			}
@@ -234,12 +239,12 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 			{
 				//--- 3. Hard Shadow ---------------------------------------------
 				LightResult = CalculateDynamicLightWithShadows(
-				   DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, SpecularPower,
+				   DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, SpecularPower, ViewSpaceZ,
 				   SpotShadowAtlas,         // t13 <float>
 				   SpotLightShadowMatrices, // t12
 				   PointShadowAtlas,        // t15 <float>
-				   DirectionalTexture,      // t17 <float>
-				   DirectionalShadowMatrix, // (CBuffer)
+				   DirectionalTextureArray,      // t17 <float>
+				   DirectionalCSMLightConstants, // (CBuffer)
 				   ShadowSampler);          // s1 (비교 샘플러)
 				//-----------------------------------------------------------------
 			}

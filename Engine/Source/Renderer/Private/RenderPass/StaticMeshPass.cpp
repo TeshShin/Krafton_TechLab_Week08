@@ -218,7 +218,7 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 	}
 
     // Upload Unified Lights to StructuredBuffer
-	Pipeline->SetConstantBuffer(4, EShaderType::EST_Pixel, CBDirectionalCSM);
+	Pipeline->SetConstantBuffer(6, EShaderType::EST_Pixel, CBDirectionalCSM);
     FRenderResourceFactory::UpdateStructuredBufferData(UnifiedLightStructuredBuffer, UnifiedLights);
 
     // After uploading current lights, build clusters using the compute shader
@@ -457,7 +457,7 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 			else if (Light->GetLightType() == ELightComponentType::LightType_Directional)
 			{
 				// Build directional CSM constants
-				FDirectionalCSMConstants csm = {};
+				FDirectionalCSMConstants CSM = {};
 				// Gather per-cascade matrices
 				const TArray<FMatrix>& viewMats = Light->GetLightViewMatrices(CamInv);
 				const TArray<FMatrix>& projMats = Light->GetCSMDsvProjections(CamInv);
@@ -467,24 +467,32 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 				// Compute split distances to select cascade in shader
 				uint32 desired = std::max<uint32>(Light->GetNumOfCascade(), 1u);
 				desired = std::min<uint32>(desired, maxCascades);
-				csm.DirNumCascades = desired;
+				CSM.DirNumCascades = desired;
 				float lambda = Light->GetCascadeSplitLambda();
 				TArray<float> splits = CSM::ComputeCascadeSplitDistances(CamInv.NearClip, CamInv.FarClip, desired, lambda);
                 // Copy splits (size desired+1) into fixed array (as float4 for 16-byte stride)
                 uint32 splitCount = static_cast<uint32>(splits.size());
                 for (uint32 i = 0; i < std::min<uint32>(splitCount, 12u); ++i)
                 {
-                    csm.DirCascadeSplits[i] = FVector4(splits[i], 0,0,0);
+                    CSM.DirCascadeSplits[i] = FVector4(splits[i], 0,0,0);
                 }
 
 				// Fill matrices
 				for (uint32 i = 0; i < desired; ++i)
 				{
-					csm.DirCascadeMatrices[i].ViewMatrix = viewMats[i];
-					csm.DirCascadeMatrices[i].ProjectionMatrix = projMats[i];
+					CSM.DirCascadeMatrices[i].ViewMatrix = viewMats[i];
+					CSM.DirCascadeMatrices[i].ProjectionMatrix = projMats[i];
 				}
 
-				FRenderResourceFactory::UpdateConstantBufferData(CBDirectionalCSM, csm);
+
+				if (Light->GetShadowProjectionMode() != EShadowProjectionMode::CSM)
+				{
+					CSM.DirNumCascades = 1;
+					CSM.DirCascadeMatrices[0].ViewMatrix = viewMats[0];
+					CSM.DirCascadeMatrices[0].ProjectionMatrix = Light->GetLightProjectionMatrix(CamInv);
+				}
+
+				FRenderResourceFactory::UpdateConstantBufferData(CBDirectionalCSM, CSM);
 			}
 		}
 	}

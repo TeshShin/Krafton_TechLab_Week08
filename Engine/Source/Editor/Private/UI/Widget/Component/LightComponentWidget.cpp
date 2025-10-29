@@ -136,8 +136,8 @@ void ULightComponentWidget::RenderWidget()
 						}
 					}
 					else
-					{ 
-						ImGui::Image(FShadowMapManager::GetInstance().GetDirectionalSRVForImGuiDebug(), ImVec2(512, 512));
+					{
+						// CSM 아닐때 처리 해줘야함
 					}
 					break;
     			case ELightComponentType::LightType_Point:

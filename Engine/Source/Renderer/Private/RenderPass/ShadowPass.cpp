@@ -78,6 +78,8 @@ void FShadowPass::Execute(FRenderingContext& Context)
 	    if (Light->GetShadowMapIdx() == -1) { continue; }
 
 	    const TArray<FMatrix>& ViewMatrices = Light->GetLightViewMatrices(CamInv);
+		const TArray<FMatrix>& DsvProjMats = Light->GetCSMDsvProjections(CamInv);
+
 	    const uint32 Resolution = ShadowMapManager.GetResolution(Light);
 	    ShadowViewport.Width = static_cast<float>(Resolution);
 	    ShadowViewport.Height = static_cast<float>(Resolution);
@@ -87,6 +89,7 @@ void FShadowPass::Execute(FRenderingContext& Context)
 	    LightInfo.LightPosition = Light->GetWorldLocation();
 	    LightInfo.LightType = static_cast<uint32>(Light->GetLightType());
 	    LightInfo.LightProjection = Light->GetLightProjectionMatrix(CamInv);
+
 	    if (Light->GetLightType() == ELightComponentType::LightType_Point)
 	    {
 	        LightInfo.LightRadius = Cast<UPointLightComponent>(Light)->GetAttenuationRadius();
@@ -100,53 +103,15 @@ void FShadowPass::Execute(FRenderingContext& Context)
 	        ID3D11RenderTargetView* RTV[] = { nullptr };
 	        ShadowMapManager.GetShadowPassViews(Light, PassIndex, &RTV[0], &DSV);
 
-	        if (Light->GetLightType() == ELightComponentType::LightType_Point)
+	        if (PassIndex >= 1)
 	        {
 	            DeviceContext->ClearDepthStencilView(DSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
 	        }
 
-	    	else if (Light->GetLightType() == ELightComponentType::LightType_Directional)
-            	{
-            		// If using CSM, render each cascade slice with its own View/Projection and DSV
-            		if (Light->GetShadowProjectionMode() == EShadowProjectionMode::CSM)
-            		{
-						// cascade 가 최대 크기를 넘지 않도록 보정
-            			const TArray<FMatrix>& ViewMats = Light->GetLightViewMatrices(CamInv);
-            			const TArray<FMatrix>& DsvProjMats = Light->GetCSMDsvProjections(CamInv);
-						const uint32 numView = static_cast<uint32>(ViewMats.size());
-						const uint32 numProj = static_cast<uint32>(DsvProjMats.size());
-						uint32 numSlices = numView;
-						if (numProj < numSlices) numSlices = numProj;
-						const uint32 mgrCascades = ShadowMapManager.GetDirectionalMaxNumCascades();
-						if (mgrCascades < numSlices) numSlices = mgrCascades;
-
-
-            			for (uint32 ci = 0; ci < numSlices; ++ci)
-            			{
-							// Cascade에 맞는 DSV, RTV를 얻는다.
-            				ID3D11DepthStencilView* sliceDSV = ShadowMapManager.GetDirectionalLightDSV(ci);
-							ID3D11RenderTargetView* sliceMomentRTV = ShadowMapManager.GetDirectionalMomentRTV(ci);
-
-							// Cascade에 맞는 Light Info 업데이트
-							LightInfo.LightView = ViewMats[ci];
-            				LightInfo.LightProjection = DsvProjMats[ci];
-							FRenderResourceFactory::UpdateConstantBufferData(CBLightInfo, LightInfo);
-
-							ID3D11RenderTargetView* RTV[] = { sliceMomentRTV };
-							Pipeline->SetRenderTargets(1, RTV, sliceDSV);
-
-            				RenderAllStaticMeshes(Context);
-            			}
-            		}
-            		else
-            		{
-            			// Non-CSM directional shadow renders to the first slice
-            			ID3D11DepthStencilView* DSV = ShadowMapManager.GetDirectionalLightDSV();
-						ID3D11RenderTargetView* RTV[] = { ShadowMapManager.GetDirectionalMomentRTV() };
-             			Pipeline->SetRenderTargets(1, RTV, DSV);
-            			RenderAllStaticMeshes(Context);
-            		}
-            	}
+	    	if (Light->GetShadowProjectionMode() == EShadowProjectionMode::CSM)
+	    	{
+	    		LightInfo.LightProjection = DsvProjMats[PassIndex];
+	    	}
 
 	        LightInfo.LightView = ViewMatrices[PassIndex];
 	        FRenderResourceFactory::UpdateConstantBufferData(CBLightInfo, LightInfo);

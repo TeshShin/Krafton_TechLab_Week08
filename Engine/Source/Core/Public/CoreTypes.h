@@ -185,7 +185,8 @@ struct FLightViewProj
 {
 	FMatrix ViewMatrix;
 	FMatrix ProjectionMatrix;
-}; 
+};
+
 struct FDirectionalCSMConstants
 {
 	uint32 DirNumCascades;

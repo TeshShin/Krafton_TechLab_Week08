@@ -10,6 +10,7 @@ struct FShadowStatData
 	// 정적(Static) VRAM - 초기화 시 한 번만 계산
 	uint64 VRAM_Directional_Depth = 0;
 	uint64 VRAM_Directional_Moments = 0;
+	uint64 VRAM_Directional_Pass_DSV = 0;
 	uint64 VRAM_Spot_Depth = 0;
 	uint64 VRAM_Spot_Moments = 0;
 	uint64 VRAM_Point_RTV = 0;
@@ -128,14 +129,11 @@ public:
 	uint32 GetMaxPointShadows() const { return ShadowSettings.MaxPointShadows; }
 
 	// --- Directional Light Getters ---
-	ID3D11ShaderResourceView* GetDirectionalLightSRV() const { return DirShadowSRV; }
-	ID3D11DepthStencilView* GetDirectionalLightDSV() const { return DirShadowDSV; }
+	ID3D11ShaderResourceView* GetDirectionalLightSRV() const;
 	ID3D11DepthStencilView* GetDirectionalLightDSV(uint32 CascadeIdx) const;
+	ID3D11RenderTargetView* GetDirectionalLightRTV(uint32 CascadeIdx) const;
 
-	ID3D11RenderTargetView* GetDirectionalMomentRTV() const { return DirShadowMomentRTV; }
-	ID3D11RenderTargetView* GetDirectionalMomentRTV(uint32 CascadeIdx) const;
-	uint32 GetDirectionalMaxNumCascades() const { return DirLightMaxNumCascades; }
-	ID3D11RenderTargetView* GetDirectionalLightRTV() const;
+	uint32 GetDirectionalMaxNumCascades() const { return DirShadowCascadesMax; }
 	uint32 GetDirectionalResolution() const { return ShadowSettings.DirResolution; }
 
 private:
@@ -167,16 +165,13 @@ private:
 	bool bIsDirShadowAllocated = false;
 	ID3D11Texture2D* DirShadowTexture = nullptr;
 	ID3D11ShaderResourceView* DirShadowSRV = nullptr;
-	ID3D11DepthStencilView* DirShadowDSV = nullptr;
-
-	ID3D11RenderTargetView* DirShadowMomentRTV;
+	TArray<ID3D11DepthStencilView*> DirShadowCascadeDSVs;
 	TArray<ID3D11RenderTargetView*> DirShadowMomentRTVs;
 
-	TArray<ID3D11Texture2D*> ImGuiDebugTextures_Dir;
-	TArray<ID3D11ShaderResourceView*> ImGuiDebugSRVs_Dir;
+	ID3D11Texture2D* DirShadowDepthTexture = nullptr;
+	ID3D11DepthStencilView* DirShadowDepthDSV = nullptr; // Dir RTV만 쓸때 Depth 기록용
 
-	uint32 DirLightMaxNumCascades = 12;
-	TArray<ID3D11DepthStencilView*> DirLightCascadeDSVs;
+	uint32 DirShadowCascadesMax = 12;
 
 	// --- VSM Moments (RG32F) 리소스 ---
 	ID3D11SamplerState* MomentSamplerState = nullptr;
@@ -198,7 +193,6 @@ public:
 	ID3D11ShaderResourceView* GetSpotSRVForImGuiDebug(uint32 SpotIndex);
 	void UpdatePointShadowDebugTextures(uint32 CubeIndex);
 	ID3D11ShaderResourceView* GetPointSRVForImGuiDebug(uint32 CubeIndex, uint32 FaceIndex); // FaceIndex: 0~5
-	ID3D11ShaderResourceView* GetDirectionalSRVForImGuiDebug();
 	ID3D11ShaderResourceView* GetDirectionalSRVForImGuiDebug(uint32 CascadeIdx);
 
 private:
@@ -209,8 +203,8 @@ private:
     ID3D11Texture2D* ImGuiDebugTextures_Point[6] = { nullptr };
     ID3D11ShaderResourceView* ImGuiDebugSRVs_Point[6] = { nullptr };
 
-	ID3D11Texture2D* ImGuiDebugTexture_Dir = nullptr;
-	ID3D11ShaderResourceView* ImGuiDebugSRV_Dir =  nullptr;
+	TArray<ID3D11Texture2D*> ImGuiDebugTextures_Dir;
+	TArray<ID3D11ShaderResourceView*> ImGuiDebugSRVs_Dir;
 
 // Stat Section
 public:
