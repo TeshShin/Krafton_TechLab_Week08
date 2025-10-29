@@ -1,9 +1,9 @@
 #include "../Material/TextureVS.hlsl"
 
 // VSM 토글 TODO:UI 연동
-//#ifndef USE_VSM
-//#define USE_VSM 1
-//#endif
+#ifndef USE_VSM
+#define USE_VSM 1
+#endif
 
 //--------------------------------------------------------------------------------------
 // [FORWARD PLUS RENDERING] Light Tile Clustering Data Structures
