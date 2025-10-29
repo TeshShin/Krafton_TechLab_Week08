@@ -153,7 +153,7 @@ private:
 	TArray<ID3D11Texture2D*> ImGuiDebugTextures_Dir; 
 	TArray<ID3D11ShaderResourceView*> ImGuiDebugSRVs_Dir;
 
-	uint32 DirLightMaxNumCascades = 10; 
+	uint32 DirLightMaxNumCascades = 12; 
 	TArray<ID3D11DepthStencilView*> DirLightCascadeDSVs; 
 
 	// --- VSM Moments (RG32F) 리소스 ---

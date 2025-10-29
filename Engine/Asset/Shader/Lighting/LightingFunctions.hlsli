@@ -39,15 +39,6 @@
 #endif
 
 
-cbuffer DirectionalCSMLightConstants : register(b4)
-{
-	uint DirNumCascades;
-	float3 CSMPadding;
-
-	float DirCascadeSplits[10];
-	FLightViewProj DirCascadeMatrices[10];
-}
-
 
 float linstep(float minV, float maxV, float v)
 {
@@ -80,6 +71,15 @@ struct FLightViewProj
 	row_major float4x4 ViewMatrix;
 	row_major float4x4 ProjectionMatrix;
 }; 
+
+cbuffer DirectionalCSMLightConstants : register(b4)
+{
+	uint DirNumCascades;
+	float3 CSMPadding;
+
+	float DirCascadeSplits[12];
+	FLightViewProj DirCascadeMatrices[12];
+}
 
 //--------------------------------------------------------------------------------------
 // [LIGHTING MODELS] Modular lighting calculation functions

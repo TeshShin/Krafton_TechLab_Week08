@@ -15,8 +15,8 @@ struct FDirectionalCSMConstants
 {
     uint32 DirNumCascades;
     float Pad[3];
-    float DirCascadeSplits[10];
-    FLightViewProj DirCascadeMatrices[10];
+    float DirCascadeSplits[12];
+    FLightViewProj DirCascadeMatrices[12];
 };
 
 FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS, ID3D11DepthStencilState* InDisabledDS)
@@ -466,7 +466,7 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 				const TArray<FMatrix>& viewMats = Light->GetLightViewMatrices(CamInv);
 				const TArray<FMatrix>& projMats = Light->GetCSMDsvProjections(CamInv);
 				uint32 maxCascades = (uint32)std::min(viewMats.size(), projMats.size());
-				maxCascades = std::min<uint32>(maxCascades, 10u);
+				maxCascades = std::min<uint32>(maxCascades, 12u);
 
 				// Compute split distances to select cascade in shader
 				uint32 desired = std::max<uint32>(Light->GetNumOfCascade(), 1u);
