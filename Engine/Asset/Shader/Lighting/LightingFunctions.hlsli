@@ -507,7 +507,7 @@ float2 SampleVSMBox_Texture2D(Texture2DArray<float2> ShadowMoments, SamplerState
 			sum += ShadowMoments.Sample(Sampler, float3(sampleUV, uvw.z)).xy;
 		}
     }
-    return (count > 0) ? (sum / count) : ShadowMoments.Sample(Sampler, uvw.z).xy;
+    return (count > 0) ? (sum / count) : ShadowMoments.Sample(Sampler, uvw).xy;
 }
 
 //--------------------------------------------------------------------------------------
@@ -845,6 +845,8 @@ FLightingResult CalculateDynamicLightWithVSM_Directional(
 		//float t = mul(float4(WorldPos, 1.0f), viewProj.ViewMatrix).z; // uvw.z;
 		
         float2 moments;
+        // Ensure we sample the correct array slice (cascade)
+        uvw.z = cascadeIdx;
         if (FilterType == 2) // Gaussian
         {
             moments = SampleVSMGaussian_Texture2D(DirectionalMomentsMap, ShadowSampler,
