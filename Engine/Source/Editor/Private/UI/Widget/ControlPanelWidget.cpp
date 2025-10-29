@@ -16,12 +16,10 @@ void UControlPanelWidget::RenderWidget()
 {
 	// Shadow
 	FShadowMapManager& ShadowMapManager = FShadowMapManager::GetInstance();
-	EShadowFilterType ShadowFilterType = ShadowMapManager.GetFilterType();
 	FShadowSettings ShadowSettings = ShadowMapManager.GetShadowSettings();
 
-    if (ImGui::CollapsingHeader("Shadow Settings"))
+	if (ImGui::CollapsingHeader("Shadow Settings"))
     {
-        // 1. 섀도우 필터 타입 선택 (Combo Box)
         const char* filterNames[] = {
             "None (No Shadows)",
             "PCF (Hard)",
@@ -30,37 +28,31 @@ void UControlPanelWidget::RenderWidget()
             "VSM (Gaussian Filter)"
         };
 
-        // ImGui::Combo는 int*를 사용하므로 enum을 int로 변환했다가 다시 돌려받습니다.
-        int CurrentFilterType = static_cast<int>(ShadowFilterType);
+        int CurrentFilterType = static_cast<int>(ShadowSettings.FilterType);
         if (ImGui::Combo("Filter Type", &CurrentFilterType, filterNames, IM_ARRAYSIZE(filterNames)))
         {
-            ShadowFilterType = static_cast<EShadowFilterType>(CurrentFilterType);
-        	ShadowSettings.FilterType = CurrentFilterType;
+            ShadowSettings.FilterType = static_cast<EShadowFilterType>(CurrentFilterType);
         }
-
-        // 2. 필터 타입에 따른 조건부 UI
 
         // --- PCF 설정 ---
-        if (ShadowFilterType == EShadowFilterType::SFT_PCF)
+        if (ShadowSettings.FilterType == EShadowFilterType::SFT_PCF)
         {
             ImGui::Separator();
-            ImGui::Text("PCF Settings");
+            ImGui::Text("PCF Quality Range");
+            ImGui::TextDisabled("Set the Min(Sharp) and Max(Soft) kernel size.");
 
-            // PCF_FilterSize가 커널의 한 변의 크기(width)라고 가정 (예: 3 -> 3x3)
-            // 홀수만 선택하도록 DragInt를 사용 (speed = 2)
-            ImGui::DragInt("PCF Filter Size", &ShadowSettings.PCF_FilterSize, 2.0f, 1, 15);
-            if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("Kernel size (e.g., 1 = 1x1, 3 = 3x3, 5 = 5x5). \nMust be an odd number.");
+            ImGui::DragInt("Min PCF Size (Sharp)", &ShadowSettings.MinPCFSize, 2.0f, 1, 49);
+            ImGui::DragInt("Max PCF Size (Soft)", &ShadowSettings.MaxPCFSize, 2.0f, 1, 49);
 
-            if (ShadowSettings.PCF_FilterSize % 2 == 0) {
-                ShadowSettings.PCF_FilterSize += 1;
-            }
-            ShadowSettings.PCF_FilterSize = max(ShadowSettings.PCF_FilterSize, 1);
+            if (ShadowSettings.MinPCFSize % 2 == 0) ShadowSettings.MinPCFSize += 1;
+            if (ShadowSettings.MaxPCFSize % 2 == 0) ShadowSettings.MaxPCFSize += 1;
+
+            ShadowSettings.MinPCFSize = std::min(ShadowSettings.MinPCFSize, ShadowSettings.MaxPCFSize);
+            ShadowSettings.MaxPCFSize = std::max(ShadowSettings.MinPCFSize, ShadowSettings.MaxPCFSize);
         }
 
-        // --- VSM 설정 ---
-        // VSM(Linear), VSM_Box, VSM_Gaussian 모두에 공통적인 설정
-        if (ShadowFilterType >= EShadowFilterType::SFT_VSM)
+        // --- VSM 공통 설정 ---
+        if (ShadowSettings.FilterType >= EShadowFilterType::SFT_VSM)
         {
             ImGui::Separator();
             ImGui::Text("VSM Settings");
@@ -69,23 +61,42 @@ void UControlPanelWidget::RenderWidget()
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("Reduces light bleeding artifacts common in VSM.");
 
-            // Box 필터 전용 설정
-            if (ShadowFilterType == EShadowFilterType::SFT_VSM_Box)
+            // --- VSM Box ---
+            if (ShadowSettings.FilterType == EShadowFilterType::SFT_VSM_Box)
             {
-                ImGui::DragInt("Box Filter Size", &ShadowSettings.VSM_BoxFilterSize, 2.0f, 1, 35);
-                 if (ShadowSettings.VSM_BoxFilterSize % 2 == 0) {
-                    ShadowSettings.VSM_BoxFilterSize += 1;
-                }
+                ImGui::Separator();
+                ImGui::Text("VSM Box Quality Range");
+                ImGui::TextDisabled("Set the Min(Sharp) and Max(Soft) kernel size.");
+
+                // ⭐️ 변경점: Min/Max 값을 직접 수정합니다.
+                ImGui::DragInt("Min Box Size (Sharp)", &ShadowSettings.MinBoxSize, 2.0f, 1, 49);
+                ImGui::DragInt("Max Box Size (Soft)", &ShadowSettings.MaxBoxSize, 2.0f, 1, 49);
+
+                if (ShadowSettings.MinBoxSize % 2 == 0) ShadowSettings.MinBoxSize += 1;
+                if (ShadowSettings.MaxBoxSize % 2 == 0) ShadowSettings.MaxBoxSize += 1;
+
+                ShadowSettings.MinBoxSize = std::min(ShadowSettings.MinBoxSize, ShadowSettings.MaxBoxSize);
+                ShadowSettings.MaxBoxSize = std::max(ShadowSettings.MinBoxSize, ShadowSettings.MaxBoxSize);
             }
-            // Gaussian 필터 전용 설정
-            else if (ShadowFilterType == EShadowFilterType::SFT_VSM_Gaussian)
+            // --- VSM Gaussian ---
+            else if (ShadowSettings.FilterType == EShadowFilterType::SFT_VSM_Gaussian)
             {
-                ImGui::SliderInt("Gaussian Radius", &ShadowSettings.VSM_GaussianKernelRadius, 1, 20);
-                ImGui::SliderFloat("Gaussian Sigma", &ShadowSettings.VSM_GaussianSigma, 0.1f, 10.0f);
+                ImGui::Separator();
+                ImGui::Text("VSM Gaussian Quality Range");
+                ImGui::TextDisabled("Set the Min(Sharp) and Max(Soft) radius/sigma.");
+
+                ImGui::SliderInt("Min Radius (Sharp)", &ShadowSettings.MinGaussRadius, 1, 20);
+                ImGui::SliderInt("Max Radius (Soft)", &ShadowSettings.MaxGaussRadius, 1, 20);
+                ShadowSettings.MinGaussRadius = std::min(ShadowSettings.MinGaussRadius, ShadowSettings.MaxGaussRadius);
+                ShadowSettings.MaxGaussRadius = std::max(ShadowSettings.MinGaussRadius, ShadowSettings.MaxGaussRadius);
+
+                ImGui::SliderFloat("Min Sigma (Sharp)", &ShadowSettings.MinGaussSigma, 0.1f, 10.0f);
+                ImGui::SliderFloat("Max Sigma (Soft)", &ShadowSettings.MaxGaussSigma, 0.1f, 10.0f);
+                ShadowSettings.MinGaussSigma = std::min(ShadowSettings.MinGaussSigma, ShadowSettings.MaxGaussSigma);
+                ShadowSettings.MaxGaussSigma = std::max(ShadowSettings.MinGaussSigma, ShadowSettings.MaxGaussSigma);
             }
         }
     }
 
 	ShadowMapManager.UpdateShadowSettings(ShadowSettings);
-	ShadowMapManager.UpdateFilterType(ShadowFilterType);
 }

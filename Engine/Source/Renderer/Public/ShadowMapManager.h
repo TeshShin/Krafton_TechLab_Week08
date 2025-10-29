@@ -32,18 +32,23 @@ struct FShadowStatData
 
 struct FShadowSettings
 {
-	// 0=None, 1=PCF, 2=VSM, 3=VSM_Box, 4=VSM_Gaussian
-	uint32 FilterType;
-	int32 PCF_FilterSize;
+	EShadowFilterType FilterType = EShadowFilterType::SFT_None;
+	// -- PCF --
+	int32 MinPCFSize = 1;
+	int32 MaxPCFSize = 9;
 
-	int32 VSM_BoxFilterSize = 11;
-	int32 VSM_GaussianKernelRadius = 10;
 	float VSM_LightBleedReduction = 0.5f;
-	float VSM_GaussianSigma = 5.0f;
 
-	float Padding[2];
+	// -- VSM Box --
+	int32 MinBoxSize = 1;
+	int32 MaxBoxSize = 11;
+
+	// -- VSM Gaussian --
+	int32 MinGaussRadius = 1;
+	int32 MaxGaussRadius = 10;
+	float MinGaussSigma = 0.5f;
+	float MaxGaussSigma = 5.0f;
 };
-
 
 class FShadowMapManager
 {
@@ -160,14 +165,13 @@ private:
 
 // Setting Section
 public:
-	EShadowFilterType GetFilterType() const { return ShadowFilterType; }
-	void UpdateFilterType(EShadowFilterType InShadowFilter);
+	EShadowFilterType GetFilterType() const { return ShadowSettings.FilterType; }
 
 	const FShadowSettings& GetShadowSettings() const { return ShadowSettings; }
-	void UpdateShadowSettings(const FShadowSettings& InSettings) { ShadowSettings = InSettings; }
+	void UpdateShadowSettings(const FShadowSettings& InSettings);
+	void UpdateFilterType(const EShadowFilterType& InFilterType);
 
 private:
-	EShadowFilterType ShadowFilterType = EShadowFilterType::SFT_None;
 	FShadowSettings ShadowSettings;
 
 // Debug Section

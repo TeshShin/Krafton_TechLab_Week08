@@ -38,7 +38,7 @@ SamplerState SamplerWrap : register(s0);
 // Shadow
 cbuffer ShadowSettings : register(b4)
 {
-	FShadowSettings ShadowSettings;
+	FShadowConstants ShadowSettings;
 }
 
 cbuffer DirectionalLightConstants : register(b5)
@@ -224,7 +224,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 					DirectionalTexture,      // t17 <float>
 					DirectionalShadowMatrix, // (CBuffer)
 					ShadowSampler,           // s1 (비교 샘플러)
-					ShadowSettings.PCF_FilterSize); // (PCF 필터 크기)
+					DynamicLights[li].ShadowFilterSize); // (PCF 필터 크기)
 			}
 			else
 			{

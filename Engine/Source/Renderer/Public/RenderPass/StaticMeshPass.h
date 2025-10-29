@@ -8,6 +8,14 @@ struct FLightViewProj
 	FMatrix ProjectionMatrix;
 };
 
+struct FShadowConstants
+{
+	// 0=None, 1=PCF, 2=VSM, 3=VSM_Box, 4=VSM_Gaussian
+	uint32 FilterType;
+	float VSM_LightBleedReduction = 0.5f;
+	float Padding[2];
+};
+
 class FStaticMeshPass : public FRenderPass
 {
 public:

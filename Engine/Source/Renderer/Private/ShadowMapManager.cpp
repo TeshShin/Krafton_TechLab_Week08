@@ -23,7 +23,7 @@ void FShadowMapManager::Initialize(EShadowFilterType InFilterType, uint32 InMaxS
 	Device = URenderer::GetInstance().GetDevice();
 	Context = URenderer::GetInstance().GetDeviceContext();
 
-	ShadowFilterType = InFilterType;
+	ShadowSettings.FilterType = InFilterType;
 
 	InitializeSpotShadows(InMaxSpotShadows, InSpotResolution);
 	InitializePointShadows(InMaxPointShadowCubes, InPointResolution);
@@ -83,7 +83,7 @@ void FShadowMapManager::InitializeSpotShadows(uint32 InMaxSpotShadows, uint32 In
 
     HRESULT hr;
 
-    if (ShadowFilterType == EShadowFilterType::SFT_None || ShadowFilterType == EShadowFilterType::SFT_PCF)
+    if (ShadowSettings.FilterType == EShadowFilterType::SFT_None || ShadowSettings.FilterType == EShadowFilterType::SFT_PCF)
     {
         // --- (PCF) Texture2DArray ---
         D3D11_TEXTURE2D_DESC SpotTexDesc = {};
@@ -214,7 +214,7 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
     DXGI_FORMAT RTVFormat;
     uint64 BytesPerPixel;
 
-    if (ShadowFilterType == EShadowFilterType::SFT_None || ShadowFilterType == EShadowFilterType::SFT_PCF)
+    if (ShadowSettings.FilterType == EShadowFilterType::SFT_None || ShadowSettings.FilterType == EShadowFilterType::SFT_PCF)
     {
         TextureFormat = DXGI_FORMAT_R32_TYPELESS;
         SRVFormat = DXGI_FORMAT_R32_FLOAT;
@@ -250,7 +250,7 @@ void FShadowMapManager::InitializePointShadows(uint32 InMaxPointShadowCubes, uin
         return;
     }
 
-	if (ShadowFilterType == EShadowFilterType::SFT_None || ShadowFilterType == EShadowFilterType::SFT_PCF)
+	if (ShadowSettings.FilterType == EShadowFilterType::SFT_None || ShadowSettings.FilterType == EShadowFilterType::SFT_PCF)
     {
         StatData.VRAM_Point_RTV = static_cast<uint64>(PointResolution) * PointResolution * (MaxPointShadowCubes * 6) * BytesPerPixel;
     }
@@ -343,7 +343,7 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
     StatData.Config_DirResolution = InResolution;
     HRESULT hr;
 
-    if (ShadowFilterType == EShadowFilterType::SFT_None || ShadowFilterType == EShadowFilterType::SFT_PCF)
+    if (ShadowSettings.FilterType == EShadowFilterType::SFT_None || ShadowSettings.FilterType == EShadowFilterType::SFT_PCF)
     {
         // --- (PCF) 단일 Texture2D (Depth) ---
         D3D11_TEXTURE2D_DESC TexDesc = {};
@@ -630,7 +630,7 @@ ID3D11DepthStencilView* FShadowMapManager::GetSpotLightDSV(uint32 SpotShadowIdx)
 		return nullptr;
 	}
 
-	if (ShadowFilterType == EShadowFilterType::SFT_None || ShadowFilterType == EShadowFilterType::SFT_PCF)
+	if (ShadowSettings.FilterType == EShadowFilterType::SFT_None || ShadowSettings.FilterType == EShadowFilterType::SFT_PCF)
 	{
 		return SpotShadowMapSliceDSVs[SpotShadowIdx];
 	}
@@ -644,7 +644,7 @@ ID3D11RenderTargetView* FShadowMapManager::GetSpotLightRTV(uint32 SpotShadowIdx)
 		return nullptr;
 	}
 
-	if (ShadowFilterType == EShadowFilterType::SFT_None || ShadowFilterType == EShadowFilterType::SFT_PCF)
+	if (ShadowSettings.FilterType == EShadowFilterType::SFT_None || ShadowSettings.FilterType == EShadowFilterType::SFT_PCF)
 	{
 		return nullptr;
 	}
@@ -675,7 +675,7 @@ ID3D11ShaderResourceView* FShadowMapManager::GetDirectionalLightSRV() const
 
 ID3D11DepthStencilView* FShadowMapManager::GetDirectionalLightDSV() const
 {
-	if (ShadowFilterType == EShadowFilterType::SFT_None || ShadowFilterType == EShadowFilterType::SFT_PCF)
+	if (ShadowSettings.FilterType == EShadowFilterType::SFT_None || ShadowSettings.FilterType == EShadowFilterType::SFT_PCF)
 	{
 		return DirShadowDSV;
 	}
@@ -684,20 +684,25 @@ ID3D11DepthStencilView* FShadowMapManager::GetDirectionalLightDSV() const
 
 ID3D11RenderTargetView* FShadowMapManager::GetDirectionalLightRTV() const
 {
-	if (ShadowFilterType == EShadowFilterType::SFT_None || ShadowFilterType == EShadowFilterType::SFT_PCF)
+	if (ShadowSettings.FilterType == EShadowFilterType::SFT_None || ShadowSettings.FilterType == EShadowFilterType::SFT_PCF)
 	{
 		return nullptr;
 	}
 	return DirShadowMomentRTV;
 }
 
-void FShadowMapManager::UpdateFilterType(EShadowFilterType InShadowFilter)
+void FShadowMapManager::UpdateShadowSettings(const FShadowSettings& InSettings)
 {
-	if (ShadowFilterType == InShadowFilter) { return; }
+	if (InSettings.FilterType != ShadowSettings.FilterType) { UpdateFilterType(InSettings.FilterType); }
+	ShadowSettings = InSettings;
+}
 
-	ShadowFilterType = InShadowFilter;
-	ShadowSettings.FilterType = static_cast<uint32>(InShadowFilter);
-	Initialize(GetFilterType(), MaxSpotShadows, SpotResolution, MaxPointShadowCubes, PointResolution, DirResolution);
+void FShadowMapManager::UpdateFilterType(const EShadowFilterType& InFilterType)
+{
+	if (InFilterType == ShadowSettings.FilterType) { return; }
+	ShadowSettings.FilterType = InFilterType;
+	Initialize(ShadowSettings.FilterType, MaxSpotShadows, SpotResolution,
+		MaxPointShadowCubes, PointResolution, DirResolution);
 }
 
 void FShadowMapManager::InitializeForDebug()

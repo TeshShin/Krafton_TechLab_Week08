@@ -57,7 +57,7 @@ FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11DepthStencilState*
 	SpotLightMatricesStructuredBuffer = FRenderResourceFactory::CreateStructuredBuffer<FLightViewProj>(SpotLightMatricesCapacity);
 	SpotLightMatricesSRV = FRenderResourceFactory::CreateBufferSRV(SpotLightMatricesStructuredBuffer, SpotLightMatricesCapacity);
 
-	CBShadowSettings = FRenderResourceFactory::CreateConstantBuffer<FShadowSettings>();
+	CBShadowSettings = FRenderResourceFactory::CreateConstantBuffer<FShadowConstants>();
 	CBDirectionalShadowMatrix = FRenderResourceFactory::CreateConstantBuffer<FLightViewProj>();
 
 	FRenderResourceFactory::CreateComputeShader(L"Asset/Shader/Lighting/LightTilesCS.hlsl", &LightTilesCS);
@@ -412,8 +412,9 @@ void FStaticMeshPass::Execute(FRenderingContext& Context)
 
 TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderingContext& Context)
 {
-	// Collect all dynamic lights into unified buffer
 	TArray<FUnifiedDynamicLight> UnifiedLights;
+
+	const FShadowSettings& GlobalSettings =  FShadowMapManager::GetInstance().GetShadowSettings();
 	SpotLightMatrices.resize(FShadowMapManager::GetInstance().GetMaxSpotShadows());
 
 	FCameraConstants CamInv = Context.CurrentCamera->GetCameraConstantsInverse();
@@ -423,6 +424,21 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 
 		// [UNIFIED FORWARD RENDERING] All light types (including Ambient) go through StructuredBuffer
 		FUnifiedDynamicLight UnifiedLight = Light->GetUnifiedLightData();
+
+		const float T = 1.0f - Light->GetShadowSharpen();
+		if (GlobalSettings.FilterType == EShadowFilterType::SFT_PCF)
+		{
+			UnifiedLight.ShadowFilterSize = std::lerp(GlobalSettings.MinPCFSize, GlobalSettings.MaxPCFSize, T);
+		}
+		else if (GlobalSettings.FilterType == EShadowFilterType::SFT_VSM_Box)
+		{
+			UnifiedLight.ShadowFilterSize = std::lerp(GlobalSettings.MinBoxSize, GlobalSettings.MaxBoxSize, T);
+		}
+		else if (GlobalSettings.FilterType == EShadowFilterType::SFT_VSM_Gaussian)
+		{
+			UnifiedLight.ShadowFilterSize = std::lerp(GlobalSettings.MinGaussRadius, GlobalSettings.MaxGaussRadius, T);
+			UnifiedLight.ShadowGaussSigma = std::lerp(GlobalSettings.MinGaussSigma, GlobalSettings.MaxGaussSigma, T);
+		}
 		UnifiedLights.push_back(UnifiedLight);
 
 		int32 ShadowMapIdx = Light->GetShadowMapIdx();
@@ -477,7 +493,10 @@ void FStaticMeshPass::UpdateShadowResources()
 	FRenderResourceFactory::UpdateStructuredBufferData(SpotLightMatricesStructuredBuffer, SpotLightMatrices);
 	Pipeline->SetSRV(12, EShaderType::EST_Pixel, SpotLightMatricesSRV);
 
-	FRenderResourceFactory::UpdateConstantBufferData(CBShadowSettings, ShadowMapManager.GetShadowSettings());
+	const FShadowSettings& ShadowSettings = ShadowMapManager.GetShadowSettings();
+	FShadowConstants ShadowConstants = { static_cast<uint32>(ShadowSettings.FilterType), ShadowSettings.VSM_LightBleedReduction };
+
+	FRenderResourceFactory::UpdateConstantBufferData(CBShadowSettings, ShadowConstants);
 	Pipeline->SetConstantBuffer(4, EShaderType::EST_Pixel, CBShadowSettings);
 	Pipeline->SetConstantBuffer(5, EShaderType::EST_Pixel, CBDirectionalShadowMatrix);
 }

@@ -105,16 +105,10 @@ FLightingResult CalculateLambertLighting(float3 LightDir, float3 Normal, float3 
 #define SHADOW_FILTER_VSM_BOX		3
 #define SHADOW_FILTER_VSM_GAUSSIAN	4
 
-struct FShadowSettings
+struct FShadowConstants
 {
 	uint FilterType;
-	int PCF_FilterSize;
-
-	int VSM_BoxFilterSize;
-	int VSM_GaussianKernelRadius;
 	float VSM_LightBleedReduction;
-	float VSM_GaussianSigma;
-
 	float2 Pad;
 };
 
@@ -129,12 +123,12 @@ struct FUnifiedDynamicLight
     float FalloffExponent;      // 4 bytes  - Radial falloff exponent (2.0 - 16.0)
     float Param0;               // 4 bytes  - Spot: InnerConeAngle (radians), Rect: Width
     float Param1;               // 4 bytes  - Spot: OuterConeAngle (radians), Rect: Height
-    float Param2;               // 4 bytes  - Reserved for future use
     uint LightType;             // 4 bytes  - Light type identifier
 	float ShadowBias;            // 4 bytes - Shadow Bias
 	uint bCastShadows;         // 4 bytes - Light Does Cast Shadows
 	int ShadowMapIndex;        // 4 bytes - Shadow Texture2D Array Index
-	float Padding;				// 4 bytes - four Byte
+	int ShadowFilterSize;      // 4 bytes  - PCF/Box Size, Gauss Radius
+	float ShadowGaussSigma;      // 4 bytes - VSM Gaussian Sigma
 };
 
 FLightingResult CalculateDynamicLight(FUnifiedDynamicLight Light, float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower)
@@ -764,7 +758,7 @@ FLightingResult CalculateDynamicLightWithVSM_Directional(
     Texture2D<float2> DirectionalMomentsMap,
     FLightViewProj DirectionalShadowMatrix,
     SamplerState ShadowSampler,
-    FShadowSettings ShadowSettings)
+    FShadowConstants ShadowSettings)
 {
     FLightingResult Result = CalculateDynamicLight(Light, WorldPos, Normal, ViewDir, SpecularPower);
     float ShadowFactor = 1.0f;
@@ -779,12 +773,12 @@ FLightingResult CalculateDynamicLightWithVSM_Directional(
         if (ShadowSettings.FilterType == SHADOW_FILTER_VSM_GAUSSIAN) // Gaussian
         {
             moments = SampleVSMGaussian_Texture2D(DirectionalMomentsMap, ShadowSampler, uvw.xy,
-            	ShadowSettings.VSM_GaussianKernelRadius, ShadowSettings.VSM_GaussianSigma);
+            	Light.ShadowFilterSize, Light.ShadowGaussSigma);
         }
         else if (ShadowSettings.FilterType == SHADOW_FILTER_VSM_BOX) // Box
         {
             moments = SampleVSMBox_Texture2D(DirectionalMomentsMap, ShadowSampler,
-                                             uvw.xy, ShadowSettings.VSM_BoxFilterSize);
+                                             uvw.xy, Light.ShadowFilterSize);
         }
         else // No filter
         {
@@ -808,7 +802,7 @@ FLightingResult CalculateDynamicLightWithVSM_Spot(
     Texture2DArray<float2> SpotMomentsAtlas,
     StructuredBuffer<FLightViewProj> SpotLightShadowMatrices,
     SamplerState ShadowSampler,
-    FShadowSettings ShadowSettings)
+    FShadowConstants ShadowSettings)
 {
     FLightingResult Result = CalculateDynamicLight(Light, WorldPos, Normal, ViewDir, SpecularPower);
     float ShadowFactor = 1.0f;
@@ -824,12 +818,12 @@ FLightingResult CalculateDynamicLightWithVSM_Spot(
         if (ShadowSettings.FilterType == SHADOW_FILTER_VSM_GAUSSIAN) // Gaussian
         {
             moments = SampleVSMGaussian(SpotMomentsAtlas, ShadowSampler, SampleCoords,
-            	ShadowSettings.VSM_GaussianKernelRadius, ShadowSettings.VSM_GaussianSigma);
+            	Light.ShadowFilterSize, Light.ShadowGaussSigma);
         }
         else if (ShadowSettings.FilterType == SHADOW_FILTER_VSM_BOX) // Box
         {
             moments = SampleVSMBox(SpotMomentsAtlas, ShadowSampler,
-                                   SampleCoords, ShadowSettings.VSM_BoxFilterSize);
+                                   SampleCoords, Light.ShadowFilterSize);
         }
         else // No filter
         {
@@ -853,7 +847,7 @@ FLightingResult CalculateDynamicLightWithVSM_Point(
     float3 WorldPos, float3 Normal, float3 ViewDir, float SpecularPower,
     TextureCubeArray<float2> PointMomentsAtlas,
     SamplerState ShadowSampler,
-	FShadowSettings ShadowSettings)
+	FShadowConstants ShadowSettings)
 {
     FLightingResult Result = CalculateDynamicLight(Light, WorldPos, Normal, ViewDir, SpecularPower);
     float ShadowFactor = 1.0f;
@@ -870,12 +864,12 @@ FLightingResult CalculateDynamicLightWithVSM_Point(
 		if (ShadowSettings.FilterType == SHADOW_FILTER_VSM_GAUSSIAN) // Gaussian
 		{
 			moments = SampleVSMGaussian_Point(PointMomentsAtlas, ShadowSampler, SampleCoords,
-				ShadowSettings.VSM_GaussianKernelRadius, ShadowSettings.VSM_GaussianSigma);
+				Light.ShadowFilterSize, Light.ShadowGaussSigma);
 		}
 		else if (ShadowSettings.FilterType == SHADOW_FILTER_VSM_BOX) // Box
 		{
 			moments = SampleVSMBox_Point(PointMomentsAtlas, ShadowSampler,
-								   SampleCoords, ShadowSettings.VSM_BoxFilterSize);
+								   SampleCoords, Light.ShadowFilterSize);
 		}
 		else // No filter
 		{
@@ -962,7 +956,7 @@ FLightingResult CalculateDynamicLightWithVSM(
     Texture2D<float2> DirectionalMomentsMap,
     FLightViewProj DirectionalShadowMatrix,
     SamplerState ShadowSampler,
-    FShadowSettings ShadowSettings)
+    FShadowConstants ShadowSettings)
 {
     if (Light.LightType == LIGHT_TYPE_SPOT)
     {

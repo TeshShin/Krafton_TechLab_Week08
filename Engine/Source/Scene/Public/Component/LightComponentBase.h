@@ -141,6 +141,9 @@ public:
 	int32 GetShadowMapIdx() const { return ShadowMapIdx; }
 	void SetShadowMapIdx(int32 InShadowIdx) { ShadowMapIdx = InShadowIdx; }
 
+	float GetShadowSharpen() const { return ShadowSharpen; }
+	void SetShadowSharpen(float InShadowSharpen) { ShadowSharpen = InShadowSharpen; }
+
 	EShadowProjectionMode GetShadowProjectionMode() const { return ShadowProjectionMode; }
 	void SetShadowProjectionMode(EShadowProjectionMode InMode)
 	{
@@ -156,8 +159,9 @@ protected:
 	mutable FMatrix CachedLightProjectionMatrix;
 	mutable bool bIsLightVPDirty = true;
 
-	bool bCastShadows = false; // 일단 SpotLight만 true로 함
+	bool bCastShadows = false;
 	int32 ShadowMapIdx = -1;
+	float ShadowSharpen = 1.0f;
 
 	EShadowProjectionMode ShadowProjectionMode = EShadowProjectionMode::LVP;
 };
