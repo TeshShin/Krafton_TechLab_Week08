@@ -346,7 +346,7 @@ void USpotLightComponent::UpdateLightMatricesInternal(const FCameraConstants& In
 			//    u_c = 0.5*(Sx * CenterX + Tx) + 0.5
 			//    v_c = 0.5*(Sy * CenterY + Ty) + 0.5
 			float UCenter = 0.5f * (Sx * CenterX + Tx) + 0.5f;
-			float VCenter = -0.5f * (Sy * CenterY + Ty) + 0.5f;
+			float VCenter = 0.5f * (Sy * CenterY + Ty) + 0.5f;
 
 			// 5) 텍셀 그리드로 스냅(가장 가까운 텍셀 중심)
 			UCenter = std::round(UCenter / TexelSize) * TexelSize;
