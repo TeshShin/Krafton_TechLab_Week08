@@ -3,6 +3,7 @@
 #include "Editor/Public/UI/ImGuiStyleHelper.h"
 #include "Editor/Public/UI/StatOverlay.h"
 #include "Core/Public/Misc/UELogParser.h"
+#include "Renderer/Public/ShadowMapManager.h"
 
 IMPLEMENT_SINGLETON_CLASS(UConsoleWidget, UWidget)
 
@@ -375,15 +376,15 @@ void UConsoleWidget::ProcessCommand(const char* InCommand)
 	CommandHistory.push_back(FString(InCommand));
 	HistoryPosition = -1;
 
-	FString Input = InCommand;
+	FString OriginalInput = InCommand;
 
 	// UE_Log Parsing
-	size_t StartPosition = Input.find("UE_LOG(");
+	size_t StartPosition = OriginalInput.find("UE_LOG(");
 	if (StartPosition != FString::npos && StartPosition == 0)
 	{
 		try
 		{
-			UELogParser::ParseResult Result = ParseUELogFromString(Input);
+			UELogParser::ParseResult Result = ParseUELogFromString(OriginalInput);
 
 			if (Result.bSuccess)
 			{
@@ -421,55 +422,53 @@ void UConsoleWidget::ProcessCommand(const char* InCommand)
 			bIsScrollToBottom = true;
 		}
 	}
-
-	// Clear 명령어 입력
-	else if (FString CommandLower = InCommand;
-		std::transform(CommandLower.begin(), CommandLower.end(), CommandLower.begin(), ::tolower),
-		CommandLower == "clear")
-	{
-		ClearLog();
-	}
-
-	// Stat 명령어 처리
-	else if (FString CommandLower = InCommand;
-		std::transform(CommandLower.begin(), CommandLower.end(), CommandLower.begin(), ::tolower),
-		CommandLower.length() > 5 && CommandLower.substr(0, 5) == "stat ")
-	{
-		FString StatCommand = CommandLower.substr(5);
-		HandleStatCommand(StatCommand);
-	}
-
-	// Help 명령어 입력
-	else if (FString CommandLower = InCommand;
-		std::transform(CommandLower.begin(), CommandLower.end(), CommandLower.begin(), ::tolower),
-		CommandLower == "help")
-	{
-		AddLog(ELogType::System, "Available Commands:");
-		AddLog(ELogType::Info, "  CLEAR - Clear The Console");
-		AddLog(ELogType::Info, "  HELP - Show This Help");
-		AddLog(ELogType::Info, "  STAT FPS - Show FPS overlay");
-		AddLog(ELogType::Info, "  STAT MEMORY - Show memory overlay");
-		AddLog(ELogType::Info, "  STAT PICK - Show picking performance overlay");
-		AddLog(ELogType::Info, "  STAT NONE - Hide all overlays");
-		AddLog(ELogType::Info, "  UE_LOG(\"String with format\", Args...) - Enhanced printf Formatting");
-		AddLog(ELogType::Debug, "    기본 예제: UE_LOG(\"Hello World %%d\", 2025)");
-		AddLog(ELogType::Debug, "    문자열: UE_LOG(\"User: %%s\", \"John\")");
-		AddLog(ELogType::Debug, "    혼합형: UE_LOG(\"Player %%s has %%d points\", \"Alice\", 1500)");
-		AddLog(ELogType::Debug, "    다중 인자: UE_LOG(\"Score: %%d, Lives: %%d\", 2500, 3)");
-		AddLog(ELogType::Info, "");
-		AddLog(ELogType::System, "Camera Controls:");
-		AddLog(ELogType::Info, "  우클릭 + WASD - 카메라 이동");
-		AddLog(ELogType::Info, "  우클릭 + Q/E - 위/아래 이동");
-		AddLog(ELogType::Info, "  우클릭 + 마우스 이동 - 카메라 회전");
-		AddLog(ELogType::Success, "  우클릭 + 마우스 휠 - 이동속도 조절 (20 ~ 50)");
-		AddLog(ELogType::Info, "");
-		AddLog(ELogType::System, "Terminal Commands:");
-		AddLog(ELogType::Info, "  Any Windows command will be executed directly");
-	}
 	else
 	{
-		// 실제 터미널 명령어 실행
-		ExecuteTerminalCommand(InCommand);
+		FString CommandLower = OriginalInput;
+		std::ranges::transform(CommandLower, CommandLower.begin(), ::tolower);
+
+		if (CommandLower == "clear")
+		{
+			ClearLog();
+		}
+		else if (CommandLower.length() > 5 && CommandLower.substr(0, 5) == "stat ")
+		{
+			FString StatCommand = CommandLower.substr(5);
+			HandleStatCommand(StatCommand);
+		}
+		else if (CommandLower.length() > 14 && CommandLower.substr(0, 14) == "shadow_filter ")
+		{
+			FString FilterArgs = CommandLower.substr(14);
+			HandleShadowFilterCommand(FilterArgs);
+		}
+		else if (CommandLower == "help")
+		{
+			AddLog(ELogType::System, "Available Commands:");
+			AddLog(ELogType::Info, "  CLEAR - Clear The Console");
+			AddLog(ELogType::Info, "  HELP - Show This Help");
+			AddLog(ELogType::Info, "  STAT FPS - Show FPS overlay");
+			AddLog(ELogType::Info, "  STAT MEMORY - Show memory overlay");
+			AddLog(ELogType::Info, "  STAT PICK - Show picking performance overlay");
+			AddLog(ELogType::Info, "  STAT NONE - Hide all overlays");
+			AddLog(ELogType::Info, "  UE_LOG(\"String with format\", Args...) - Enhanced printf Formatting");
+			AddLog(ELogType::Debug, "    기본 예제: UE_LOG(\"Hello World %%d\", 2025)");
+			AddLog(ELogType::Debug, "    문자열: UE_LOG(\"User: %%s\", \"John\")");
+			AddLog(ELogType::Debug, "    혼합형: UE_LOG(\"Player %%s has %%d points\", \"Alice\", 1500)");
+			AddLog(ELogType::Debug, "    다중 인자: UE_LOG(\"Score: %%d, Lives: %%d\", 2500, 3)");
+			AddLog(ELogType::Info, "");
+			AddLog(ELogType::System, "Camera Controls:");
+			AddLog(ELogType::Info, "  우클릭 + WASD - 카메라 이동");
+			AddLog(ELogType::Info, "  우클릭 + Q/E - 위/아래 이동");
+			AddLog(ELogType::Info, "  우클릭 + 마우스 이동 - 카메라 회전");
+			AddLog(ELogType::Success, "  우클릭 + 마우스 휠 - 이동속도 조절 (1 ~ 50)");
+			AddLog(ELogType::Info, "");
+			AddLog(ELogType::System, "Terminal Commands:");
+			AddLog(ELogType::Info, "  Any Windows command will be executed directly");
+		}
+		else
+		{
+			ExecuteTerminalCommand(InCommand);
+		}
 	}
 
 	// 스크롤 하단으로 이동
@@ -482,48 +481,84 @@ void UConsoleWidget::HandleStatCommand(const FString& StatCommand)
 
 	if (StatCommand == "fps")
 	{
-		StatOverlay.ShowStat(EStatType::FPS);
+		StatOverlay.ToggleStat(EStatType::FPS);
 		AddLog(ELogType::Success, "FPS overlay");
 	}
 	else if (StatCommand == "memory")
 	{
-		StatOverlay.ShowStat(EStatType::Memory);
+		StatOverlay.ToggleStat(EStatType::Memory);
 		AddLog(ELogType::Success, "Memory overlay");
 	}
 	else if (StatCommand == "pick" || StatCommand == "picking")
 	{
-		StatOverlay.ShowStat(EStatType::Picking);
+		StatOverlay.ToggleStat(EStatType::Picking);
 		AddLog(ELogType::Success, "Picking overlay");
 	}
 	else if (StatCommand == "time")
 	{
-		StatOverlay.ShowStat(EStatType::Time);
+		StatOverlay.ToggleStat(EStatType::Time);
 		AddLog(ELogType::Success, "Time overlay");
 	}
 	else if (StatCommand == "decal")
 	{
-		StatOverlay.ShowStat(EStatType::Decal);
+		StatOverlay.ToggleStat(EStatType::Decal);
 		AddLog(ELogType::Success, "Decal overlay");
 	}
 	else if (StatCommand == "shadow")
 	{
-		StatOverlay.ShowStat(EStatType::Shadow);
+		StatOverlay.ToggleStat(EStatType::Shadow);
 		AddLog(ELogType::Success, "Shadow overlay");
 	}
 	else if (StatCommand == "all")
 	{
-		StatOverlay.ShowStat(EStatType::All);
+		StatOverlay.ToggleStat(EStatType::All);
 		AddLog(ELogType::Success, "All overlays");
 	}
 	else if (StatCommand == "none")
 	{
-		StatOverlay.ShowStat(EStatType::All);
+		StatOverlay.ToggleStat(EStatType::All);
 		AddLog(ELogType::Success, "All overlays disabled");
 	}
 	else
 	{
 		AddLog(ELogType::Error, "Unknown stat command: %s", StatCommand.c_str());
 		AddLog(ELogType::Info, "Available: fps, memory, pick, decal, none");
+	}
+}
+
+void UConsoleWidget::HandleShadowFilterCommand(const FString& InArgs)
+{
+	auto& ShadowMapManager = FShadowMapManager::GetInstance();
+	if (InArgs == "vsm gaussian")
+	{
+		ShadowMapManager.UpdateFilterType(EShadowFilterType::SFT_VSM_Gaussian);
+		AddLog(ELogType::System, "Shadow Filter set to: VSM (Gaussian)");
+	}
+	else if (InArgs == "vsm box")
+	{
+		ShadowMapManager.UpdateFilterType(EShadowFilterType::SFT_VSM_Box);
+		AddLog(ELogType::System, "Shadow Filter set to: VSM (Box)");
+	}
+	else if (InArgs == "vsm") // "vsm gaussian", "vsm box" 보다 뒤에 와야 함
+	{
+		ShadowMapManager.UpdateFilterType(EShadowFilterType::SFT_VSM);
+		AddLog(ELogType::System, "Shadow Filter set to: VSM (Basic)");
+	}
+	else if (InArgs == "pcf")
+	{
+		ShadowMapManager.UpdateFilterType(EShadowFilterType::SFT_PCF);
+		AddLog(ELogType::System, "Shadow Filter set to: PCF");
+	}
+	else if (InArgs == "none")
+	{
+		ShadowMapManager.UpdateFilterType(EShadowFilterType::SFT_None);
+		AddLog(ELogType::System, "Shadow Filter set to: None (Disabled)");
+	}
+	else
+	{
+		// 잘못된 인자
+		AddLog(ELogType::Error, "Unknown shadow_filter command");
+		AddLog(ELogType::Info, "  Available options: none, pcf, vsm, vsm box, vsm gaussian");
 	}
 }
 

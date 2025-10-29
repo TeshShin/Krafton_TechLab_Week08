@@ -1,6 +1,20 @@
-#pragma once
+﻿#pragma once
 #include "Renderer/Public/RenderPass/RenderPass.h"
 #include "Renderer/Public/LightData.h"
+
+struct FLightViewProj
+{
+	FMatrix ViewMatrix;
+	FMatrix ProjectionMatrix;
+};
+
+struct FShadowConstants
+{
+	// 0=None, 1=PCF, 2=VSM, 3=VSM_Box, 4=VSM_Gaussian
+	uint32 FilterType;
+	float VSM_LightBleedReduction = 0.5f;
+	float Padding[2];
+};
 
 class FStaticMeshPass : public FRenderPass
 {
@@ -15,6 +29,8 @@ public:
 	TArray<FUnifiedDynamicLight> CollectLightsFromContext(FRenderingContext& Context);
 
 private:
+	void UpdateShadowResources();
+
     ID3D11VertexShader* VSPhong = nullptr;
     ID3D11PixelShader* PSPhong = nullptr;
 
@@ -41,6 +57,8 @@ private:
 	ID3D11ShaderResourceView* SpotLightMatricesSRV = nullptr;
     uint32 SpotLightMatricesCapacity;
 	TArray<FLightViewProj> SpotLightMatrices;
+	ID3D11Buffer* CBShadowSettings;
+	ID3D11Buffer* CBDirectionalShadowMatrix;
     ID3D11Buffer* CBDirectionalCSM = nullptr;
 
 	ID3D11ComputeShader* LightTilesCS = nullptr;

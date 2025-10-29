@@ -26,6 +26,7 @@ void ULightComponentWidget::RenderWidget()
 	    UActorComponent* NewSelectedComponent = GEditor->GetEditorModule()->GetSelectedComponent();
     	if (ULightComponentBase* LightComponent = Cast<ULightComponentBase>(NewSelectedComponent))
     	{
+    		ELightComponentType LightType = LightComponent->GetLightType();
     		ImGui::Separator();
 
     		// Visibility
@@ -49,19 +50,35 @@ void ULightComponentWidget::RenderWidget()
     			LightComponent->SetIntensity(Intensity);
     		}
 
-    		// bCastShadows
-    		bool bCastShadows = LightComponent->DoesCastShadows();
-    		if (ImGui::Checkbox("Cast Shadows", &bCastShadows))
+    		// bCastShadows (Spot/Point/Directional)
+    		if (LightType == ELightComponentType::LightType_Spot || LightType == ELightComponentType::LightType_Point
+    			|| LightType == ELightComponentType::LightType_Directional)
     		{
-    			LightComponent->SetCastShadows(bCastShadows);
+    			bool bCastShadows = LightComponent->DoesCastShadows();
+    			if (ImGui::Checkbox("Cast Shadows", &bCastShadows))
+    			{
+    				LightComponent->SetCastShadows(bCastShadows);
+    			}
+
+    			float ShadowSharpen = LightComponent->GetShadowSharpen();
+    			if (ImGui::DragFloat("Shadow Sharpen", &ShadowSharpen, 0.01f, 0.f, 1.0f))
+    			{
+    				LightComponent->SetShadowSharpen(ShadowSharpen);
+    			}
+
+    			float ShadowResolutionScale = LightComponent->GetShadowResolutionScale();
+    			if (ImGui::DragFloat("Shadow Resolution Scale", &ShadowResolutionScale, 0.01f, 0.f, 1.0f))
+    			{
+    				LightComponent->SetShadowResolutionScale(ShadowResolutionScale);
+    			}
     		}
 			// Shadow Projection Mode Toggle (Spot/Directional 지원)
-			if (LightComponent->GetLightType() == ELightComponentType::LightType_Spot ||
-				LightComponent->GetLightType() == ELightComponentType::LightType_Directional)
+			if (LightType == ELightComponentType::LightType_Spot ||
+				LightType == ELightComponentType::LightType_Directional)
 			{
 				int CurrentMode = static_cast<int>(LightComponent->GetShadowProjectionMode());
 
-				if (LightComponent->GetLightType() == ELightComponentType::LightType_Directional)
+				if (LightType == ELightComponentType::LightType_Directional)
 				{
 					const char* ModeItems[] = { "LVP", "PSM", "LiSPSM (TODO)", "CSM"};
 					if (ImGui::Combo("Shadow Projection", &CurrentMode, ModeItems, IM_ARRAYSIZE(ModeItems)))
@@ -83,7 +100,7 @@ void ULightComponentWidget::RenderWidget()
     		if (ShadowMapIdx > -1)
     		{
     			ImGui::Text("Shadow Map Idx: %d", ShadowMapIdx);
-    			switch (LightComponent->GetLightType())
+    			switch (LightType)
     			{
     			case ELightComponentType::LightType_Spot:
     				ImGui::Image(FShadowMapManager::GetInstance().GetSpotSRVForImGuiDebug(ShadowMapIdx), ImVec2(512, 512));

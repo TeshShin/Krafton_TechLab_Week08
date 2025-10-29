@@ -1,10 +1,4 @@
 #include "../Material/TextureVS.hlsl"
-
-// VSM 토글 TODO:UI 연동
-#ifndef USE_VSM
-#define USE_VSM 1
-#endif
-
 //--------------------------------------------------------------------------------------
 // [FORWARD PLUS RENDERING] Light Tile Clustering Data Structures
 //--------------------------------------------------------------------------------------
@@ -19,7 +13,7 @@ cbuffer FP_CameraCB : register(b2)
 	uint    FP_NumTilesY;      // dispatch dim Y
 	uint    FP_NumZSlices;     // dispatch dim Z
 }
- 
+
 // Forward+ control parameters
 cbuffer FP_ForwardPlusCB : register(b3)
 {
@@ -42,10 +36,15 @@ Texture2D BumpTexture : register(t5);		// map_bump
 SamplerState SamplerWrap : register(s0);
 
 // Shadow
-//cbuffer DirectionalLightConstants : register(b4)
-//{
-//	FLightViewProj DirectionalShadowMatrix;
-//};
+cbuffer ShadowSettings : register(b4)
+{
+	FShadowConstants ShadowSettings;
+}
+
+cbuffer DirectionalLightConstants : register(b5)
+{
+	FLightViewProj DirectionalShadowMatrix;
+};
 
 StructuredBuffer<FLightViewProj> SpotLightShadowMatrices : register(t12);
 Texture2DArray<float> SpotShadowAtlas : register(t13);
@@ -186,66 +185,64 @@ PS_OUTPUT mainPS(PS_INPUT Input)
     float SpecularPower = max(Ns, 1.0f); // Prevent division by zero
 
 	float3 posVS = mul(float4(Input.WorldPosition, 1.0f), View).xyz;
-	float ViewSpaceZ = posVS.z;	
-	
+	float ViewSpaceZ = posVS.z;
+
     uint cid   = FP_ComputeClusterID(Input.Position, Input.WorldPosition);
     uint count = FP_ClusterCount[cid];
     // Clamp to avoid reading past FP_ClusterIndex allocation when clusters overflow
-    uint maxCount = FP_MaxLightsPerCluster;
-    uint safeCount = (count < maxCount) ? count : maxCount;
     uint base  = cid * FP_MaxLightsPerCluster;
 
 [loop]
-	for (uint i = 0; i < safeCount; ++i);
+    for (uint i = 0; i < count; ++i)
     {
        uint li = FP_ClusterIndex[base + i];
-		 
+
        FLightingResult LightResult;
 
     	bool bShowShadows = (ShowFlags & SF_Shadow) != 0;
     	if (bShowShadows)
-    	{ 
-    		//--- 1. VSM ----------------------------------------------
-#if USE_VSM
-    		// VSM은 <float2> 텍스처와 '일반' 샘플러(SamplerState)를 사용합니다.
-    		// (참고: CalculateDynamicLightWithVSM의 마지막 인자(ViewSpaceDepth)는
-    		// 내부에서 사용되지 않으므로 더미 값 0.0f를 전달합니다.)
-    		LightResult = CalculateDynamicLightWithVSM(
-				DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, SpecularPower, ViewSpaceZ,
-				SpotMomentsAtlas,        // t14 <float2>
-				SpotLightShadowMatrices, // t12
-				PointMomentsAtlas,       // t16 <float2>
-				DirectionalMoment,       // t18 <float2>
-				DirectionalTexture,
-				//DirectionalShadowMatrix, // (CBuffer에서 온다고 가정)
-				ShadowLinearSampler,     // s2 (일반 샘플러)
-				0.0f);     // (Dummy 값)
-			  
-    		//--- 2. PCF ---------------------------------------------
-// #elif USE_PCF
-    		//        // (필터 크기는 예시로 11을 사용. CBuffer의 상수로 대체 가능)
-    		//        LightResult = CalculateDynamicLightWithPCF(
-    		//            DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, SpecularPower,
-    		//            SpotShadowAtlas,         // t13 <float>
-    		//            SpotLightShadowMatrices, // t12
-    		//            PointShadowAtlas,        // t15 <float>
-    		//            DirectionalTexture,      // t17 <float>
-    		//            DirectionalShadowMatrix, // (CBuffer)
-    		//            ShadowSampler,           // s1 (비교 샘플러)
-    		//            11);                     // (PCF 필터 크기)
-
-    		//--- 3. Hard Shadow ---------------------------------------------
-#else
-    		LightResult = CalculateDynamicLightWithShadows(
-			   DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, SpecularPower, ViewSpaceZ,
-			   SpotShadowAtlas,         // t13 <float>
-			   SpotLightShadowMatrices, // t12
-			   PointShadowAtlas,        // t15 <float>
-			   DirectionalTexture,      // t17 <float>
-			   //DirectionalShadowMatrix, // (CBuffer)
-			   ShadowSampler);          // s1 (비교 샘플러)
-#endif
-    		//-------------------------------------------------------------------------
+    	{
+			if (ShadowSettings.FilterType >= SHADOW_FILTER_VSM)
+			{
+				//--- 1. VSM ----------------------------------------------
+				// VSM은 <float2> 텍스처와 '일반' 샘플러(SamplerState)를 사용합니다.
+				LightResult = CalculateDynamicLightWithVSM(
+					DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, SpecularPower, ViewSpaceZ,
+					SpotMomentsAtlas,        // t14 <float2>
+					SpotLightShadowMatrices, // t12
+					PointMomentsAtlas,       // t16 <float2>
+					DirectionalMoment,       // t18 <float2>
+					//DirectionalShadowMatrix, // b5
+					DirectionalTexture,
+					ShadowLinearSampler,     // s2 (일반 샘플러)
+					ShadowSettings);		 // b4
+			}
+			else if (ShadowSettings.FilterType == SHADOW_FILTER_PCF)
+			{
+				//--- 2. PCF ---------------------------------------------
+				LightResult = CalculateDynamicLightWithPCF(
+					DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, SpecularPower,
+					SpotShadowAtlas,         // t13 <float>
+					SpotLightShadowMatrices, // t12
+					PointShadowAtlas,        // t15 <float>
+					DirectionalTexture,      // t17 <float>
+					DirectionalShadowMatrix, // (CBuffer)
+					ShadowSampler,           // s1 (비교 샘플러)
+					DynamicLights[li].ShadowFilterSize); // (PCF 필터 크기)
+			}
+			else
+			{
+				//--- 3. Hard Shadow ---------------------------------------------
+				LightResult = CalculateDynamicLightWithShadows(
+				   DynamicLights[li], Input.WorldPosition, wsNormal, ViewDir, SpecularPower,
+				   SpotShadowAtlas,         // t13 <float>
+				   SpotLightShadowMatrices, // t12
+				   PointShadowAtlas,        // t15 <float>
+				   DirectionalTexture,      // t17 <float>
+				   DirectionalShadowMatrix, // (CBuffer)
+				   ShadowSampler);          // s1 (비교 샘플러)
+				//-----------------------------------------------------------------
+			}
     	}
         else
         {

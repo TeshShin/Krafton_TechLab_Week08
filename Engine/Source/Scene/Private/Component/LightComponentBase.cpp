@@ -21,6 +21,8 @@ void ULightComponentBase::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		FJsonSerializer::ReadVector(InOutHandle, "LightColor", LightColor);
 		FJsonSerializer::ReadBool(InOutHandle, "bVisible", bVisible, true);
 		FJsonSerializer::ReadBool(InOutHandle, "bCastShadows", bCastShadows, true);
+		FJsonSerializer::ReadFloat(InOutHandle, "ShadowSharpen", ShadowSharpen, 1.0f);
+		FJsonSerializer::ReadFloat(InOutHandle, "ShadowResolutionScale", ShadowResolutionScale, 1.0f);
 		SetLightColor(LightColor);
 		int32 ShadowModeInt = 0;
 		FJsonSerializer::ReadInt32(InOutHandle, "ShadowProjectionMode", ShadowModeInt, 0);
@@ -32,6 +34,8 @@ void ULightComponentBase::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		InOutHandle["LightColor"] = FJsonSerializer::VectorToJson(LightColor);
 		InOutHandle["bVisible"] = bVisible;
 		InOutHandle["bCastShadows"] = bCastShadows;
+		InOutHandle["ShadowSharpen"] = ShadowSharpen;
+		InOutHandle["ShadowResolutionScale"] = ShadowResolutionScale;
 		InOutHandle["ShadowProjectionMode"] = static_cast<int>(ShadowProjectionMode);
 	}
 }
@@ -43,6 +47,9 @@ UObject* ULightComponentBase::Duplicate()
 	LightComponent->LightColor = LightColor;
 	LightComponent->bVisible = bVisible;
 	LightComponent->bCastShadows = bCastShadows;
+	LightComponent->ShadowSharpen = ShadowSharpen;
+	LightComponent->ShadowResolutionScale = ShadowResolutionScale;
+	LightComponent->ShadowProjectionMode = ShadowProjectionMode;
 
 	return LightComponent;
 }
