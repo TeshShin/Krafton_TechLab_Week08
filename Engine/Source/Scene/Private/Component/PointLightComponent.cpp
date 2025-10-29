@@ -12,6 +12,7 @@ UPointLightComponent::UPointLightComponent()
 {
 	bCastShadows = true;
 	CachedLightViewProjection.reserve(6);
+	ShadowBias = 0.;
 }
 
 void UPointLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
@@ -57,7 +58,7 @@ void UPointLightComponent::DrawDebugLines()
 
 	LineManager.AddDebugCircle(BaseLabel, Center, AttenuationRadius, Color, DebugLineLabels);
 }
- 
+
 FUnifiedDynamicLight UPointLightComponent::GetUnifiedLightData() const
 {
     FUnifiedDynamicLight LightData = {};
@@ -68,9 +69,10 @@ FUnifiedDynamicLight UPointLightComponent::GetUnifiedLightData() const
 	LightData.AttenuationRadius = GetAttenuationRadius();
     LightData.FalloffExponent = GetLightFalloffExponent();
     LightData.LightType = static_cast<uint32>(GetLightType());
-	LightData.ShadowBias = 0.05f;
+	LightData.ShadowBias = ShadowBias;
 	LightData.bCastShadows = bCastShadows;
 	LightData.ShadowMapIndex = ShadowMapIdx;
+	LightData.ShadowSlopeBias = ShadowSlopeBias;
 
     return LightData;
 }

@@ -134,6 +134,7 @@ struct FUnifiedDynamicLight
     float Param1;               // 4 bytes  - Spot: OuterConeAngle (radians), Rect: Height
     uint LightType;             // 4 bytes  - Light type identifier
 	float ShadowBias;            // 4 bytes - Shadow Bias
+	float ShadowSlopeBias;       // 4 bytes - Shadow Slope Bias
 	uint bCastShadows;         // 4 bytes - Light Does Cast Shadows
 	int ShadowMapIndex;        // 4 bytes - Shadow Texture2D Array Index
 	int ShadowFilterSize;      // 4 bytes  - PCF/Box Size, Gauss Radius
@@ -638,41 +639,57 @@ float2 SampleVSMGaussian_Texture2D(Texture2D<float2> ShadowMoments, SamplerState
 // PCF Shadow (Hard/Soft) - Directional Light
 //--------------------------------------------------------------------------------------
 
-
-float SampleCSMShadow_PCF(FDirectionalCSMLightConstants Constants,
-   float3 worldPos,
-    float viewSpaceZ,
-    Texture2DArray<float> DirectionalShadowArray,
-    SamplerComparisonState ShadowSampler,
-    float shadowBias,
-    int filterSize)
+float SampleCSMShadow_PCF(
+    FDirectionalCSMLightConstants InConstants,
+    float3 InWorldPos,
+    float InViewSpaceZ,
+    Texture2DArray<float> InDirectionalShadowArray,
+    SamplerComparisonState InShadowSampler,
+    float InShadowBias,
+    float InShadowSlopeBias,
+    int InFilterSize,
+    float InShadowResolutionScale)
 {
-	uint numCascade = Constants.DirNumCascades;
-	if (numCascade == 0)
-		return 1.0f;
+    uint NumCascade = InConstants.DirNumCascades;
+    if (NumCascade == 0)
+       return 1.0f;
 
-	// Select Cascade Idx
-	uint cascadeIdx = SelectCascadeIndex(Constants, viewSpaceZ, numCascade);
+    // 뷰 공간 Z값을 기반으로 올바른 Cascade 인덱스를 선택합니다.
+    uint CascadeIdx = SelectCascadeIndex(InConstants, InViewSpaceZ, NumCascade);
 
-	FLightViewProj viewProj = Constants.DirCascadeMatrices[cascadeIdx];
+    // 해당 Cascade의 뷰/투영 행렬을 가져옵니다.
+    FLightViewProj ViewProj = InConstants.DirCascadeMatrices[CascadeIdx];
 
-	float3 uvw = GetSampleCoords(worldPos, viewProj.ViewMatrix, viewProj.ProjectionMatrix);
-	float3 SampleCoords = float3(uvw.xy, cascadeIdx);
-	float refZ = uvw.z - shadowBias;
+    // 월드 좌표를 라이트 공간의 UVW [0,1] 좌표로 변환합니다.
+    float3 UVW = GetSampleCoords(InWorldPos, ViewProj.ViewMatrix, ViewProj.ProjectionMatrix);
 
-	uint GlobalAtlasWidth, GlobalAtlasHeight, NumSlices;
-	DirectionalShadowArray.GetDimensions(GlobalAtlasWidth, GlobalAtlasHeight, NumSlices);
-	float fGlobalAtlasWidth = (float)GlobalAtlasWidth;
+    // 아틀라스의 실제(글로벌) 해상도를 가져옵니다.
+    uint GlobalAtlasWidth, GlobalAtlasHeight, NumSlices;
+    InDirectionalShadowArray.GetDimensions(GlobalAtlasWidth, GlobalAtlasHeight, NumSlices);
+    float FGlobalAtlasWidth = (float)GlobalAtlasWidth;
+	UVW.xy = UVW.xy * InShadowResolutionScale;
 
-	float shadow0 = (filterSize <= 1)
-        ? DirectionalShadowArray.SampleCmp(ShadowSampler, SampleCoords, refZ)
-        : PCF_Texture2DArray(DirectionalShadowArray, ShadowSampler, SampleCoords, refZ, filterSize, fGlobalAtlasWidth);
+    // [Slope Bias 적용]
+    // 픽셀 셰이더에서 뎁스(UVW.z)의 화면 공간 경사도를 계산합니다.
+    float DepthDX = ddx(UVW.z);
+    float DepthDY = ddy(UVW.z);
+    float Slope = max(abs(DepthDX), abs(DepthDY));
 
-	return shadow0;
+    // 경사 바이어스와 상수 바이어스를 조합하여 최종 바이어스를 계산합니다.
+    float SlopeBiasValue = Slope * InShadowSlopeBias;
+    float FinalBias = InShadowBias + SlopeBiasValue;
 
-	// Compute Cascade Blend Factor
+    // 최종 샘플링 좌표 및 기준 깊이를 준비합니다.
+    float3 SampleCoords = float3(UVW.xy, CascadeIdx);
+    float RefZ = UVW.z - FinalBias;
+
+    // 하드 섀도우 또는 PCF 필터링을 수행합니다.
+    float ShadowFactor = (InFilterSize <= 1)
+        ? InDirectionalShadowArray.SampleCmp(InShadowSampler, SampleCoords, RefZ)
+        : PCF_Texture2DArray(InDirectionalShadowArray, InShadowSampler, SampleCoords, RefZ, InFilterSize, FGlobalAtlasWidth);
+
+    return ShadowFactor;
 }
-
 
 FLightingResult CalculateDynamicLightWithPCF_Directional(
     FUnifiedDynamicLight Light,
@@ -690,7 +707,7 @@ FLightingResult CalculateDynamicLightWithPCF_Directional(
     if (Light.bCastShadows > 0)
     {
 		ShadowFactor = SampleCSMShadow_PCF(DirectionalConstants, WorldPos, ViewSpaceZ,
-			DirectionalShadowArray, ShadowSampler, Light.ShadowBias, FilterSize);
+			DirectionalShadowArray, ShadowSampler, Light.ShadowBias, Light.ShadowSlopeBias, FilterSize, Light.ShadowResolutionScale);
     }
 
     Result.Diffuse *= ShadowFactor;
@@ -721,12 +738,23 @@ FLightingResult CalculateDynamicLightWithPCF_Spot(
     	SpotShadowAtlas.GetDimensions(GlobalAtlasWidth, GlobalAtlasHeight, NumSlices);
     	float fGlobalAtlasWidth = (float)GlobalAtlasWidth;
 
-    	// 2. UV 좌표에 라이트의 'ResolutionScale'을 곱하여 UV를 보정합니다.
     	uvw.xy = uvw.xy * Light.ShadowResolutionScale;
+    	float3 SampleCoords = float3(uvw.xy, Light.ShadowMapIndex);
 
-        float3 SampleCoords = float3(uvw.xy, Light.ShadowMapIndex);
-        float RefZ = uvw.z - Light.ShadowBias;
+    	// ===== [Slope Bias 적용] =====
+    	// 1. 현재 픽셀 깊이(uvw.z)의 스크린 공간 x, y 변화율(경사)을 계산
+    	float depth_dx = ddx(uvw.z);
+    	float depth_dy = ddy(uvw.z);
+    	// 2. 두 경사 중 더 큰 쪽(더 가파른 쪽)을 선택
+    	float slope = max(abs(depth_dx), abs(depth_dy));
+    	// 3. 경사에 Slope Bias 스케일 값을 곱함
+    	float slopeBiasValue = slope * Light.ShadowSlopeBias;
+    	// 4. 바이어스와 경사 바이어스를 더함
+    	float finalBias = Light.ShadowBias + slopeBiasValue;
+    	// 5. 최종 바이어스를 적용한 기준 깊이(RefZ) 계산
+    	float RefZ = uvw.z - finalBias;
 
+    	// ⬆️ ===== [적용 끝] ===== ⬆️
         if (FilterSize <= 1)
         {
             // Hard shadow
@@ -874,12 +902,12 @@ FLightingResult CalculateDynamicLightWithVSM_Directional(
     	FLightViewProj viewProj = DirConstants.DirCascadeMatrices[cascadeIdx];
 
     	float3 uvw = GetSampleCoords(WorldPos, viewProj.ViewMatrix, viewProj.ProjectionMatrix);
-		 
+
     	float4 lightSpacePos = mul(float4(WorldPos, 1.0f), viewProj.ViewMatrix);
-    	float t = lightSpacePos.z; 
+    	float t = lightSpacePos.z;
 
     	float3 sampleCoords = float3(uvw.xy, cascadeIdx);
-		
+
     	uint Width, Height, Idx;
     	DirectionalMomentsMap.GetDimensions(Width, Height, Idx);
     	float TexSize = (float)Width;

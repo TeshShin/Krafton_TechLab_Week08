@@ -6,7 +6,6 @@
 #include "Editor/Public/UI/Widget/Component/SpotLightComponentWidget.h"
 #include "Manager/Public/AssetManager.h"
 #include "Renderer/Public/LightData.h"
-#include "Renderer/Public/ShadowMapManager.h"
 
 IMPLEMENT_CLASS(USpotLightComponent, UPointLightComponent)
 
@@ -15,6 +14,7 @@ USpotLightComponent::USpotLightComponent()
 	CachedLightViewProjection.reserve(1);
 	bCanEverTick = true;
 	bCastShadows = true;
+	ShadowBias = 0.00f;
 }
 
 void USpotLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
@@ -60,7 +60,8 @@ FUnifiedDynamicLight USpotLightComponent::GetUnifiedLightData() const
     LightData.Param0 = InnerConeAngle;
     LightData.Param1 = OuterConeAngle;
     LightData.LightType = static_cast<uint32>(GetLightType());
-	LightData.ShadowBias = 0.001f;
+	LightData.ShadowBias = ShadowBias;
+	LightData.ShadowSlopeBias = ShadowSlopeBias;
 
     return LightData;
 }

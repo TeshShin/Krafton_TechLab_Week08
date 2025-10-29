@@ -10,6 +10,7 @@ IMPLEMENT_CLASS(UDirectionalLightComponent, ULightComponent)
 UDirectionalLightComponent::UDirectionalLightComponent()
 {
 	bCastShadows = true;
+	ShadowBias = 0.001f;
 }
 
 
@@ -33,9 +34,10 @@ FUnifiedDynamicLight UDirectionalLightComponent::GetUnifiedLightData() const
     LightData.Intensity = GetIntensity();
     LightData.Color = GetLightColor();
 	LightData.LightType = static_cast<uint32>(GetLightType());
-	LightData.ShadowBias = 0.001f;
+	LightData.ShadowBias = ShadowBias;
 	LightData.bCastShadows = bCastShadows;
 	LightData.ShadowMapIndex = ShadowMapIdx;
+	LightData.ShadowSlopeBias = ShadowSlopeBias;
 
     return LightData;
 }
@@ -115,20 +117,20 @@ void UDirectionalLightComponent::UpdateLightMatricesInternal(const FCameraConsta
 		CachedLightViewMatrices.emplace_back(LightView);
 		CachedLightProjectionMatrix = OrthographicProjection;
 		CachedLightViewProjection.emplace_back(CachedLightViewMatrices[0] * CachedLightProjectionMatrix);
-		return;	
+		return;
 	}
-	// --- LiSPSM 모드: 추후 구현, 현재는 LVP로 폴백 ---
-	else if (GetShadowProjectionMode() == EShadowProjectionMode::LiSPSM)
-	{
-		// TODO : LiSPSM 구현
-	}
-	else if (GetShadowProjectionMode() == EShadowProjectionMode::PSM)
-	{
-		// TODO : PSM 구현
-		
-	}
+	// // --- LiSPSM 모드: 추후 구현, 현재는 LVP로 폴백 ---
+	// else if (GetShadowProjectionMode() == EShadowProjectionMode::LiSPSM)
+	// {
+	// 	// TODO : LiSPSM 구현
+	// }
+	// else if (GetShadowProjectionMode() == EShadowProjectionMode::PSM)
+	// {
+	// 	// TODO : PSM 구현
+	//
+	// }
 	else if (GetShadowProjectionMode() == EShadowProjectionMode::CSM)
-	{  
+	{
 		// TODO : CSM 구현
 		CachedLightViewProjection.clear();
 		CachedLightViewMatrices.clear();
@@ -141,7 +143,7 @@ void UDirectionalLightComponent::UpdateLightMatricesInternal(const FCameraConsta
 		// Perspective camera: build NDC corners using perspective depth mapping
 		TArray<TArray<FVector>> CascadeCornersNDC = CSM::BuildCascadeCornersNDC(InCameraInvConstants.NearClip, InCameraInvConstants.FarClip, SplitView, true/*perspective*/);
 		TArray<TArray<FVector>> CascadeCornersWS = CSM::BuildCascadeCornersWorldFromNDC(InverseVP, CascadeCornersNDC);
-		
+
 
 		const FVector LightDir = GetWorldForwardVector().GetNormalized();
 		TArray<FMatrix> LightVP = CSM::BuildCascadeLightVP(LightDir, CascadeCornersWS, 1000.0f, CachedLightViewMatrices, CachedCSMDSVProjection);

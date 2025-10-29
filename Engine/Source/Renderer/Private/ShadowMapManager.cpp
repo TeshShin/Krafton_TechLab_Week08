@@ -825,6 +825,24 @@ void FShadowMapManager::InitializeForDebug()
         return;
     }
 
+	DXGI_FORMAT DebugFormat;
+    EShadowFilterType CurrentFilter = ShadowSettings.FilterType;
+
+    if (CurrentFilter == EShadowFilterType::SFT_VSM ||
+        CurrentFilter == EShadowFilterType::SFT_VSM_Box ||
+        CurrentFilter == EShadowFilterType::SFT_VSM_Gaussian)
+    {
+        // VSM (Variance Shadow Map)은 Depth와 Depth^2를 저장 (R32G32)
+        DebugFormat = DXGI_FORMAT_R32G32_FLOAT;
+        UE_LOG_INFO("[ShadowMapManager] Initializing Debug Resources for VSM (R32G32).");
+    }
+    else
+    {
+        // PCF 또는 Hard Shadow는 Depth만 저장 (R32)
+        DebugFormat = DXGI_FORMAT_R32_FLOAT;
+        UE_LOG_INFO("[ShadowMapManager] Initializing Debug Resources for PCF (R32).");
+    }
+
     HRESULT hr;
     // --- 1. 스포트라이트 디버그 리소스 생성 ---
     {
@@ -836,7 +854,7 @@ void FShadowMapManager::InitializeForDebug()
         Desc.Height = SrcDesc.Height;
         Desc.MipLevels = 1;
         Desc.ArraySize = 1;
-        Desc.Format = DXGI_FORMAT_R32_FLOAT;
+        Desc.Format = DebugFormat;
         Desc.SampleDesc.Count = 1;
         Desc.Usage = D3D11_USAGE_DEFAULT;
         Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
@@ -874,22 +892,22 @@ void FShadowMapManager::InitializeForDebug()
         Desc.Height = SrcDesc.Height;
         Desc.MipLevels = 1;
         Desc.ArraySize = 1;
-        Desc.Format = DXGI_FORMAT_R32_FLOAT;
+        Desc.Format = DebugFormat;
         Desc.SampleDesc.Count = 1;
         Desc.Usage = D3D11_USAGE_DEFAULT;
         Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
         Desc.CPUAccessFlags = 0;
         Desc.MiscFlags = 0;
 
-    	for (uint32 Idx = 0; Idx < 6; Idx++)
-    	{
-    		hr = Device->CreateTexture2D(&Desc, nullptr, &ImGuiDebugTextures_Point[Idx]);
-    		if (FAILED(hr))
-    		{
-    			UE_LOG_ERROR("[ShadowMapManager] Failed to create Point Debug Texture.");
-    			return;
-    		}
-    	}
+        for (uint32 Idx = 0; Idx < 6; Idx++)
+        {
+           hr = Device->CreateTexture2D(&Desc, nullptr, &ImGuiDebugTextures_Point[Idx]);
+           if (FAILED(hr))
+           {
+              UE_LOG_ERROR("[ShadowMapManager] Failed to create Point Debug Texture.");
+              return;
+           }
+        }
 
         // SRV 생성
         D3D11_SHADER_RESOURCE_VIEW_DESC SrvDesc = {};
@@ -898,50 +916,50 @@ void FShadowMapManager::InitializeForDebug()
         SrvDesc.Texture2D.MostDetailedMip = 0;
         SrvDesc.Texture2D.MipLevels = 1;
 
-    	for (uint32 Idx = 0; Idx < 6; Idx++)
-    	{
-    		hr = Device->CreateShaderResourceView(ImGuiDebugTextures_Point[Idx], &SrvDesc, &ImGuiDebugSRVs_Point[Idx]);
-    		if (FAILED(hr))
-    		{
-    			UE_LOG_ERROR("[ShadowMapManager] Failed to create Point Debug SRV.");
-    			return;
-    		}
-    	}
+        for (uint32 Idx = 0; Idx < 6; Idx++)
+        {
+           hr = Device->CreateShaderResourceView(ImGuiDebugTextures_Point[Idx], &SrvDesc, &ImGuiDebugSRVs_Point[Idx]);
+           if (FAILED(hr))
+           {
+              UE_LOG_ERROR("[ShadowMapManager] Failed to create Point Debug SRV.");
+              return;
+           }
+        }
     }
 
-	// --- 3. 디렉셔널 라이트 디버그 리소스 생성 ---
-	{
-		D3D11_TEXTURE2D_DESC srcDesc = {};
-		DirShadowTexture->GetDesc(&srcDesc);
+    // --- 3. 디렉셔널 라이트 디버그 리소스 생성 ---
+    {
+       D3D11_TEXTURE2D_DESC srcDesc = {};
+       DirShadowTexture->GetDesc(&srcDesc);
 
-		ImGuiDebugTextures_Dir.resize(DirShadowCascadesMax, nullptr);
-		ImGuiDebugSRVs_Dir.resize(DirShadowCascadesMax, nullptr);
+       ImGuiDebugTextures_Dir.resize(DirShadowCascadesMax, nullptr);
+       ImGuiDebugSRVs_Dir.resize(DirShadowCascadesMax, nullptr);
 
-		D3D11_TEXTURE2D_DESC Desc = {};
-		Desc.Width = srcDesc.Width;
-		Desc.Height = srcDesc.Height;
-		Desc.MipLevels = 1;
-		Desc.ArraySize = 1;
-		Desc.Format = DXGI_FORMAT_R32_FLOAT; // SRV 읽기용
-		Desc.SampleDesc.Count = 1;
-		Desc.Usage = D3D11_USAGE_DEFAULT;
-		Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+       D3D11_TEXTURE2D_DESC Desc = {};
+       Desc.Width = srcDesc.Width;
+       Desc.Height = srcDesc.Height;
+       Desc.MipLevels = 1;
+       Desc.ArraySize = 1;
+       Desc.Format = DebugFormat;
+       Desc.SampleDesc.Count = 1;
+       Desc.Usage = D3D11_USAGE_DEFAULT;
+       Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
-		for (uint32 i = 0; i < DirShadowCascadesMax; ++i)
-		{
-			HRESULT hr = Device->CreateTexture2D(&Desc, nullptr, &ImGuiDebugTextures_Dir[i]);
-			if (FAILED(hr)) { UE_LOG_ERROR("Create Dir Debug Tex failed"); return; }
+       for (uint32 i = 0; i < DirShadowCascadesMax; ++i)
+       {
+          HRESULT hr = Device->CreateTexture2D(&Desc, nullptr, &ImGuiDebugTextures_Dir[i]);
+          if (FAILED(hr)) { UE_LOG_ERROR("Create Dir Debug Tex failed"); return; }
 
-			D3D11_SHADER_RESOURCE_VIEW_DESC sdesc = {};
-			sdesc.Format = Desc.Format;
-			sdesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-			sdesc.Texture2D.MostDetailedMip = 0;
-			sdesc.Texture2D.MipLevels = 1;
+          D3D11_SHADER_RESOURCE_VIEW_DESC sdesc = {};
+          sdesc.Format = Desc.Format;
+          sdesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+          sdesc.Texture2D.MostDetailedMip = 0;
+          sdesc.Texture2D.MipLevels = 1;
 
-			hr = Device->CreateShaderResourceView(ImGuiDebugTextures_Dir[i], &sdesc, &ImGuiDebugSRVs_Dir[i]);
-			if (FAILED(hr)) { UE_LOG_ERROR("Create Dir Debug SRV failed"); return; }
-		}
-	}
+          hr = Device->CreateShaderResourceView(ImGuiDebugTextures_Dir[i], &sdesc, &ImGuiDebugSRVs_Dir[i]);
+          if (FAILED(hr)) { UE_LOG_ERROR("Create Dir Debug SRV failed"); return; }
+       }
+    }
 }
 
 ID3D11ShaderResourceView* FShadowMapManager::GetSpotSRVForImGuiDebug(uint32 SpotIndex)
@@ -994,7 +1012,6 @@ ID3D11ShaderResourceView* FShadowMapManager::GetPointSRVForImGuiDebug(uint32 Cub
 	}
 	return ImGuiDebugSRVs_Point[FaceIndex];
 }
-
 
 ID3D11ShaderResourceView* FShadowMapManager::GetDirectionalSRVForImGuiDebug(uint32 CascadeIdx)
 {

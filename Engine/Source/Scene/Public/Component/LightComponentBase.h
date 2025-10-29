@@ -150,6 +150,12 @@ public:
 	float GetShadowSharpen() const { return ShadowSharpen; }
 	void SetShadowSharpen(float InShadowSharpen) { ShadowSharpen = clamp(InShadowSharpen, 0.0f, 1.0f); }
 
+	float GetShadowBias() const { return ShadowBias; }
+	void SetShadowBias(float InShadowBias) { ShadowBias = InShadowBias; }
+
+	float GetShadowSlopeBias() const { return ShadowSlopeBias; }
+	void SetShadowSlopeBias(float InShadowSlopeBias) { ShadowSlopeBias = InShadowSlopeBias; }
+
 	EShadowProjectionMode GetShadowProjectionMode() const { return ShadowProjectionMode; }
 	void SetShadowProjectionMode(EShadowProjectionMode InMode)
 	{
@@ -173,10 +179,11 @@ protected:
 	bool bCastShadows = false;
 	int32 ShadowMapIdx = -1;
 	float ShadowResolutionScale = 1.0f;
+	float ShadowBias = 0;
+	float ShadowSlopeBias = 0;
 	float ShadowSharpen = 1.0f;
 
 	EShadowProjectionMode ShadowProjectionMode = EShadowProjectionMode::LVP;
-
 
 protected:
 	uint32 NumOfCascade = 12;

@@ -45,6 +45,7 @@ struct FUnifiedDynamicLight
     float  Param1;              // spot outer (rad) / rect height
 	uint   LightType;           // enum above
 	float ShadowBias;            // 4 bytes - Shadow Bias
+	float ShadowSlopeBias;       // 4 bytes - Shadow Slope Bias
 	uint bCastShadows;         // 4 bytes - Light Does Cast Shadows
 	int ShadowMapIndex;        // 4 bytes - Shadow Texture2D Array Index
 	int ShadowFilterSize;      // 4 bytes  - PCF/Box Size, Gauss Radius

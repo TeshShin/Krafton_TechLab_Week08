@@ -71,6 +71,18 @@ void ULightComponentWidget::RenderWidget()
     			{
     				LightComponent->SetShadowResolutionScale(ShadowResolutionScale);
     			}
+
+    			float ShadowBias = LightComponent->GetShadowBias();
+    			if (ImGui::DragFloat("Shadow Bias", &ShadowBias, 0.001f, 0.f, 1.0f))
+    			{
+    				LightComponent->SetShadowBias(ShadowBias);
+    			}
+
+    			float ShadowSlopeBias = LightComponent->GetShadowSlopeBias();
+    			if (ImGui::DragFloat("Shadow Slope Bias", &ShadowSlopeBias, 0.001f, 0.f, 1.0f))
+    			{
+    				LightComponent->SetShadowSlopeBias(ShadowSlopeBias);
+    			}
     		}
 			// Shadow Projection Mode Toggle (Spot/Directional 지원)
 			if (LightType == ELightComponentType::LightType_Spot ||
@@ -80,10 +92,11 @@ void ULightComponentWidget::RenderWidget()
 
 				if (LightType == ELightComponentType::LightType_Directional)
 				{
-					const char* ModeItems[] = { "LVP", "PSM", "LiSPSM (TODO)", "CSM"};
+					const char* ModeItems[] = { "LVP", "CSM" };
 					if (ImGui::Combo("Shadow Projection", &CurrentMode, ModeItems, IM_ARRAYSIZE(ModeItems)))
 					{
-						LightComponent->SetShadowProjectionMode(static_cast<EShadowProjectionMode>(CurrentMode));
+						EShadowProjectionMode ShadowProjectionMode = CurrentMode == 0 ? EShadowProjectionMode::LVP : EShadowProjectionMode::CSM;
+						LightComponent->SetShadowProjectionMode(ShadowProjectionMode);
 					}
 				}
 				else
@@ -91,7 +104,8 @@ void ULightComponentWidget::RenderWidget()
 					const char* ModeItems[] = { "LVP", "PSM" };
 					if (ImGui::Combo("Shadow Projection", &CurrentMode, ModeItems, IM_ARRAYSIZE(ModeItems)))
 					{
-						LightComponent->SetShadowProjectionMode(static_cast<EShadowProjectionMode>(CurrentMode));
+						EShadowProjectionMode ShadowProjectionMode = CurrentMode == 0 ? EShadowProjectionMode::LVP : EShadowProjectionMode::PSM;
+						LightComponent->SetShadowProjectionMode(ShadowProjectionMode);
 					}
 				}
 			}
@@ -103,12 +117,12 @@ void ULightComponentWidget::RenderWidget()
     			switch (LightType)
     			{
     			case ELightComponentType::LightType_Spot:
-    				ImGui::Image(FShadowMapManager::GetInstance().GetSpotSRVForImGuiDebug(ShadowMapIdx), ImVec2(512, 512));
+    				ImGui::Image(FShadowMapManager::GetInstance().GetSpotSRVForImGuiDebug(ShadowMapIdx), ImVec2(256, 256));
     				break;
     			case ELightComponentType::LightType_Directional:
 					if (LightComponent->GetShadowProjectionMode() == EShadowProjectionMode::CSM)
 					{
-						auto& SMM = FShadowMapManager::GetInstance();
+						auto& ShadowMapManager = FShadowMapManager::GetInstance();
 
 						// 썸네일 옵션(원하면 UPROPERTY/설정으로 빼도 됨)
 						const float Thumb = 256.0f;
@@ -116,13 +130,13 @@ void ULightComponentWidget::RenderWidget()
 
 						if (ImGui::CollapsingHeader("CSM Depth Slices", ImGuiTreeNodeFlags_DefaultOpen))
 						{
-							const uint32 lightCasc = LightComponent->GetNumOfCascade();
-							const uint32 smmCasc   = (uint32)SMM.GetDirectionalMaxNumCascades();
-							const uint32 debugCascades = (lightCasc < smmCasc) ? lightCasc : smmCasc;
-							ImGui::Text("Cascades: %u", debugCascades);
-							for (uint32 i = 0; i < debugCascades; ++i)
+							const uint32 LightCascacdesNum = LightComponent->GetNumOfCascade();
+							const uint32 CascadesNum   = ShadowMapManager.GetDirectionalMaxNumCascades();
+							const uint32 DebugCascades = (LightCascacdesNum < CascadesNum) ? LightCascacdesNum : CascadesNum;
+							ImGui::Text("Cascades: %u", DebugCascades);
+							for (uint32 i = 0; i < DebugCascades; ++i)
 							{
-								ID3D11ShaderResourceView* srv = SMM.GetDirectionalSRVForImGuiDebug(i);
+								ID3D11ShaderResourceView* srv = ShadowMapManager.GetDirectionalSRVForImGuiDebug(i);
 								if (srv)
 								{
 									ImGui::BeginGroup();
@@ -137,14 +151,20 @@ void ULightComponentWidget::RenderWidget()
 					}
 					else
 					{
-						// CSM 아닐때 처리 해줘야함
+						ID3D11ShaderResourceView* SRV = FShadowMapManager::GetInstance().GetDirectionalSRVForImGuiDebug(0);
+						if (SRV)
+						{
+							ImGui::BeginGroup();
+							ImGui::Image((ImTextureID)SRV, ImVec2(256, 256));
+							ImGui::EndGroup();
+						}
 					}
 					break;
     			case ELightComponentType::LightType_Point:
     				FShadowMapManager::GetInstance().UpdatePointShadowDebugTextures(ShadowMapIdx);
     				for (uint32 Idx = 0; Idx < 6; ++Idx)
     				{
-    					ImGui::Image(FShadowMapManager::GetInstance().GetPointSRVForImGuiDebug(ShadowMapIdx, Idx), ImVec2(512, 512));
+    					ImGui::Image(FShadowMapManager::GetInstance().GetPointSRVForImGuiDebug(ShadowMapIdx, Idx), ImVec2(256, 256));
     				}
     				break;
     			default: ;
