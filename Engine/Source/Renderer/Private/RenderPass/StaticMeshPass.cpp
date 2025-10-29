@@ -9,16 +9,6 @@
 #include "Editor/Public/Camera.h"
 #include "Renderer/Public/ShadowMapManager.h"
 #include "Renderer/Public/Optimization/CSM.h"
-
-// Mirror of HLSL b4 cbuffer for directional CSM
-struct FDirectionalCSMConstants
-{
-    uint32 DirNumCascades;
-    float Pad[3];
-    float DirCascadeSplits[12];
-    FLightViewProj DirCascadeMatrices[12];
-};
-
 FStaticMeshPass::FStaticMeshPass(UPipeline* InPipeline, ID3D11DepthStencilState* InDS, ID3D11DepthStencilState* InDisabledDS)
 	: FRenderPass(InPipeline), DS(InDS), DisabledDS(InDisabledDS)
 {
@@ -474,12 +464,12 @@ TArray<FUnifiedDynamicLight> FStaticMeshPass::CollectLightsFromContext(FRenderin
 				csm.DirNumCascades = desired;
 				float lambda = Light->GetCascadeSplitLambda();
 				TArray<float> splits = CSM::ComputeCascadeSplitDistances(CamInv.NearClip, CamInv.FarClip, desired, lambda);
-				// Copy splits (size desired+1) into fixed array
-				uint32 splitCount = static_cast<uint32>(splits.size());
-				for (uint32 i = 0; i < std::min<uint32>(splitCount, 10u); ++i)
-				{
-					csm.DirCascadeSplits[i] = splits[i];
-				}
+                // Copy splits (size desired+1) into fixed array (as float4 for 16-byte stride)
+                uint32 splitCount = static_cast<uint32>(splits.size());
+                for (uint32 i = 0; i < std::min<uint32>(splitCount, 12u); ++i)
+                {
+                    csm.DirCascadeSplits[i] = FVector4(splits[i], 0,0,0);
+                }
 
 				// Fill matrices
 				for (uint32 i = 0; i < desired; ++i)

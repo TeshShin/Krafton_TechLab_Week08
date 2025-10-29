@@ -180,3 +180,16 @@ struct FForwardPlusConstants
 	uint32 TotalClusters;            // NumTilesX*NumTilesY*NumZSlices
 	uint32 FP_Pad0;
 };
+
+struct FLightViewProj
+{
+	FMatrix ViewMatrix;
+	FMatrix ProjectionMatrix;
+}; 
+struct FDirectionalCSMConstants
+{
+	uint32 DirNumCascades;
+	float Pad[3];
+	FVector4 DirCascadeSplits[12];
+	FLightViewProj DirCascadeMatrices[12];
+};

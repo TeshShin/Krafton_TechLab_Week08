@@ -1,12 +1,6 @@
-﻿#pragma once
+#pragma once
 #include "Renderer/Public/RenderPass/RenderPass.h"
 #include "Renderer/Public/LightData.h"
-
-struct FLightViewProj
-{
-	FMatrix ViewMatrix;
-	FMatrix ProjectionMatrix;
-};
 
 class FStaticMeshPass : public FRenderPass
 {
