@@ -130,10 +130,22 @@ void ULightComponentWidget::RenderWidget()
 
 						if (ImGui::CollapsingHeader("CSM Depth Slices", ImGuiTreeNodeFlags_DefaultOpen))
 						{
-							const uint32 LightCascacdesNum = LightComponent->GetNumOfCascade();
 							const uint32 CascadesNum   = ShadowMapManager.GetDirectionalMaxNumCascades();
+							int cascadesEditable = static_cast<int>(LightComponent->GetNumOfCascade());
+							if (ImGui::SliderInt("Num Cascades", &cascadesEditable, 1, static_cast<int>(CascadesNum)))
+							{
+								LightComponent->SetNumOfCascade(static_cast<uint32>(cascadesEditable));
+							}
+
+							float lambda = LightComponent->GetCascadeSplitLambda();
+							if (ImGui::SliderFloat("Split Lambda", &lambda, 0.0f, 1.0f))
+							{
+								LightComponent->SetCascadeSplitLambda(lambda);
+							}
+
+							const uint32 LightCascacdesNum = LightComponent->GetNumOfCascade();
 							const uint32 DebugCascades = (LightCascacdesNum < CascadesNum) ? LightCascacdesNum : CascadesNum;
-							ImGui::Text("Cascades: %u", DebugCascades);
+							ImGui::Text("Cascades Preview: %u", DebugCascades);
 							for (uint32 i = 0; i < DebugCascades; ++i)
 							{
 								ID3D11ShaderResourceView* srv = ShadowMapManager.GetDirectionalSRVForImGuiDebug(i);

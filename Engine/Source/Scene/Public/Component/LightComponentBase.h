@@ -164,7 +164,20 @@ public:
 	}
 
 	uint32 GetNumOfCascade() { return NumOfCascade; }
-	float GetCascadeSplitLambda() {	return CascadeSpitLambda; }
+	float GetCascadeSplitLambda() { return CascadeSpitLambda; }
+
+	void SetNumOfCascade(uint32 InNum)
+	{
+		const uint32 kMaxCascades = 12; // Keep in sync with renderer constants
+		NumOfCascade = std::clamp<uint32>(InNum, 1u, kMaxCascades);
+		bIsLightVPDirty = true;
+	}
+
+	void SetCascadeSplitLambda(float InLambda)
+	{
+		CascadeSpitLambda = std::clamp(InLambda, 0.0f, 1.0f);
+		bIsLightVPDirty = true;
+	}
 
 protected:
 	virtual void UpdateLightMatricesInternal(const FCameraConstants& InCameraInvConstants) const {}

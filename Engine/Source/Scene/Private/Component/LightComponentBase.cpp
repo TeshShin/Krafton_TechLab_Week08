@@ -29,6 +29,12 @@ void ULightComponentBase::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		int32 ShadowModeInt = 0;
 		FJsonSerializer::ReadInt32(InOutHandle, "ShadowProjectionMode", ShadowModeInt, 0);
 		ShadowProjectionMode = static_cast<EShadowProjectionMode>(ShadowModeInt);
+
+		// CSM parameters
+		int32 NumCascadeInt = static_cast<int32>(NumOfCascade);
+		FJsonSerializer::ReadInt32(InOutHandle, "NumOfCascade", NumCascadeInt, 12);
+		NumOfCascade = static_cast<uint32>(std::max(1, NumCascadeInt));
+		FJsonSerializer::ReadFloat(InOutHandle, "CascadeSplitLambda", CascadeSpitLambda, 0.5f);
 	}
 	else
 	{
@@ -41,6 +47,8 @@ void ULightComponentBase::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		InOutHandle["ShadowSlopeBias"] = ShadowSlopeBias;
 		InOutHandle["ShadowResolutionScale"] = ShadowResolutionScale;
 		InOutHandle["ShadowProjectionMode"] = static_cast<int>(ShadowProjectionMode);
+		InOutHandle["NumOfCascade"] = static_cast<int>(NumOfCascade);
+		InOutHandle["CascadeSplitLambda"] = CascadeSpitLambda;
 	}
 }
 
@@ -56,6 +64,8 @@ UObject* ULightComponentBase::Duplicate()
 	LightComponent->ShadowSlopeBias = ShadowSlopeBias;
 	LightComponent->ShadowResolutionScale = ShadowResolutionScale;
 	LightComponent->ShadowProjectionMode = ShadowProjectionMode;
+	LightComponent->NumOfCascade = NumOfCascade;
+	LightComponent->CascadeSpitLambda = CascadeSpitLambda;
 
 	return LightComponent;
 }
