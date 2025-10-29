@@ -97,11 +97,13 @@ public:
 	// --- Directional Light Getters ---
 	ID3D11ShaderResourceView* GetDirectionalLightSRV() const { return DirShadowSRV; }
 	ID3D11DepthStencilView* GetDirectionalLightDSV() const { return DirShadowDSV; }
+	ID3D11DepthStencilView* GetDirectionalLightDSV(uint32 CascadeIdx) const;
+
 	uint32 GetDirectionalResolution() const { return DirResolution; }
 
 	ID3D11ShaderResourceView* GetDirectionalMomentSRV() const { return DirShadowMomentSRV; }
 	ID3D11RenderTargetView* GetDirectionalMomentRTV() const { return DirShadowMomentRTV; }
-	ID3D11DepthStencilView* GetDirectionalLightDSV(uint32 CascadeIdx) const;
+	ID3D11RenderTargetView* GetDirectionalMomentRTV(uint32 CascadeIdx) const;
 	uint32 GetDirectionalMaxNumCascades() const { return DirLightMaxNumCascades; }
 private:
     // D3D11 핵심 오브젝트
@@ -145,7 +147,8 @@ private:
 
 	ID3D11Texture2D* DirShadowMomentTexture = nullptr;
 	ID3D11ShaderResourceView* DirShadowMomentSRV = nullptr;
-	ID3D11RenderTargetView* DirShadowMomentRTV = nullptr;
+	ID3D11RenderTargetView* DirShadowMomentRTV;
+	TArray<ID3D11RenderTargetView*> DirShadowMomentRTVs;
 
 	TArray<ID3D11Texture2D*> ImGuiDebugTextures_Dir; 
 	TArray<ID3D11ShaderResourceView*> ImGuiDebugSRVs_Dir;

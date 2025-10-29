@@ -384,7 +384,7 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 	MomentsDesc.Width = DirResolution;
 	MomentsDesc.Height = DirResolution;
 	MomentsDesc.MipLevels = 1;
-	MomentsDesc.ArraySize = 1;
+	MomentsDesc.ArraySize = DirLightMaxNumCascades;
 	MomentsDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
 	MomentsDesc.SampleDesc.Count = 1;
 	MomentsDesc.SampleDesc.Quality = 0;
@@ -401,9 +401,12 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 	// SRV for moments
 	D3D11_SHADER_RESOURCE_VIEW_DESC MomentsSRVDesc = {};
 	MomentsSRVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
-	MomentsSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	MomentsSRVDesc.Texture2D.MostDetailedMip = 0;
-	MomentsSRVDesc.Texture2D.MipLevels = 1;
+	MomentsSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+	MomentsSRVDesc.Texture2DArray.MostDetailedMip = 0;
+	MomentsSRVDesc.Texture2DArray.MipLevels = 1;
+	MomentsSRVDesc.Texture2DArray.FirstArraySlice = 0;
+	MomentsSRVDesc.Texture2DArray.ArraySize = DirLightMaxNumCascades;
+
 	hr = Device->CreateShaderResourceView(DirShadowMomentTexture, &MomentsSRVDesc, &DirShadowMomentSRV);
 	if (FAILED(hr))
 	{
@@ -413,17 +416,24 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 	// RTVs for moments per slice
 	D3D11_RENDER_TARGET_VIEW_DESC RTVDesc = {};
 	RTVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
-	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
 	RTVDesc.Texture2D.MipSlice = 0;
-	hr = Device->CreateRenderTargetView(DirShadowMomentTexture, &RTVDesc, &DirShadowMomentRTV);
-	if (FAILED(hr))
+	 
+	DirShadowMomentRTVs.resize(DirLightMaxNumCascades);
+	for (uint32 i = 0; i < DirLightMaxNumCascades; ++i)
 	{
-		UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE DIR LIGHT MOMENT RTV");
-		return;
+		RTVDesc.Texture2DArray.FirstArraySlice = i;
+		RTVDesc.Texture2DArray.ArraySize = 1;
+		hr = Device->CreateRenderTargetView(DirShadowMomentTexture, &RTVDesc, &DirShadowMomentRTVs[i]);
+		if (FAILED(hr))
+		{
+			UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE DIR LIGHT MOMENT RTV");
+			return;
+		}
+
 	}
-
-
-	//InitializeForDebug();
+	DirShadowMomentRTV = DirShadowMomentRTVs[0];
+	 
 
 	UpdateTotalVRAMStats();
 }
@@ -474,7 +484,10 @@ void FShadowMapManager::ReleaseDirectionalShadow()
 
 	SafeRelease(DirShadowMomentTexture);
 	SafeRelease(DirShadowMomentSRV);
-	SafeRelease(DirShadowMomentRTV);
+
+	for (auto* rtv : DirShadowMomentRTVs) { SafeRelease(rtv); }
+	// DirShadowMomentRTV = DirShadowMomentRTVs[0]
+	//SafeRelease(DirShadowMomentRTV);
 }
 
 void FShadowMapManager::Release()
@@ -592,6 +605,12 @@ ID3D11DepthStencilView* FShadowMapManager::GetDirectionalLightDSV(uint32 Cascade
 {
 	if (CascadeIdx >= DirLightMaxNumCascades) return nullptr;
 	return DirLightCascadeDSVs[CascadeIdx];
+}
+
+ID3D11RenderTargetView* FShadowMapManager::GetDirectionalMomentRTV(uint32 CascadeIdx) const
+{
+	if (CascadeIdx >= DirLightMaxNumCascades) return nullptr;
+	return DirShadowMomentRTVs[CascadeIdx];
 }
 
 void FShadowMapManager::InitializeForDebug()
