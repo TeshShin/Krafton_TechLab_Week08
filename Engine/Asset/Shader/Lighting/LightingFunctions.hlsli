@@ -874,18 +874,12 @@ FLightingResult CalculateDynamicLightWithVSM_Directional(
     	FLightViewProj viewProj = DirConstants.DirCascadeMatrices[cascadeIdx];
 
     	float3 uvw = GetSampleCoords(WorldPos, viewProj.ViewMatrix, viewProj.ProjectionMatrix);
-
-    	// CRITICAL: Calculate view-space depth for VSM comparison
+		 
     	float4 lightSpacePos = mul(float4(WorldPos, 1.0f), viewProj.ViewMatrix);
-    	float t = lightSpacePos.z; // View-space depth in light's coordinate system
+    	float t = lightSpacePos.z; 
 
-    	// Set cascade index for array sampling
     	float3 sampleCoords = float3(uvw.xy, cascadeIdx);
-
-
-    	//uvw.z = cascadeIdx;
-    	//float t = mul(float4(WorldPos, 1.0f), viewProj.ViewMatrix).z; // uvw.z;
-
+		
     	uint Width, Height, Idx;
     	DirectionalMomentsMap.GetDimensions(Width, Height, Idx);
     	float TexSize = (float)Width;
@@ -893,17 +887,17 @@ FLightingResult CalculateDynamicLightWithVSM_Directional(
     	float2 moments;
     	if (ShadowSettings.FilterType == SHADOW_FILTER_VSM_GAUSSIAN) // Gaussian
     	{
-    		moments = SampleVSMGaussian(DirectionalMomentsMap, ShadowSampler, uvw, Light.ShadowFilterSize,
+			moments = SampleVSMGaussian(DirectionalMomentsMap, ShadowSampler, sampleCoords, Light.ShadowFilterSize,
     		Light.ShadowGaussSigma, TexSize);
     	}
     	else if (ShadowSettings.FilterType == SHADOW_FILTER_VSM_BOX)
     	{
-    		moments = SampleVSMBox(DirectionalMomentsMap, ShadowSampler, uvw, Light.ShadowFilterSize, TexSize);
-    	}
+			moments = SampleVSMBox(DirectionalMomentsMap, ShadowSampler, sampleCoords, Light.ShadowFilterSize, TexSize);
+		}
 	    else
 	    {
-		    moments = DirectionalMomentsMap.Sample(ShadowSampler, uvw).xy;
-	    }
+			moments = DirectionalMomentsMap.Sample(ShadowSampler, sampleCoords).xy;
+		}
 
         ShadowFactor = VSM_Visibility(moments, t, ShadowSettings.VSM_LightBleedReduction);
     }

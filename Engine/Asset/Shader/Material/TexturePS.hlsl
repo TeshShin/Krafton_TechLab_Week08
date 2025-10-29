@@ -44,7 +44,7 @@ cbuffer ShadowSettings : register(b4)
 cbuffer DirectionalLightConstants : register(b5)
 {
 	FLightViewProj DirectionalShadowMatrix;
-};
+}; 
 
 cbuffer DirectionalCSMLightConstants : register(b6)
 {
