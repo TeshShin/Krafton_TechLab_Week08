@@ -89,8 +89,37 @@ void ULightComponentWidget::RenderWidget()
     				ImGui::Image(FShadowMapManager::GetInstance().GetSpotSRVForImGuiDebug(ShadowMapIdx), ImVec2(512, 512));
     				break;
     			case ELightComponentType::LightType_Directional:
-    				ImGui::Image(FShadowMapManager::GetInstance().GetDirectionalSRVForImGuiDebug(), ImVec2(512, 512));
-    				break;
+					if (LightComponent->GetShadowProjectionMode() == EShadowProjectionMode::CSM)
+					{
+						auto& SMM = FShadowMapManager::GetInstance();
+
+						// 썸네일 옵션(원하면 UPROPERTY/설정으로 빼도 됨)
+						const float Thumb = 256.0f;
+						const int   Cols = 2;
+
+						if (ImGui::CollapsingHeader("CSM Depth Slices", ImGuiTreeNodeFlags_DefaultOpen))
+						{
+							ImGui::Text("Cascades: %u", (uint32)SMM.GetDirectionalNumCascades());
+							for (uint32 i = 0; i < (uint32)SMM.GetDirectionalNumCascades(); ++i)
+							{
+								ID3D11ShaderResourceView* srv = SMM.GetDirectionalSRVForImGuiDebug(i);
+								if (srv)
+								{
+									ImGui::BeginGroup();
+									ImGui::Text("Cascade %u", i);
+									ImGui::Image((ImTextureID)srv, ImVec2(Thumb, Thumb));
+									ImGui::EndGroup();
+								}
+								if ((i % Cols) != (Cols - 1)) ImGui::SameLine();
+							}
+
+						}
+					}
+					else
+					{ 
+						ImGui::Image(FShadowMapManager::GetInstance().GetDirectionalSRVForImGuiDebug(), ImVec2(512, 512));
+					}
+					break;
     			case ELightComponentType::LightType_Point:
     				FShadowMapManager::GetInstance().UpdatePointShadowDebugTextures(ShadowMapIdx);
     				for (uint32 Idx = 0; Idx < 6; ++Idx)
