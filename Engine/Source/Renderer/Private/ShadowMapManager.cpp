@@ -501,11 +501,11 @@ void FShadowMapManager::ReleaseSpotShadows()
 {
 	SafeRelease(SpotShadowMapArrayTexture);
 	SafeRelease(SpotShadowMapArraySRV);
-	for (uint32 Idx = 0; Idx < ShadowSettings.MaxSpotShadows; ++Idx)
+	for (uint32 Idx = 0; Idx < SpotShadowMapSliceDSVs.size(); ++Idx)
 	{
 		SafeRelease(SpotShadowMapSliceDSVs[Idx]);
 	}
-	for (uint32 Idx = 0; Idx < ShadowSettings.MaxSpotShadows; ++Idx)
+	for (uint32 Idx = 0; Idx < SpotShadowMomentsSliceRTVs.size(); ++Idx)
 	{
 		SafeRelease(SpotShadowMomentsSliceRTVs[Idx]);
 	}
@@ -515,7 +515,7 @@ void FShadowMapManager::ReleasePointShadows()
 {
 	SafeRelease(PointShadowCubeArrayTexture);
 	SafeRelease(PointShadowCubeArraySRV);
-	for (uint32 Idx = 0; Idx < ShadowSettings.MaxPointShadows * 6; ++Idx)
+	for (uint32 Idx = 0; Idx < PointShadowCubeSliceRTVs.size(); ++Idx)
 	{
 		SafeRelease(PointShadowCubeSliceRTVs[Idx]);
 	}
