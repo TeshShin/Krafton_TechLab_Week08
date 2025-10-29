@@ -14,7 +14,7 @@ USpotLightComponent::USpotLightComponent()
 	CachedLightViewProjection.reserve(1);
 	bCanEverTick = true;
 	bCastShadows = true;
-	ShadowBias = 0.00f;
+	ShadowBias = 0.001f;
 }
 
 void USpotLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)

@@ -17,49 +17,57 @@ namespace
 
 void ViewVolumeCuller::Cull(FOctree* StaticOctree, TArray<UPrimitiveComponent*>& DynamicPrimitives, const FCameraConstants& ViewProjConstants)
 {
-	// 이전의 Cull했던 정보를 지운다.
 	RenderableObjects.clear();
-	CurrentFrustum.Clear();
+	TArray<UPrimitiveComponent*> Primitives;
+	StaticOctree->GetAllPrimitives(Primitives);
+	RenderableObjects.insert(RenderableObjects.end(), Primitives.begin(), Primitives.end());
+	RenderableObjects.insert(RenderableObjects.end(), DynamicPrimitives.begin(), DynamicPrimitives.end());
 
-	// 1. 절두체 'Key' 생성 
-	FMatrix VP = ViewProjConstants.View * ViewProjConstants.Projection;
-	CurrentFrustum.Planes[0] = VP[3] + VP[0]; // Left
-	CurrentFrustum.Planes[1] = VP[3] - VP[0]; // Right
-	CurrentFrustum.Planes[2] = VP[3] + VP[1]; // Bottom
-	CurrentFrustum.Planes[3] = VP[3] - VP[1]; // Top
-	CurrentFrustum.Planes[4] = VP[2]; // Near
-	CurrentFrustum.Planes[5] = VP[3] - VP[2]; // Far
+	// 그림자때문에 프러스텀컬링 임시 제거
 
-	for (int i = 0; i < 6; i++)
-	{
-		const float Length = sqrt((CurrentFrustum.Planes[i].X * CurrentFrustum.Planes[i].X) +
-								(CurrentFrustum.Planes[i].Y * CurrentFrustum.Planes[i].Y) +
-								(CurrentFrustum.Planes[i].Z * CurrentFrustum.Planes[i].Z));
-
-		if (Length > -MATH_EPSILON && Length < MATH_EPSILON) { return; }
-
-		CurrentFrustum.Planes[i] /= Length;
-	}
-
-	// 2. 옥트리를 이용해 보이는 객체만 RenderableObjects에 저장한다.
-	if (StaticOctree)
-	{
-		CullOctree(StaticOctree);
-	}
-
-	for (UPrimitiveComponent* Primitive : DynamicPrimitives)
-	{
-		if (Primitive && CurrentFrustum.CheckIntersection(GetPrimitiveBoundingBox(Primitive)) != EBoundCheckResult::Outside)
-		{
-			RenderableObjects.push_back(Primitive);
-		}
-	}
+	// // 이전의 Cull했던 정보를 지운다.
+	// RenderableObjects.clear();
+	// CurrentFrustum.Clear();
+	//
+	// // 1. 절두체 'Key' 생성
+	// FMatrix VP = ViewProjConstants.View * ViewProjConstants.Projection;
+	// CurrentFrustum.Planes[0] = VP[3] + VP[0]; // Left
+	// CurrentFrustum.Planes[1] = VP[3] - VP[0]; // Right
+	// CurrentFrustum.Planes[2] = VP[3] + VP[1]; // Bottom
+	// CurrentFrustum.Planes[3] = VP[3] - VP[1]; // Top
+	// CurrentFrustum.Planes[4] = VP[2]; // Near
+	// CurrentFrustum.Planes[5] = VP[3] - VP[2]; // Far
+	//
+	// for (int i = 0; i < 6; i++)
+	// {
+	// 	const float Length = sqrt((CurrentFrustum.Planes[i].X * CurrentFrustum.Planes[i].X) +
+	// 							(CurrentFrustum.Planes[i].Y * CurrentFrustum.Planes[i].Y) +
+	// 							(CurrentFrustum.Planes[i].Z * CurrentFrustum.Planes[i].Z));
+	//
+	// 	if (Length > -MATH_EPSILON && Length < MATH_EPSILON) { return; }
+	//
+	// 	CurrentFrustum.Planes[i] /= Length;
+	// }
+	//
+	// // 2. 옥트리를 이용해 보이는 객체만 RenderableObjects에 저장한다.
+	// if (StaticOctree)
+	// {
+	// 	CullOctree(StaticOctree);
+	// }
+	//
+	// for (UPrimitiveComponent* Primitive : DynamicPrimitives)
+	// {
+	// 	if (Primitive && CurrentFrustum.CheckIntersection(GetPrimitiveBoundingBox(Primitive)) != EBoundCheckResult::Outside)
+	// 	{
+	// 		RenderableObjects.push_back(Primitive);
+	// 	}
+	// }
 }
 
 const TArray<UPrimitiveComponent*>& ViewVolumeCuller::GetRenderableObjects()
 {
 	// Octree에 없는 DynamicPrimitives들 추가
-	
+
 	//TArray<UPrimitiveComponent*>& DynamicPrimitives = GWorld->GetLevel()->GetDynamicPrimitives();
 	//RenderableObjects.insert(RenderableObjects.end(), DynamicPrimitives.begin(), DynamicPrimitives.end());
 	/*
@@ -86,8 +94,8 @@ void ViewVolumeCuller::CullOctree(FOctree* Octree)
 
 		// 현재 옥트리 노드(자신)의 경계와 절두체의 관계를 확인합니다.
 		EBoundCheckResult result = CurrentFrustum.CheckIntersection(CurrentNode->GetBoundingBox());
-	
-		// Case 1. 노드가 절두체 밖에 있다면, 즉시 다음 노드로 넘어갑니다. 
+
+		// Case 1. 노드가 절두체 밖에 있다면, 즉시 다음 노드로 넘어갑니다.
 		if (result == EBoundCheckResult::Outside)
 		{
 			continue;
@@ -106,7 +114,7 @@ void ViewVolumeCuller::CullOctree(FOctree* Octree)
 			// 노드가 겹치면, 현재 노드에 있는 프리미티브들만 개별적으로 검사합니다.
 			for (UPrimitiveComponent* Primitive : CurrentNode->GetPrimitives())
 			{
-				if (Primitive && 
+				if (Primitive &&
 					CurrentFrustum.CheckIntersection(GetPrimitiveBoundingBox(Primitive)) != EBoundCheckResult::Outside)
 				{
 					RenderableObjects.push_back(Primitive);
