@@ -322,7 +322,7 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 	TexDesc.Width = DirResolution;
 	TexDesc.Height = DirResolution;
 	TexDesc.MipLevels = 1;
-	TexDesc.ArraySize = 1;
+	TexDesc.ArraySize = DirLightNumCascades;
 	TexDesc.Format = DXGI_FORMAT_R32_TYPELESS;
 	TexDesc.SampleDesc.Count = 1;
 	TexDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -337,15 +337,18 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 		return;
 	}
 
-	StatData.VRAM_Directional_Depth = static_cast<uint64_t>(DirResolution) * DirResolution * 1 * 4;
+	//StatData.VRAM_Directional_Depth = static_cast<uint64_t>(DirResolution) * DirResolution * 1 * 4;
+	StatData.VRAM_Directional_Depth = static_cast<uint64_t>(DirResolution) * DirResolution * DirLightNumCascades * 4;
 	StatData.Config_DirResolution = InResolution;
 
-	// --- SRV (Texture2D) ---
+	// --- SRVs (Texture2D) ---
 	D3D11_SHADER_RESOURCE_VIEW_DESC SrvDesc = {};
 	SrvDesc.Format = DXGI_FORMAT_R32_FLOAT;
-	SrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	SrvDesc.Texture2D.MostDetailedMip = 0;
-	SrvDesc.Texture2D.MipLevels = 1;
+	SrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+	SrvDesc.Texture2DArray.MostDetailedMip = 0;
+	SrvDesc.Texture2DArray.MipLevels = 1;
+	SrvDesc.Texture2DArray.FirstArraySlice = 0;
+	SrvDesc.Texture2DArray.ArraySize = DirLightNumCascades;
 
 	hr = Device->CreateShaderResourceView(DirShadowTexture, &SrvDesc, &DirShadowSRV);
 	if (FAILED(hr))
@@ -354,19 +357,27 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 		return;
 	}
 
-	// --- DSV (Texture2D) ---
+	// --- DSVs (Texture2D) ---
 	D3D11_DEPTH_STENCIL_VIEW_DESC DsvDesc = {};
 	DsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
-	DsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	DsvDesc.Texture2D.MipSlice = 0;
+	DsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+	DsvDesc.Texture2DArray.MipSlice = 0;
 	DsvDesc.Flags = 0;
-
-	hr = Device->CreateDepthStencilView(DirShadowTexture, &DsvDesc, &DirShadowDSV);
-	if (FAILED(hr))
+	 
+	DirLightCascadeDSVs.resize(DirLightNumCascades);
+	for (uint32 i = 0; i < DirLightNumCascades; ++i)
 	{
-		UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE DIR LIGHT DSV");
-		return;
-	}
+		DsvDesc.Texture2DArray.FirstArraySlice = i;
+		DsvDesc.Texture2DArray.ArraySize = 1;
+		hr = Device->CreateDepthStencilView(DirShadowTexture, &DsvDesc, &DirLightCascadeDSVs[i]);
+		if (FAILED(hr))
+		{
+			UE_LOG_ERROR("[ShadowMapManager] FAILED TO CREATE DIR LIGHT DSV SLICE");
+			DirLightCascadeDSVs.clear();
+			return;
+		}
+	} 
+	DirShadowDSV = DirLightCascadeDSVs[0];
 
 	// --- Moments Texture2DArray (RG32_FLOAT) for VSM ---
 	D3D11_TEXTURE2D_DESC MomentsDesc = {};
@@ -411,6 +422,9 @@ void FShadowMapManager::InitializeDirectionalShadow(uint32 InResolution)
 		return;
 	}
 
+
+	//InitializeForDebug();
+
 	UpdateTotalVRAMStats();
 }
 
@@ -445,9 +459,17 @@ void FShadowMapManager::ReleasePointShadows()
 
 void FShadowMapManager::ReleaseDirectionalShadow()
 {
+	for (auto* dsv : DirLightCascadeDSVs) { SafeRelease(dsv); }
+	DirLightCascadeDSVs.clear();
+
 	SafeRelease(DirShadowDSV);
 	SafeRelease(DirShadowSRV);
 	SafeRelease(DirShadowTexture);
+
+	for (auto* tex : ImGuiDebugTextures_Dir) { SafeRelease(tex); }
+	ImGuiDebugTextures_Dir.clear();
+	for (auto* srv : ImGuiDebugSRVs_Dir) { SafeRelease(srv); }
+	ImGuiDebugSRVs_Dir.clear();
 
 	SafeRelease(DirShadowMomentTexture);
 	SafeRelease(DirShadowMomentSRV);
@@ -483,6 +505,11 @@ void FShadowMapManager::ClearShadowMaps()
 
 	Context->ClearDepthStencilView(DirShadowDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
 	Context->ClearRenderTargetView(DirShadowMomentRTV, ClearColor);
+
+	for (uint32 i = 0; i < DirLightNumCascades; ++i)
+		if (i < DirLightCascadeDSVs.size() && DirLightCascadeDSVs[i])
+			Context->ClearDepthStencilView(DirLightCascadeDSVs[i], D3D11_CLEAR_DEPTH, 1.0f, 0);
+	 
 	bIsDirShadowAllocated = false;
 }
 
@@ -558,6 +585,12 @@ void FShadowMapManager::GetPointShadowRTVs(class ULightComponentBase* Light, TAr
 			OutRTVs.emplace_back(PointShadowCubeSliceRTVs[ShadowMapIdx * 6 + Idx]);
 		}
 	}
+}
+
+ID3D11DepthStencilView* FShadowMapManager::GetDirectionalLightDSV(uint32 CascadeIdx) const
+{
+	if (CascadeIdx >= DirLightNumCascades) return nullptr;
+	return DirLightCascadeDSVs[CascadeIdx];
 }
 
 void FShadowMapManager::InitializeForDebug()
@@ -655,42 +688,36 @@ void FShadowMapManager::InitializeForDebug()
 
 	// --- 3. 디렉셔널 라이트 디버그 리소스 생성 ---
 	{
-    	// 원본 텍스처(DirLightShadowTexture)에서 해상도 가져오기
-    	D3D11_TEXTURE2D_DESC SrcDesc;
-    	DirShadowTexture->GetDesc(&SrcDesc);
+		D3D11_TEXTURE2D_DESC srcDesc = {};
+		DirShadowTexture->GetDesc(&srcDesc);
 
-    	D3D11_TEXTURE2D_DESC Desc = {};
-    	Desc.Width = SrcDesc.Width;
-    	Desc.Height = SrcDesc.Height;
-    	Desc.MipLevels = 1;
-    	Desc.ArraySize = 1;
-    	Desc.Format = DXGI_FORMAT_R32_FLOAT;
-    	Desc.SampleDesc.Count = 1;
-    	Desc.Usage = D3D11_USAGE_DEFAULT;
-    	Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-    	Desc.CPUAccessFlags = 0;
-    	Desc.MiscFlags = 0;
+		ImGuiDebugTextures_Dir.resize(DirLightNumCascades, nullptr);
+		ImGuiDebugSRVs_Dir.resize(DirLightNumCascades, nullptr);
 
-    	hr = Device->CreateTexture2D(&Desc, nullptr, &ImGuiDebugTexture_Dir);
-    	if (FAILED(hr))
-    	{
-    		UE_LOG_ERROR("[ShadowMapManager] Failed to create Dir Debug Texture.");
-    		return;
-    	}
+		D3D11_TEXTURE2D_DESC Desc = {};
+		Desc.Width = srcDesc.Width;
+		Desc.Height = srcDesc.Height;
+		Desc.MipLevels = 1;
+		Desc.ArraySize = 1;
+		Desc.Format = DXGI_FORMAT_R32_FLOAT; // SRV 읽기용
+		Desc.SampleDesc.Count = 1;
+		Desc.Usage = D3D11_USAGE_DEFAULT;
+		Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
-    	// SRV 생성
-    	D3D11_SHADER_RESOURCE_VIEW_DESC SrvDesc = {};
-    	SrvDesc.Format = Desc.Format;
-    	SrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-    	SrvDesc.Texture2D.MostDetailedMip = 0;
-    	SrvDesc.Texture2D.MipLevels = 1;
+		for (uint32 i = 0; i < DirLightNumCascades; ++i)
+		{
+			HRESULT hr = Device->CreateTexture2D(&Desc, nullptr, &ImGuiDebugTextures_Dir[i]);
+			if (FAILED(hr)) { UE_LOG_ERROR("Create Dir Debug Tex failed"); return; }
 
-    	hr = Device->CreateShaderResourceView(ImGuiDebugTexture_Dir, &SrvDesc, &ImGuiDebugSRV_Dir);
-    	if (FAILED(hr))
-    	{
-    		UE_LOG_ERROR("[ShadowMapManager] Failed to create Dir Debug SRV.");
-    		return;
-    	}
+			D3D11_SHADER_RESOURCE_VIEW_DESC sdesc = {};
+			sdesc.Format = Desc.Format;
+			sdesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+			sdesc.Texture2D.MostDetailedMip = 0;
+			sdesc.Texture2D.MipLevels = 1;
+
+			hr = Device->CreateShaderResourceView(ImGuiDebugTextures_Dir[i], &sdesc, &ImGuiDebugSRVs_Dir[i]);
+			if (FAILED(hr)) { UE_LOG_ERROR("Create Dir Debug SRV failed"); return; }
+		}
 	}
 }
 
@@ -769,6 +796,20 @@ ID3D11ShaderResourceView* FShadowMapManager::GetDirectionalSRVForImGuiDebug()
 
 	// 4. 복사된 텍스처의 SRV 반환
 	return ImGuiDebugSRV_Dir;
+}
+
+ID3D11ShaderResourceView* FShadowMapManager::GetDirectionalSRVForImGuiDebug(uint32 CascadeIdx)
+{
+	if (!Context || CascadeIdx >= DirLightNumCascades) return nullptr;
+
+	const UINT srcSubresource = D3D11CalcSubresource(0, CascadeIdx, 1);
+	const UINT dstSubresource = 0;
+
+	Context->CopySubresourceRegion(
+		ImGuiDebugTextures_Dir[CascadeIdx], dstSubresource, 0, 0, 0,
+		DirShadowTexture, srcSubresource, nullptr);
+
+	return ImGuiDebugSRVs_Dir[CascadeIdx];
 }
 
 

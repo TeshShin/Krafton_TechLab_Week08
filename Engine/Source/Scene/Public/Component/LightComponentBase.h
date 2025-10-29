@@ -133,8 +133,10 @@ public:
 	 -----------------------------------------------------------------------------*/
 public:
 	const TArray<FMatrix>& GetLightViewMatrices(const FCameraConstants& InCameraInvConstants) const;
-	const FMatrix& GetLightProjectionMatrix(const FCameraConstants& InCameraInvConstants) const;
-	const TArray<FMatrix>& GetLightViewProjectionMatrices(const FCameraConstants& InCameraInvConstants) const;
+    const FMatrix& GetLightProjectionMatrix(const FCameraConstants& InCameraInvConstants) const;
+    const TArray<FMatrix>& GetLightViewProjectionMatrices(const FCameraConstants& InCameraInvConstants) const;
+    // Returns per-cascade DSV projection matrices in CSM mode (size == num cascades)
+    const TArray<FMatrix>& GetCSMDsvProjections(const FCameraConstants& InCameraInvConstants) const { UpdateLightMatricesInternal(InCameraInvConstants); return CachedCSMDSVProjection; }
 
 	bool DoesCastShadows() const { return bCastShadows; }
 	void SetCastShadows(bool bInCastShadows) { bCastShadows = bInCastShadows; }
@@ -148,6 +150,9 @@ public:
 		ShadowProjectionMode = InMode;
 		bIsLightVPDirty = true;
 	}
+
+	uint32 GetNumOfCascade() { return NumOfCascade; }
+	float GetCascadeSplitLambda() {	return CascadeSpitLambda; }
 
 protected:
 	virtual void UpdateLightMatricesInternal(const FCameraConstants& InCameraInvConstants) const {}
@@ -163,4 +168,9 @@ protected:
 	int32 ShadowMapIdx = -1;
 
 	EShadowProjectionMode ShadowProjectionMode = EShadowProjectionMode::LVP;
+
+
+protected:
+	uint32 NumOfCascade = 3;
+	float CascadeSpitLambda = 0.5;
 };

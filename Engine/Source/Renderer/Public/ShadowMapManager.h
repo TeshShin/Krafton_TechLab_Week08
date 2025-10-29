@@ -101,7 +101,8 @@ public:
 
 	ID3D11ShaderResourceView* GetDirectionalMomentSRV() const { return DirShadowMomentSRV; }
 	ID3D11RenderTargetView* GetDirectionalMomentRTV() const { return DirShadowMomentRTV; }
-
+	ID3D11DepthStencilView* GetDirectionalLightDSV(uint32 CascadeIdx) const;
+	uint32 GetDirectionalNumCascades() const { return DirLightNumCascades; }
 private:
     // D3D11 핵심 오브젝트
     ID3D11Device* Device = nullptr;
@@ -146,6 +147,12 @@ private:
 	ID3D11ShaderResourceView* DirShadowMomentSRV = nullptr;
 	ID3D11RenderTargetView* DirShadowMomentRTV = nullptr;
 
+	TArray<ID3D11Texture2D*> ImGuiDebugTextures_Dir; 
+	TArray<ID3D11ShaderResourceView*> ImGuiDebugSRVs_Dir;
+
+	uint32 DirLightNumCascades = 4; 
+	TArray<ID3D11DepthStencilView*> DirLightCascadeDSVs; 
+
 	// --- VSM Moments (RG32F) 리소스 ---
 	ID3D11SamplerState* MomentSamplerState = nullptr;
 
@@ -156,6 +163,7 @@ public:
 	void UpdatePointShadowDebugTextures(uint32 CubeIndex);
 	ID3D11ShaderResourceView* GetPointSRVForImGuiDebug(uint32 CubeIndex, uint32 FaceIndex); // FaceIndex: 0~5
 	ID3D11ShaderResourceView* GetDirectionalSRVForImGuiDebug();
+	ID3D11ShaderResourceView* GetDirectionalSRVForImGuiDebug(uint32 CascadeIdx);
 
 private:
     // --- 디버그용 리소스 ---
