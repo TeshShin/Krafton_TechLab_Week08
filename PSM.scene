@@ -1,0 +1,308 @@
+{
+  "Actors" : {
+    "333" : {
+      "Components" : [{
+          "IsEditorOnly" : "false",
+          "IsVisualizationComponent" : "false",
+          "Location" : [2.360316, -7.755370, 1.433792],
+          "Name" : "UStaticMeshComponent_0",
+          "ObjStaticMeshAsset" : "Data/airdrop/airdrop.obj",
+          "ParentName" : "",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [1.830485, 1.830485, 1.830485],
+          "Type" : "UStaticMeshComponent",
+          "bVisible" : "1"
+        }, {
+          "IsEditorOnly" : "true",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UUUIDTextComponent_0",
+          "ParentName" : "UStaticMeshComponent_0",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [0.300000, 0.300000, 0.300000],
+          "Type" : "UUUIDTextComponent",
+          "bVisible" : "1"
+        }],
+      "Location" : [2.360316, -7.755370, 1.433792],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "Scale" : [1.830485, 1.830485, 1.830485],
+      "Type" : "AStaticMeshActor",
+      "bCanEverTick" : "false",
+      "bTickInEditor" : "false",
+      "bVisible" : "1"
+    },
+    "336" : {
+      "Components" : [{
+          "IsEditorOnly" : "false",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UStaticMeshComponent_1",
+          "ObjStaticMeshAsset" : "Data/Shapes/Cube.obj",
+          "ParentName" : "",
+          "Rotation" : [0.000000, 89.980232, 0.000000],
+          "Scale" : [1.311000, 47.710999, 49.910999],
+          "Type" : "UStaticMeshComponent",
+          "bVisible" : "1"
+        }, {
+          "IsEditorOnly" : "true",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UUUIDTextComponent_2",
+          "ParentName" : "UStaticMeshComponent_1",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [0.300000, 0.300000, 0.300000],
+          "Type" : "UUUIDTextComponent",
+          "bVisible" : "1"
+        }],
+      "Location" : [0.000000, 0.000000, 0.000000],
+      "Rotation" : [0.000000, 89.980232, 0.000000],
+      "Scale" : [1.311000, 47.710999, 49.910999],
+      "Type" : "AStaticMeshActor",
+      "bCanEverTick" : "false",
+      "bTickInEditor" : "false",
+      "bVisible" : "1"
+    },
+    "339" : {
+      "Components" : [{
+          "IsEditorOnly" : "false",
+          "IsVisualizationComponent" : "false",
+          "Location" : [-7.054824, 0.000000, 5.575181],
+          "Name" : "UStaticMeshComponent_2",
+          "ObjStaticMeshAsset" : "Data/airdrop/airdrop.obj",
+          "ParentName" : "",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [1.526017, 1.526017, 1.526017],
+          "Type" : "UStaticMeshComponent",
+          "bVisible" : "1"
+        }, {
+          "IsEditorOnly" : "true",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UUUIDTextComponent_3",
+          "ParentName" : "UStaticMeshComponent_2",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [0.300000, 0.300000, 0.300000],
+          "Type" : "UUUIDTextComponent",
+          "bVisible" : "1"
+        }],
+      "Location" : [-7.054824, 0.000000, 5.575181],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "Scale" : [1.526017, 1.526017, 1.526017],
+      "Type" : "AStaticMeshActor",
+      "bCanEverTick" : "false",
+      "bTickInEditor" : "false",
+      "bVisible" : "1"
+    },
+    "342" : {
+      "Components" : [{
+          "IsEditorOnly" : "false",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.621391, 0.000000, 1.225460],
+          "Name" : "UStaticMeshComponent_3",
+          "ObjStaticMeshAsset" : "Data/airdrop/airdrop.obj",
+          "ParentName" : "",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [0.941847, 0.941847, 0.941847],
+          "Type" : "UStaticMeshComponent",
+          "bVisible" : "1"
+        }, {
+          "IsEditorOnly" : "true",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UUUIDTextComponent_4",
+          "ParentName" : "UStaticMeshComponent_3",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [0.300000, 0.300000, 0.300000],
+          "Type" : "UUUIDTextComponent",
+          "bVisible" : "1"
+        }],
+      "Location" : [0.621391, 0.000000, 1.225460],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "Scale" : [0.941847, 0.941847, 0.941847],
+      "Type" : "AStaticMeshActor",
+      "bCanEverTick" : "false",
+      "bTickInEditor" : "false",
+      "bVisible" : "1"
+    },
+    "345" : {
+      "Components" : [{
+          "IsEditorOnly" : "false",
+          "IsVisualizationComponent" : "false",
+          "Location" : [6.569437, 6.724415, 0.843533],
+          "Name" : "UStaticMeshComponent_4",
+          "ObjStaticMeshAsset" : "Data/airdrop/airdrop.obj",
+          "ParentName" : "",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [1.783151, 1.783151, 1.783151],
+          "Type" : "UStaticMeshComponent",
+          "bVisible" : "1"
+        }, {
+          "IsEditorOnly" : "true",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UUUIDTextComponent_5",
+          "ParentName" : "UStaticMeshComponent_4",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [0.300000, 0.300000, 0.300000],
+          "Type" : "UUUIDTextComponent",
+          "bVisible" : "1"
+        }],
+      "Location" : [6.569437, 6.724415, 0.843533],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "Scale" : [1.783151, 1.783151, 1.783151],
+      "Type" : "AStaticMeshActor",
+      "bCanEverTick" : "false",
+      "bTickInEditor" : "false",
+      "bVisible" : "1"
+    },
+    "348" : {
+      "Components" : [{
+          "IsEditorOnly" : "false",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.000000, 11.990701, 0.784560],
+          "Name" : "UStaticMeshComponent_5",
+          "ObjStaticMeshAsset" : "Data/airdrop/airdrop.obj",
+          "ParentName" : "",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [1.340937, 1.340937, 1.340937],
+          "Type" : "UStaticMeshComponent",
+          "bVisible" : "1"
+        }, {
+          "IsEditorOnly" : "true",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UUUIDTextComponent_6",
+          "ParentName" : "UStaticMeshComponent_5",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [0.300000, 0.300000, 0.300000],
+          "Type" : "UUUIDTextComponent",
+          "bVisible" : "1"
+        }],
+      "Location" : [0.000000, 11.990701, 0.784560],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "Scale" : [1.340937, 1.340937, 1.340937],
+      "Type" : "AStaticMeshActor",
+      "bCanEverTick" : "false",
+      "bTickInEditor" : "false",
+      "bVisible" : "1"
+    },
+    "351" : {
+      "Components" : [{
+          "IsEditorOnly" : "false",
+          "IsVisualizationComponent" : "false",
+          "Location" : [5.806122, 0.000000, 3.169621],
+          "Name" : "UStaticMeshComponent_6",
+          "ObjStaticMeshAsset" : "Data/Shapes/Sphere.obj",
+          "ParentName" : "",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [1.264580, 1.264580, 1.264580],
+          "Type" : "UStaticMeshComponent",
+          "bVisible" : "1"
+        }, {
+          "IsEditorOnly" : "true",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UUUIDTextComponent_7",
+          "ParentName" : "UStaticMeshComponent_6",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [0.300000, 0.300000, 0.300000],
+          "Type" : "UUUIDTextComponent",
+          "bVisible" : "1"
+        }],
+      "Location" : [5.806122, 0.000000, 3.169621],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "Scale" : [1.264580, 1.264580, 1.264580],
+      "Type" : "ASphereActor",
+      "bCanEverTick" : "false",
+      "bTickInEditor" : "false",
+      "bVisible" : "1"
+    },
+    "354" : {
+      "Components" : [{
+          "AttenuationRadius" : 10000.000000,
+          "CascadeSplitLambda" : 0.500000,
+          "InnerConeAngle" : 30.000000,
+          "Intensity" : 1.000000,
+          "IsEditorOnly" : "false",
+          "IsVisualizationComponent" : "false",
+          "LightColor" : [1.000000, 1.000000, 1.000000],
+          "LightFalloffExponent" : 2.000000,
+          "Location" : [0.000000, 0.000000, 60.000000],
+          "Name" : "USpotLightComponent_0",
+          "NumOfCascade" : 12,
+          "OuterConeAngle" : 45.000000,
+          "ParentName" : "",
+          "Rotation" : [0.000000, 89.980232, 0.000000],
+          "Scale" : [0.674230, 0.674230, 0.674230],
+          "ShadowBias" : 0.000100,
+          "ShadowProjectionMode" : 0,
+          "ShadowResolutionScale" : 1.000000,
+          "ShadowSharpen" : 1.000000,
+          "ShadowSlopeBias" : 0.000000,
+          "Type" : "USpotLightComponent",
+          "bCastShadows" : true,
+          "bVisible" : true
+        }, {
+          "IsEditorOnly" : "true",
+          "IsVisualizationComponent" : "false",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UUUIDTextComponent_7",
+          "ParentName" : "USpotLightComponent_0",
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Scale" : [0.300000, 0.300000, 0.300000],
+          "Type" : "UUUIDTextComponent",
+          "bVisible" : "1"
+        }, {
+          "BillBoardScreenSize" : "5.000000",
+          "BillBoardScreenSizeScaled" : "true",
+          "BillBoardSprite" : "Data\\Icons\\SpotLight_64x.PNG",
+          "IsEditorOnly" : "true",
+          "IsVisualizationComponent" : "true",
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Name" : "UBillBoardComponent_0",
+          "ParentName" : "USpotLightComponent_0",
+          "Rotation" : [169.708115, 77.220703, -10.041440],
+          "Scale" : [0.300000, 0.300000, 0.300000],
+          "Type" : "UBillBoardComponent",
+          "bVisible" : "1"
+        }],
+      "Location" : [0.000000, 0.000000, 60.000000],
+      "Rotation" : [0.000000, 89.980232, 0.000000],
+      "Scale" : [0.674230, 0.674230, 0.674230],
+      "Type" : "ASpotLightActor",
+      "bCanEverTick" : "false",
+      "bTickInEditor" : "false",
+      "bVisible" : "1"
+    }
+  },
+  "NextUUID" : 0,
+  "PerspectiveCamera" : [{
+      "FOV" : [90.000000],
+      "FarClip" : [1000.000000],
+      "Location" : [16.907238, 0.890831, 7.054458],
+      "NearClip" : [2.230000],
+      "Rotation" : [0.000000, 12.600087, -177.735138],
+      "ViewportCameraType" : 0
+    }, {
+      "FOV" : [90.000000],
+      "FarClip" : [1000.000000],
+      "Location" : [-15.000000, 0.000000, 10.000000],
+      "NearClip" : [0.100000],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "ViewportCameraType" : 0
+    }, {
+      "FOV" : [90.000000],
+      "FarClip" : [1000.000000],
+      "Location" : [-15.000000, 0.000000, 10.000000],
+      "NearClip" : [0.100000],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "ViewportCameraType" : 0
+    }, {
+      "FOV" : [90.000000],
+      "FarClip" : [1000.000000],
+      "Location" : [-15.000000, 0.000000, 10.000000],
+      "NearClip" : [0.100000],
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "ViewportCameraType" : 0
+    }]
+}
