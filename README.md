@@ -1,3 +1,32 @@
+## 내가 맡은 부분 — 신동민
+
+**기간** 2025.10.23 – 10.30 · **내 커밋** 26건
+
+| 구현 | 내용 |
+| --- | --- |
+| **PSM (Perspective Shadow Map)** | 스포트라이트용 PSM 구현. **W가 음수로 나올 때 양수로 바꾸는 것이 아니라, 음수가 나오는 상황 자체를 회피**하도록 처리하고 `W<0`인 경우 역투영 경로로 분기. 섀도우 아크네는 **컬링 모드를 front로** 바꿔 해결하고 래스터라이저 상태를 함께 수정 |
+| **라이트** | 라이트 종류 선택 UI, 라이트 매트릭스 인수 변경, 라이트별 빌보드 정상화 |
+| **회전** | 위젯 회전을 쿼터니언 기반으로 전환(LH 표기), `Cross` 정상화 |
+| **컬링** | 프러스텀 컬링 수정 |
+
+**주요 파일** `Engine/Source/Scene/Private/Component/SpotLightComponent.cpp` · `Engine/Source/Renderer/Private/RenderPass/ShadowPass.cpp` · `Engine/Source/Core/Private/Math/Quaternion.cpp`
+
+→ **[내 커밋 26건 보기](https://github.com/TeshShin/Krafton_TechLab_Week08/commits?author=TeshShin)** · [14주 전체 정리](https://github.com/TeshShin/Krafton-TechLab-Roles)
+
+---
+
+## 8주차(2025.10.23 – 10.30)에 추가된 것 — 그림자 시스템
+
+아래 기술문서는 7주차 내용까지를 담고 있어, 8주차에 들어간 그림자 시스템을 여기에 정리합니다.
+
+- **섀도우 맵 종류** — CSM(Cascaded Shadow Map), VSM(Variance Shadow Map), PSM(Perspective Shadow Map)
+- **광원별 그림자** — Directional Light Shadow, Point Light Shadow, Spotlight Shadow
+- **필터링** — PCF, Box Filter, Gaussian Filter
+- **CSM 세부** — SubFrustum별 Depth Map, Moment RTV를 Array로 전환
+- **에디터 연동** — Shadow ShowFlag, ShadowSettings UI, Shadow Stat
+
+---
+
 # KTL Engine - Technical Documentation
 
 ## 프로젝트 개요
